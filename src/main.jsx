@@ -29,7 +29,8 @@ import{
   Save,
   PackageCheck,
   Pencil,
-  Download
+  Download,
+  ArrowRight
 }from'lucide-react';
 import'./style.css';
 
@@ -1651,8 +1652,13 @@ function CompanyAuth({
 
             {error&&<div className="authError">{error}</div>}
 
-            <button className="primary authSubmit" disabled={busy}>
-              {busy?'Кирүүдө...':'Войти'}
+            <button
+              className="pinArrowSubmit"
+              disabled={busy}
+              aria-label="Кирүү"
+              title="Кирүү"
+            >
+              {busy ? <span className="pinArrowSpinner"/> : <ArrowRight/>}
             </button>
 
             <button
