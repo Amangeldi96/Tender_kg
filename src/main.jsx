@@ -214,20 +214,13 @@ function App(){
       .then(snap=>{
         const remote=snap.docs.map(d=>({docId:d.id,...d.data()}));
 
-        const merged=[...cached];
-        remote.forEach(company=>{
-          const index=merged.findIndex(
-            x=>x.uid===company.uid || x.email===company.email
-          );
-          if(index>=0){
-            merged[index]={...merged[index],...company};
-          }else{
-            merged.push(company);
-          }
-        });
+        // Firestore ийгиликтүү ачылса, ал негизги булак болуп эсептелет.
+        // Firebase'тен компания өчүрүлгөн болсо, localStorage'дагы эски
+        // көчүрмөсү да автоматтык түрдө тазаланат.
+        const remoteCompanies=remote.filter(company=>company?.email);
 
-        setCompanies(merged);
-        saveCompanyCache(merged);
+        setCompanies(remoteCompanies);
+        saveCompanyCache(remoteCompanies);
       })
       .catch(err=>{
         console.error('Companies load error:',err);
