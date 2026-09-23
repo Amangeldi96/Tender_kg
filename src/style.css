@@ -17,3 +17,166 @@ header{margin-bottom:18px}.stats{gap:12px;margin-bottom:14px}.stat{min-width:0}.
 @media(min-width:1700px){.shell{grid-template-columns:270px minmax(0,1fr)}main{padding:30px 34px 38px}.row{min-width:0;font-size:12px}.row.head{font-size:11px}.bigTable{max-height:calc(100vh - 300px)}}
 @media(max-width:1000px){body{overflow:auto}.shell{height:auto;min-height:100vh;grid-template-columns:76px minmax(0,1fr)}aside{height:100vh}main{height:auto;min-height:100vh;overflow:visible}.bigTable{max-height:none}.row{min-width:1400px}}
 @media(max-width:700px){.shell{display:block;width:100%;height:auto}.shell aside{display:none}main{height:auto;padding:18px 12px 28px}.bigTable{max-height:none}.tablePanel{padding:12px}.row{min-width:1450px}}
+/* ================================
+   INLINE TABLE EDIT
+================================ */
+
+.editingRow{
+  background:#f8fafc;
+}
+
+.tableInput{
+  width:100%;
+  min-width:80px;
+  height:38px;
+  padding:0 10px;
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  background:#fff;
+  font:inherit;
+  color:#0f172a;
+  outline:none;
+  transition:.18s ease;
+}
+
+.tableInput:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.10);
+}
+
+.tableInput.number{
+  min-width:105px;
+}
+
+
+/* ================================
+   PAID AMOUNT
+================================ */
+
+.paidAmount{
+  border:0;
+  min-height:34px;
+  padding:7px 11px;
+  border-radius:9px;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:.18s ease;
+}
+
+.paidAmount:hover{
+  transform:translateY(-1px);
+}
+
+/* 0 сом */
+.paidAmount.red{
+  color:#dc2626;
+  background:#fef2f2;
+  border:1px solid #fecaca;
+}
+
+/* Жарым төлөндү */
+.paidAmount.yellow{
+  color:#a16207;
+  background:#fefce8;
+  border:1px solid #fde68a;
+}
+
+/* Толук төлөндү */
+.paidAmount.green{
+  color:#15803d;
+  background:#f0fdf4;
+  border:1px solid #bbf7d0;
+}
+
+
+/* ================================
+   PAYMENT INPUT
+================================ */
+
+.paymentEditor{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:130px;
+}
+
+.paymentEditor input{
+  width:95px;
+  height:36px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  padding:0 8px;
+  outline:none;
+  font-size:12px;
+  font-weight:700;
+}
+
+.paymentEditor input:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.10);
+}
+
+.paymentSave{
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:0;
+  border-radius:8px;
+  background:#16a34a;
+  color:white;
+  cursor:pointer;
+}
+
+.paymentSave svg{
+  width:16px;
+  height:16px;
+}
+
+
+/* ================================
+   ROW EDIT / SAVE
+================================ */
+
+.editBtn,
+.rowSaveBtn{
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:9px;
+  cursor:pointer;
+  transition:.18s ease;
+}
+
+.editBtn{
+  border:1px solid #e2e8f0;
+  background:#fff;
+  color:#475569;
+}
+
+.editBtn:hover{
+  color:#2563eb;
+  border-color:#bfdbfe;
+  background:#eff6ff;
+}
+
+.rowSaveBtn{
+  border:1px solid #16a34a;
+  background:#16a34a;
+  color:#fff;
+}
+
+.rowSaveBtn:hover{
+  background:#15803d;
+}
+
+.editBtn svg,
+.rowSaveBtn svg{
+  width:17px;
+  height:17px;
+}
