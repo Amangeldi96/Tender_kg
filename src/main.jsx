@@ -1,53 +1,145 @@
-// lucide-react импортуна Pencil жана Save кош
-import {
-  LayoutDashboard,Briefcase,FileText,Settings,Search,Plus,Upload,
-  CalendarDays,Wallet,X,Paperclip,Trash2,CheckCircle2,AlertCircle,
-  FolderOpen,Save,Eye,PackageCheck,Pencil
-} from 'lucide-react';
+jsx
+import React,{useMemo,useRef,useState} from 'react';
+import{createRoot}from'react-dom/client';
+import{
+  LayoutDashboard,
+  Briefcase,
+  FileText,
+  Settings,
+  Search,
+  Plus,
+  Upload,
+  Wallet,
+  X,
+  Paperclip,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  FolderOpen,
+  Save,
+  PackageCheck,
+  Pencil
+}from'lucide-react';
+import'./style.css';
+
+const DOCS=[
+  'Таблица цен',
+  'Техническая спецификация',
+  'Коммерческое предложение',
+  'Сертификат соответствия',
+  'Декларация соответствия',
+  'Гарантийное письмо',
+  'Реквизиты компании',
+  'Справка об отсутствии задолженности',
+  'Лицензия / разрешительные документы',
+  'Другие документы'
+];
+
+const seed=[{
+  id:'26091627861269',
+  org:'ГСИН',
+  name:'Кафель',
+  sum:778300,
+  paid:0,
+  gopp:'15600',
+  goik:'',
+  goppPaid:true,
+  goikPaid:false,
+  date:'2026-09-23',
+  docs:{
+    'Таблица цен':{
+      name:'Таблица цен.xlsx',
+      size:24560
+    }
+  }
+}];
+
+const money=n=>
+  new Intl.NumberFormat('ru-RU').format(Number(n)||0)+' сом';
+
+const read=()=>{
+  try{
+    return JSON.parse(localStorage.getItem('tf-v3'))||seed
+  }catch{
+    return seed
+  }
+};
+
+const persist=v=>
+  localStorage.setItem('tf-v3',JSON.stringify(v));
+
+const niceDate=v=>v||'—';
+
 
 function App(){
-  const [tenders,setTenders]=useState(read);
-  const [active,setActive]=useState(null);
-  const [addOpen,setAddOpen]=useState(false);
-  const [docsOpen,setDocsOpen]=useState(false);
-  const [q,setQ]=useState('');
 
-  // Кайсы сап өзгөртүлүп жатат
-  const [editingId,setEditingId]=useState(null);
-  const [editDraft,setEditDraft]=useState(null);
+  const[tenders,setTenders]=useState(read);
+  const[active,setActive]=useState(null);
+  const[addOpen,setAddOpen]=useState(false);
+  const[docsOpen,setDocsOpen]=useState(false);
+  const[q,setQ]=useState('');
 
-  // Төлөнгөн сумма input
-  const [paymentEditId,setPaymentEditId]=useState(null);
-  const [paymentValue,setPaymentValue]=useState('');
+  // Төлөнгөн сумманы өзгөртүү
+  const[paymentEditId,setPaymentEditId]=useState(null);
+  const[paymentValue,setPaymentValue]=useState('');
 
-  const filtered=tenders.filter(t =>
-    (t.id+t.org+t.name).toLowerCase().includes(q.toLowerCase())
+  // Таблицадагы тендерди өзгөртүү
+  const[editingId,setEditingId]=useState(null);
+  const[editDraft,setEditDraft]=useState(null);
+
+  const filtered=tenders.filter(t=>
+    (t.id+t.org+t.name)
+      .toLowerCase()
+      .includes(q.toLowerCase())
   );
 
   const total=useMemo(
-    ()=>tenders.reduce((a,b)=>a+Number(b.sum||0),0),
+    ()=>tenders.reduce(
+      (a,b)=>a+Number(b.sum||0),
+      0
+    ),
     [tenders]
   );
 
+
   const update=(id,patch)=>{
-    const a=tenders.map(t=>t.id===id?{...t,...patch}:t);
+
+    const a=tenders.map(t=>
+      t.id===id
+        ?{...t,...patch}
+        :t
+    );
+
     setTenders(a);
     persist(a);
 
-    setActive(x=>x?.id===id?{...x,...patch}:x);
+    setActive(x=>
+      x?.id===id
+        ?{...x,...patch}
+        :x
+    );
   };
 
+
   const remove=id=>{
-    const a=tenders.filter(t=>t.id!==id);
+
+    const a=tenders.filter(
+      t=>t.id!==id
+    );
+
     setTenders(a);
     persist(a);
     setActive(null);
   };
 
+
   function add(e){
+
     e.preventDefault();
 
-    let f=new FormData(e.currentTarget);
+    let f=new FormData(
+      e.currentTarget
+    );
 
     let t={
       id:String(f.get('id')).trim(),
@@ -55,8 +147,12 @@ function App(){
       name:String(f.get('name')).trim(),
       sum:+f.get('sum'),
       paid:0,
-      gopp:String(f.get('gopp')||'').trim(),
-      goik:String(f.get('goik')||'').trim(),
+      gopp:String(
+        f.get('gopp')||''
+      ).trim(),
+      goik:String(
+        f.get('goik')||''
+      ).trim(),
       goppPaid:false,
       goikPaid:false,
       date:f.get('date'),
@@ -67,40 +163,62 @@ function App(){
 
     setTenders(a);
     persist(a);
+
     setAddOpen(false);
     setActive(t);
   }
 
-  // -------------------------
-  // ТӨЛӨНГӨН СУММА
-  // -------------------------
 
-  const openPayment = t => {
+  // =========================
+  // ТӨЛӨНГӨН СУММА
+  // =========================
+
+  const startPayment=t=>{
+
     setPaymentEditId(t.id);
-    setPaymentValue(String(t.paid || ''));
+
+    setPaymentValue(
+      t.paid>0
+        ?String(t.paid)
+        :''
+    );
   };
 
-  const savePayment = t => {
-    let value = Number(paymentValue || 0);
 
-    if(value < 0) value = 0;
+  const savePayment=t=>{
 
-    // Жалпы суммадан ашырбайбыз
-    if(value > Number(t.sum)){
-      value = Number(t.sum);
+    let value=Number(
+      paymentValue||0
+    );
+
+    if(value<0){
+      value=0;
     }
 
-    update(t.id,{paid:value});
+    // Тендердин жалпы суммасынан
+    // көп төлөм киргизилбейт
+    if(value>Number(t.sum)){
+      value=Number(t.sum);
+    }
+
+    update(t.id,{
+      paid:value
+    });
 
     setPaymentEditId(null);
     setPaymentValue('');
   };
 
-  // -------------------------
-  // ТЕНДЕРДИ ИЗМЕНИТЬ
-  // -------------------------
 
-  const startEdit = t => {
+  // =========================
+  // ИЗМЕНИТЬ
+  // =========================
+
+  const startEdit=t=>{
+
+    // төлөм input ачык болсо жабабыз
+    setPaymentEditId(null);
+
     setEditingId(t.id);
 
     setEditDraft({
@@ -108,57 +226,134 @@ function App(){
       org:t.org,
       name:t.name,
       sum:t.sum,
-      date:t.date,
-      gopp:t.gopp || '',
-      goik:t.goik || ''
+      paid:t.paid||0,
+      gopp:t.gopp||'',
+      goik:t.goik||'',
+      date:t.date||''
     });
   };
 
-  const changeEdit = (key,value) => {
+
+  const changeEdit=(key,value)=>{
+
     setEditDraft(d=>({
       ...d,
       [key]:value
     }));
   };
 
-  const saveEdit = oldId => {
-    if(!editDraft) return;
+
+  const saveEdit=oldId=>{
+
+    if(!editDraft)return;
+
+    const oldTender=tenders.find(
+      t=>t.id===oldId
+    );
+
+    if(!oldTender)return;
+
+    const newId=
+      String(editDraft.id||'').trim();
+
+    const newSum=
+      Math.max(
+        0,
+        Number(editDraft.sum)||0
+      );
+
+    let newPaid=
+      Math.max(
+        0,
+        Number(editDraft.paid)||0
+      );
+
+    if(newPaid>newSum){
+      newPaid=newSum;
+    }
 
     const newTender={
-      ...tenders.find(t=>t.id===oldId),
+      ...oldTender,
       ...editDraft,
-      sum:Number(editDraft.sum || 0)
+
+      id:newId,
+      org:String(
+        editDraft.org||''
+      ).trim(),
+
+      name:String(
+        editDraft.name||''
+      ).trim(),
+
+      sum:newSum,
+      paid:newPaid,
+
+      gopp:String(
+        editDraft.gopp||''
+      ).trim(),
+
+      goik:String(
+        editDraft.goik||''
+      ).trim(),
+
+      date:editDraft.date||''
     };
 
+
+    // ГОПП өчүрүлсө статус дагы reset
+    if(!newTender.gopp){
+      newTender.goppPaid=false;
+    }
+
+    // ГОИК өчүрүлсө статус дагы reset
+    if(!newTender.goik){
+      newTender.goikPaid=false;
+    }
+
+
     const a=tenders.map(t=>
-      t.id===oldId ? newTender : t
+      t.id===oldId
+        ?newTender
+        :t
     );
 
     setTenders(a);
     persist(a);
 
+
     if(active?.id===oldId){
       setActive(newTender);
     }
+
 
     setEditingId(null);
     setEditDraft(null);
   };
 
-  return (
+
+  return(
     <div className="shell">
 
       <aside>
+
         <div className="brand">
-          <div className="logo">TF</div>
+
+          <div className="logo">
+            TF
+          </div>
 
           <div>
             <b>TenderFlow</b>
-            <small>PROCUREMENT</small>
+            <small>
+              PROCUREMENT
+            </small>
           </div>
+
         </div>
 
+
         <nav>
+
           <a className="on">
             <LayoutDashboard/>
             Тендерлер
@@ -173,51 +368,82 @@ function App(){
             <Settings/>
             Настройки
           </a>
+
         </nav>
 
+
         <div className="navbottom">
+
           <div className="user">
-            <div className="avatar">КК</div>
+
+            <div className="avatar">
+              КК
+            </div>
 
             <div>
               <b>Кел кел</b>
-              <small>Администратор</small>
+              <small>
+                Администратор
+              </small>
             </div>
+
           </div>
+
         </div>
+
       </aside>
+
 
       <main>
 
         <header>
+
           <div>
-            <small>ТЕНДЕР БАШКАРУУ</small>
-            <h1>Тендерлер</h1>
-            <p>Тендер, төлөм жана документтер бир жерде</p>
+            <small>
+              ТЕНДЕР БАШКАРУУ
+            </small>
+
+            <h1>
+              Тендерлер
+            </h1>
+
+            <p>
+              Тендер, төлөм жана документтер бир жерде
+            </p>
           </div>
+
 
           <div className="actions">
 
             <div className="search">
+
               <Search/>
 
               <input
                 value={q}
-                onChange={e=>setQ(e.target.value)}
+                onChange={e=>
+                  setQ(e.target.value)
+                }
                 placeholder="Тендер номер, мекеме, товар..."
               />
+
             </div>
+
 
             <button
               className="primary"
-              onClick={()=>setAddOpen(true)}
+              onClick={()=>
+                setAddOpen(true)
+              }
             >
               <Plus/>
               Тендер кошуу
             </button>
 
           </div>
+
         </header>
+
 
         <section className="stats">
 
@@ -236,134 +462,258 @@ function App(){
           <Stat
             icon={<PackageCheck/>}
             label="ГОПП төлөнгөн"
-            value={tenders.filter(t=>t.gopp&&t.goppPaid).length}
+            value={
+              tenders.filter(
+                t=>
+                  t.gopp&&
+                  t.goppPaid
+              ).length
+            }
           />
 
           <Stat
             icon={<FileText/>}
             label="Файлдар"
-            value={tenders.reduce(
-              (a,t)=>a+Object.keys(t.docs||{}).length,
-              0
-            )}
+            value={
+              tenders.reduce(
+                (a,t)=>
+                  a+
+                  Object.keys(
+                    t.docs||{}
+                  ).length,
+                0
+              )
+            }
           />
 
         </section>
 
+
         <div className="panel tablePanel">
 
           <div className="panelhead">
+
             <div>
-              <small>КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР</small>
-              <h2>Таблица</h2>
+              <small>
+                КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР
+              </small>
+
+              <h2>
+                Таблица
+              </h2>
             </div>
 
             <span className="count">
               {filtered.length}
             </span>
+
           </div>
+
 
           <div className="bigTable">
 
             <div className="row head">
+
               <span>№</span>
-              <span>тендер номер</span>
-              <span>Мекемелер</span>
-              <span>Lot аталышы</span>
-              <span>суммасы</span>
-              <span>төлөнгөн суммалар</span>
-              <span>ГОПП</span>
-              <span>ГОИК</span>
-              <span>Таблица цен</span>
-              <span>Срок вскрытия</span>
-              <span>Файлдар</span>
+
+              <span>
+                тендер номер
+              </span>
+
+              <span>
+                Мекемелер
+              </span>
+
+              <span>
+                Lot аталышы
+              </span>
+
+              <span>
+                суммасы
+              </span>
+
+              <span>
+                төлөнгөн суммалар
+              </span>
+
+              <span>
+                ГОПП
+              </span>
+
+              <span>
+                ГОИК
+              </span>
+
+              <span>
+                Таблица цен
+              </span>
+
+              <span>
+                Срок вскрытия
+              </span>
+
+              <span>
+                Файлдар
+              </span>
 
               {/* Действие деген текст жок */}
               <span></span>
+
             </div>
 
-            {filtered.map((t,i)=>{
-              const editing=editingId===t.id;
-              const paymentEditing=paymentEditId===t.id;
 
-              return (
+            {filtered.map((t,i)=>{
+
+              const editing=
+                editingId===t.id;
+
+              const paymentEditing=
+                paymentEditId===t.id;
+
+
+              return(
+
                 <div
-                  className={'row '+(editing?'editingRow':'')}
+                  className={
+                    'row '+
+                    (
+                      editing
+                        ?'editingRow'
+                        :''
+                    )
+                  }
                   key={t.id}
                 >
 
-                  <span>{i+1}</span>
+                  {/* № */}
+                  <span>
+                    {i+1}
+                  </span>
+
 
                   {/* ТЕНДЕР НОМЕР */}
                   <span>
+
                     {editing ? (
+
                       <input
                         className="tableInput"
                         value={editDraft.id}
                         onChange={e=>
-                          changeEdit('id',e.target.value)
+                          changeEdit(
+                            'id',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
+
                       <span
                         className="tenderLink"
-                        onClick={()=>setActive(t)}
+                        onClick={()=>
+                          setActive(t)
+                        }
                       >
                         {t.id}
                       </span>
+
                     )}
+
                   </span>
+
 
                   {/* МЕКЕМЕ */}
                   <span>
+
                     {editing ? (
+
                       <input
                         className="tableInput"
                         value={editDraft.org}
                         onChange={e=>
-                          changeEdit('org',e.target.value)
+                          changeEdit(
+                            'org',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
                       t.org
                     )}
+
                   </span>
+
 
                   {/* LOT */}
                   <span>
+
                     {editing ? (
+
                       <input
                         className="tableInput"
                         value={editDraft.name}
                         onChange={e=>
-                          changeEdit('name',e.target.value)
+                          changeEdit(
+                            'name',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
                       t.name
                     )}
+
                   </span>
 
-                  {/* СУММА */}
+
+                  {/* ЖАЛПЫ СУММА */}
                   <span>
+
                     {editing ? (
+
                       <input
-                        className="tableInput number"
+                        className="tableInput"
                         type="number"
+                        min="0"
                         value={editDraft.sum}
                         onChange={e=>
-                          changeEdit('sum',e.target.value)
+                          changeEdit(
+                            'sum',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
                       money(t.sum)
                     )}
+
                   </span>
+
 
                   {/* ТӨЛӨНГӨН СУММА */}
                   <span>
 
-                    {paymentEditing ? (
+                    {editing ? (
+
+                      <input
+                        className="tableInput"
+                        type="number"
+                        min="0"
+                        max={editDraft.sum}
+                        value={editDraft.paid}
+                        onChange={e=>
+                          changeEdit(
+                            'paid',
+                            e.target.value
+                          )
+                        }
+                      />
+
+                    ):paymentEditing ? (
 
                       <div className="paymentEditor">
 
@@ -374,22 +724,36 @@ function App(){
                           autoFocus
                           value={paymentValue}
                           onChange={e=>
-                            setPaymentValue(e.target.value)
+                            setPaymentValue(
+                              e.target.value
+                            )
                           }
                           onKeyDown={e=>{
-                            if(e.key==='Enter'){
+
+                            if(
+                              e.key==='Enter'
+                            ){
                               savePayment(t);
                             }
 
-                            if(e.key==='Escape'){
-                              setPaymentEditId(null);
+                            if(
+                              e.key==='Escape'
+                            ){
+                              setPaymentEditId(
+                                null
+                              );
                             }
+
                           }}
                         />
 
+
                         <button
                           className="paymentSave"
-                          onClick={()=>savePayment(t)}
+                          title="Сохранить"
+                          onClick={()=>
+                            savePayment(t)
+                          }
                         >
                           <Save/>
                         </button>
@@ -397,100 +761,154 @@ function App(){
                       </div>
 
                     ):(
+
                       <PaidAmount
                         t={t}
-                        onClick={()=>openPayment(t)}
+                        onClick={()=>
+                          startPayment(t)
+                        }
                       />
+
                     )}
 
                   </span>
 
+
                   {/* ГОПП */}
                   <span>
+
                     {editing ? (
+
                       <input
                         className="tableInput"
                         value={editDraft.gopp}
-                        placeholder="ГОПП жок"
+                        placeholder="Жок"
                         onChange={e=>
-                          changeEdit('gopp',e.target.value)
+                          changeEdit(
+                            'gopp',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
+
                       <PayPill
                         t={t}
                         type="gopp"
                         update={update}
                       />
+
                     )}
+
                   </span>
+
 
                   {/* ГОИК */}
                   <span>
+
                     {editing ? (
+
                       <input
                         className="tableInput"
                         value={editDraft.goik}
-                        placeholder="ГОИК жок"
+                        placeholder="Жок"
                         onChange={e=>
-                          changeEdit('goik',e.target.value)
+                          changeEdit(
+                            'goik',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
+
                       <PayPill
                         t={t}
                         type="goik"
                         update={update}
                       />
+
                     )}
+
                   </span>
+
 
                   {/* ТАБЛИЦА ЦЕН */}
                   <span>
+
                     <b
                       className={
-                        (t.docs||{})['Таблица цен']
-                          ? 'pill green'
-                          : 'pill gray'
+                        (t.docs||{})[
+                          'Таблица цен'
+                        ]
+                          ?'pill green'
+                          :'pill gray'
                       }
                     >
-                      {(t.docs||{})['Таблица цен']
-                        ? '✓ Тиркелген'
-                        : 'Жок'}
+                      {
+                        (t.docs||{})[
+                          'Таблица цен'
+                        ]
+                          ?'✓ Тиркелген'
+                          :'Жок'
+                      }
                     </b>
+
                   </span>
+
 
                   {/* СРОК */}
                   <span>
+
                     {editing ? (
+
                       <input
                         className="tableInput"
                         type="date"
                         value={editDraft.date}
                         onChange={e=>
-                          changeEdit('date',e.target.value)
+                          changeEdit(
+                            'date',
+                            e.target.value
+                          )
                         }
                       />
+
                     ):(
                       niceDate(t.date)
                     )}
+
                   </span>
+
 
                   {/* ФАЙЛДАР */}
                   <span>
+
                     <button
                       className="filesBtn"
                       onClick={()=>{
+
                         setActive(t);
                         setDocsOpen(true);
+
                       }}
                     >
                       <FolderOpen/>
-                      ({Object.keys(t.docs||{}).length})
+
+                      (
+                        {
+                          Object.keys(
+                            t.docs||{}
+                          ).length
+                        }
+                      )
                     </button>
+
                   </span>
 
-                  {/* КАРАНДАШ / SAVE */}
+
+                  {/* ИЗМЕНИТЬ / SAVE */}
                   <span>
 
                     {editing ? (
@@ -498,7 +916,9 @@ function App(){
                       <button
                         className="rowSaveBtn"
                         title="Сохранить"
-                        onClick={()=>saveEdit(t.id)}
+                        onClick={()=>
+                          saveEdit(t.id)
+                        }
                       >
                         <Save/>
                       </button>
@@ -508,7 +928,9 @@ function App(){
                       <button
                         className="editBtn"
                         title="Изменить"
-                        onClick={()=>startEdit(t)}
+                        onClick={()=>
+                          startEdit(t)
+                        }
                       >
                         <Pencil/>
                       </button>
@@ -518,25 +940,179 @@ function App(){
                   </span>
 
                 </div>
+
               );
+
             })}
 
           </div>
+
         </div>
 
       </main>
 
-      {/* Сенин калган Modal / Detail / Documents
-          бөлүктөрүң ушул бойдон калат */}
+
+      {/* =========================
+          ТЕНДЕР КОШУУ
+      ========================== */}
+
+      {addOpen&&
+
+        <Modal
+          close={()=>
+            setAddOpen(false)
+          }
+        >
+
+          <form onSubmit={add}>
+
+            <small>
+              ЖАҢЫ ТЕНДЕР
+            </small>
+
+            <h2>
+              Тендер кошуу
+            </h2>
+
+
+            <div className="fields">
+
+              <label>
+                Тендер номер *
+
+                <input
+                  name="id"
+                  required
+                />
+              </label>
+
+
+              <label>
+                Организация *
+
+                <input
+                  name="org"
+                  required
+                />
+              </label>
+
+
+              <label className="full">
+                Товардын / Lot аталышы *
+
+                <input
+                  name="name"
+                  required
+                />
+              </label>
+
+
+              <label>
+                Суммасы *
+
+                <input
+                  name="sum"
+                  type="number"
+                  required
+                />
+              </label>
+
+
+              <label>
+                Срок вскрытия *
+
+                <input
+                  name="date"
+                  type="date"
+                  required
+                />
+              </label>
+
+
+              <label>
+                ГОПП
+                <em>
+                  жок болсо бош калтыр
+                </em>
+
+                <input
+                  name="gopp"
+                  placeholder="мисалы 15 600"
+                />
+              </label>
+
+
+              <label>
+                ГОИК
+                <em>
+                  жок болсо бош калтыр
+                </em>
+
+                <input
+                  name="goik"
+                  placeholder="мисалы 8 000"
+                />
+              </label>
+
+            </div>
+
+
+            <button
+              className="primary submit"
+            >
+              <Plus/>
+              Добавить
+            </button>
+
+          </form>
+
+        </Modal>
+      }
+
+
+      {/* =========================
+          DETAIL
+      ========================== */}
+
+      {active&&!docsOpen&&
+
+        <Detail
+          t={active}
+          update={update}
+          close={()=>
+            setActive(null)
+          }
+          remove={remove}
+          openDocs={()=>
+            setDocsOpen(true)
+          }
+        />
+      }
+
+
+      {/* =========================
+          DOCUMENTS
+      ========================== */}
+
+      {active&&docsOpen&&
+
+        <Documents
+          t={active}
+          update={update}
+          close={()=>
+            setDocsOpen(false)
+          }
+        />
+      }
 
     </div>
   );
 }
 
 
-// ====================================
-// ТӨЛӨНГӨН СУММАНЫН ТҮСҮ
-// ====================================
+// ========================================
+// ТӨЛӨНГӨН СУММА
+// ========================================
 
 function PaidAmount({t,onClick}){
 
@@ -546,23 +1122,625 @@ function PaidAmount({t,onClick}){
   let state='red';
   let text='✕ 0 сом';
 
+  // Жарым төлөнгөн
   if(paid>0 && paid<total){
+
     state='yellow';
     text=money(paid);
+
   }
 
+  // Толук төлөнгөн
   if(total>0 && paid>=total){
+
     state='green';
     text='✓ '+money(paid);
+
   }
 
-  return (
+  return(
     <button
-      className={'paidAmount '+state}
+      type="button"
+      className={
+        'paidAmount '+state
+      }
+      title="Төлөнгөн сумманы өзгөртүү"
       onClick={onClick}
-      title="Төлөнгөн сумманы киргизүү"
     >
       {text}
     </button>
   );
 }
+
+
+// ========================================
+// ГОПП / ГОИК
+// ========================================
+
+function PayPill({
+  t,
+  type,
+  update
+}){
+
+  const val=t[type];
+
+  const paid=
+    t[type+'Paid'];
+
+  if(!val){
+
+    return(
+      <b className="pill red">
+        ✕ 0 сом
+      </b>
+    );
+
+  }
+
+  return(
+    <button
+      type="button"
+      title="Басып төлөндү/төлөнө элек деп өзгөртүңүз"
+      className={
+        'pill clickable '+
+        (
+          paid
+            ?'green'
+            :'red'
+        )
+      }
+      onClick={()=>
+        update(
+          t.id,
+          {
+            [type+'Paid']:!paid
+          }
+        )
+      }
+    >
+      {paid?'✓ ':'✕ '}
+      {money(val)}
+    </button>
+  );
+}
+
+
+// ========================================
+// DETAIL
+// ========================================
+
+function Detail({
+  t,
+  update,
+  close,
+  remove,
+  openDocs
+}){
+
+  return(
+    <div
+      className="drawerShade"
+      onMouseDown={close}
+    >
+
+      <div
+        className="drawer"
+        onMouseDown={e=>
+          e.stopPropagation()
+        }
+      >
+
+        <button
+          className="close"
+          onClick={close}
+        >
+          <X/>
+        </button>
+
+
+        <small>
+          ТЕНДЕР ДЕТАЛЬ
+        </small>
+
+        <h2>
+          № {t.id}
+        </h2>
+
+        <h3>
+          {t.name}
+        </h3>
+
+        <p>
+          {t.org}
+        </p>
+
+
+        <div className="detailGrid">
+
+          <Info
+            k="Суммасы"
+            v={money(t.sum)}
+          />
+
+          <Info
+            k="Төлөнгөн"
+            v={money(t.paid)}
+          />
+
+          <Info
+            k="Срок вскрытия"
+            v={t.date}
+          />
+
+        </div>
+
+
+        <h4>
+          Төлөмдөр
+        </h4>
+
+
+        <div className="payCards">
+
+          <TogglePay
+            title="ГОПП"
+            value={t.gopp}
+            paid={t.goppPaid}
+            onClick={()=>
+              t.gopp&&
+              update(
+                t.id,
+                {
+                  goppPaid:
+                    !t.goppPaid
+                }
+              )
+            }
+          />
+
+
+          <TogglePay
+            title="ГОИК"
+            value={t.goik}
+            paid={t.goikPaid}
+            onClick={()=>
+              t.goik&&
+              update(
+                t.id,
+                {
+                  goikPaid:
+                    !t.goikPaid
+                }
+              )
+            }
+          />
+
+        </div>
+
+
+        <button
+          className="docsMain"
+          onClick={openDocs}
+        >
+          <FolderOpen/>
+
+          Документтер
+
+          <b>
+            {
+              Object.keys(
+                t.docs||{}
+              ).length
+            }
+            /
+            {DOCS.length}
+          </b>
+        </button>
+
+
+        <button
+          className="deleteBtn"
+          onClick={()=>
+            remove(t.id)
+          }
+        >
+          <Trash2/>
+          Тендерди өчүрүү
+        </button>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+// ========================================
+// PAYMENT TOGGLE
+// ========================================
+
+function TogglePay({
+  title,
+  value,
+  paid,
+  onClick
+}){
+
+  if(!value){
+
+    return(
+      <div className="payCard missing">
+
+        <small>
+          {title}
+        </small>
+
+        <b>
+          {title} жок
+        </b>
+
+        <AlertCircle/>
+
+      </div>
+    );
+  }
+
+
+  return(
+    <button
+      className={
+        'payCard '+
+        (
+          paid
+            ?'paid'
+            :'unpaid'
+        )
+      }
+      onClick={onClick}
+    >
+
+      <small>
+        {title} · {money(value)}
+      </small>
+
+      <b>
+        {
+          paid
+            ?'ТӨЛӨНДҮ'
+            :'ТӨЛӨНӨ ЭЛЕК'
+        }
+      </b>
+
+      {
+        paid
+          ?<CheckCircle2/>
+          :<AlertCircle/>
+      }
+
+    </button>
+  );
+}
+
+
+// ========================================
+// DOCUMENTS
+// ========================================
+
+function Documents({
+  t,
+  update,
+  close
+}){
+
+  const[drafts,setDrafts]=
+    useState(t.docs||{});
+
+  const inputs=
+    useRef({});
+
+
+  const attach=(name,file)=>{
+
+    if(!file)return;
+
+    setDrafts(d=>({
+      ...d,
+
+      [name]:{
+        name:file.name,
+        size:file.size,
+        type:file.type
+      }
+
+    }));
+  };
+
+
+  const del=name=>
+    setDrafts(d=>{
+
+      let n={...d};
+
+      delete n[name];
+
+      return n;
+    });
+
+
+  const save=()=>{
+
+    update(
+      t.id,
+      {
+        docs:drafts
+      }
+    );
+
+    close();
+  };
+
+
+  return(
+    <div className="drawerShade">
+
+      <div className="docsModal">
+
+        <button
+          className="close"
+          onClick={close}
+        >
+          <X/>
+        </button>
+
+
+        <small>
+          ТЕНДЕР № {t.id}
+        </small>
+
+
+        <h2>
+          Керектүү документтер
+        </h2>
+
+
+        <p className="modalSub">
+          Документти тандап, файлды прикрепить кылыңыз.
+          Бүткөндө «Сохранить» басыңыз.
+        </p>
+
+
+        <div className="docList">
+
+          {DOCS.map(name=>
+
+            <div
+              className={
+                'docItem '+
+                (
+                  drafts[name]
+                    ?'ready'
+                    :''
+                )
+              }
+              key={name}
+            >
+
+              <div className="docState">
+
+                {
+                  drafts[name]
+                    ?<CheckCircle2/>
+                    :<FileText/>
+                }
+
+              </div>
+
+
+              <div className="docName">
+
+                <b>
+                  {name}
+                </b>
+
+                <small>
+                  {
+                    drafts[name]
+                      ?drafts[name].name
+                      :'Файл тиркеле элек'
+                  }
+                </small>
+
+              </div>
+
+
+              <input
+                ref={el=>
+                  inputs.current[name]=el
+                }
+                type="file"
+                hidden
+                onChange={e=>
+                  attach(
+                    name,
+                    e.target.files?.[0]
+                  )
+                }
+              />
+
+
+              {
+                drafts[name]
+                  ?(
+                    <>
+
+                      <button
+                        className="replace"
+                        onClick={()=>
+                          inputs.current[name]
+                            ?.click()
+                        }
+                      >
+                        <Upload/>
+                        Алмаштыруу
+                      </button>
+
+
+                      <button
+                        className="miniDel"
+                        onClick={()=>
+                          del(name)
+                        }
+                      >
+                        <Trash2/>
+                      </button>
+
+                    </>
+                  )
+                  :(
+                    <button
+                      className="attach"
+                      onClick={()=>
+                        inputs.current[name]
+                          ?.click()
+                      }
+                    >
+                      <Paperclip/>
+                      Прикрепить файл
+                    </button>
+                  )
+              }
+
+            </div>
+
+          )}
+
+        </div>
+
+
+        <div className="docsFooter">
+
+          <span>
+            {Object.keys(drafts).length}
+            {' / '}
+            {DOCS.length}
+            {' документ'}
+          </span>
+
+
+          <button
+            className="primary saveBtn"
+            onClick={save}
+          >
+            <Save/>
+            Сохранить
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+// ========================================
+// MODAL
+// ========================================
+
+function Modal({
+  children,
+  close
+}){
+
+  return(
+    <div
+      className="overlay"
+      onMouseDown={close}
+    >
+
+      <div
+        className="modal"
+        onMouseDown={e=>
+          e.stopPropagation()
+        }
+      >
+
+        <button
+          className="close"
+          onClick={close}
+        >
+          <X/>
+        </button>
+
+        {children}
+
+      </div>
+
+    </div>
+  );
+}
+
+
+// ========================================
+// INFO
+// ========================================
+
+function Info({k,v}){
+
+  return(
+    <div className="infoBox">
+
+      <small>
+        {k}
+      </small>
+
+      <b>
+        {v}
+      </b>
+
+    </div>
+  );
+}
+
+
+// ========================================
+// STAT
+// ========================================
+
+function Stat({
+  icon,
+  label,
+  value
+}){
+
+  return(
+    <div className="stat">
+
+      <div className="statIcon">
+        {icon}
+      </div>
+
+      <div>
+
+        <small>
+          {label}
+        </small>
+
+        <b>
+          {value}
+        </b>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+createRoot(
+  document.getElementById('root')
+).render(
+  <App/>
+);
