@@ -1,4 +1,3 @@
-jsx
 import React,{useMemo,useRef,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import{
@@ -14,11 +13,11 @@ import{
   Paperclip,
   Trash2,
   CheckCircle2,
-  AlertCircle,
   FolderOpen,
   Save,
   PackageCheck,
-  Pencil
+  Pencil,
+  Download
 }from'lucide-react';
 import'./style.css';
 
@@ -70,6 +69,70 @@ const persist=v=>
 
 const niceDate=v=>v||'—';
 
+
+
+// Тиркелген файлдардын өзүн браузерде сактайбыз.
+// IndexedDB колдонулгандыктан баракты жаңырткандан кийин да скачать кылса болот.
+const DB_NAME='tenderflow-files';
+const DB_STORE='files';
+
+function openFileDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(DB_STORE)){
+        db.createObjectStore(DB_STORE);
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function saveRealFile(key,file){
+  const db=await openFileDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).put(file,key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+
+async function deleteRealFile(key){
+  const db=await openFileDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).delete(key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+
+async function downloadRealFile(key,fileName){
+  const db=await openFileDB();
+  const file=await new Promise((resolve,reject)=>{
+    const tx=db.transaction(DB_STORE,'readonly');
+    const req=tx.objectStore(DB_STORE).get(key);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+
+  if(!file){
+    alert('Бул файлдын өзү браузерде табылган жок. Файлды кайра тиркеңиз.');
+    return;
+  }
+
+  const url=URL.createObjectURL(file);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=fileName||file.name||'document';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 
 function App(){
 
@@ -165,7 +228,6 @@ function App(){
     persist(a);
 
     setAddOpen(false);
-    setActive(t);
   }
 
 
@@ -609,12 +671,7 @@ function App(){
 
                     ):(
 
-                      <span
-                        className="tenderLink"
-                        onClick={()=>
-                          setActive(t)
-                        }
-                      >
+                      <span className="tenderLink">
                         {t.id}
                       </span>
 
@@ -1071,26 +1128,6 @@ function App(){
 
 
       {/* =========================
-          DETAIL
-      ========================== */}
-
-      {active&&!docsOpen&&
-
-        <Detail
-          t={active}
-          update={update}
-          close={()=>
-            setActive(null)
-          }
-          remove={remove}
-          openDocs={()=>
-            setDocsOpen(true)
-          }
-        />
-      }
-
-
-      {/* =========================
           DOCUMENTS
       ========================== */}
 
@@ -1207,223 +1244,6 @@ function PayPill({
 
 
 // ========================================
-// DETAIL
-// ========================================
-
-function Detail({
-  t,
-  update,
-  close,
-  remove,
-  openDocs
-}){
-
-  return(
-    <div
-      className="drawerShade"
-      onMouseDown={close}
-    >
-
-      <div
-        className="drawer"
-        onMouseDown={e=>
-          e.stopPropagation()
-        }
-      >
-
-        <button
-          className="close"
-          onClick={close}
-        >
-          <X/>
-        </button>
-
-
-        <small>
-          ТЕНДЕР ДЕТАЛЬ
-        </small>
-
-        <h2>
-          № {t.id}
-        </h2>
-
-        <h3>
-          {t.name}
-        </h3>
-
-        <p>
-          {t.org}
-        </p>
-
-
-        <div className="detailGrid">
-
-          <Info
-            k="Суммасы"
-            v={money(t.sum)}
-          />
-
-          <Info
-            k="Төлөнгөн"
-            v={money(t.paid)}
-          />
-
-          <Info
-            k="Срок вскрытия"
-            v={t.date}
-          />
-
-        </div>
-
-
-        <h4>
-          Төлөмдөр
-        </h4>
-
-
-        <div className="payCards">
-
-          <TogglePay
-            title="ГОПП"
-            value={t.gopp}
-            paid={t.goppPaid}
-            onClick={()=>
-              t.gopp&&
-              update(
-                t.id,
-                {
-                  goppPaid:
-                    !t.goppPaid
-                }
-              )
-            }
-          />
-
-
-          <TogglePay
-            title="ГОИК"
-            value={t.goik}
-            paid={t.goikPaid}
-            onClick={()=>
-              t.goik&&
-              update(
-                t.id,
-                {
-                  goikPaid:
-                    !t.goikPaid
-                }
-              )
-            }
-          />
-
-        </div>
-
-
-        <button
-          className="docsMain"
-          onClick={openDocs}
-        >
-          <FolderOpen/>
-
-          Документтер
-
-          <b>
-            {
-              Object.keys(
-                t.docs||{}
-              ).length
-            }
-            /
-            {DOCS.length}
-          </b>
-        </button>
-
-
-        <button
-          className="deleteBtn"
-          onClick={()=>
-            remove(t.id)
-          }
-        >
-          <Trash2/>
-          Тендерди өчүрүү
-        </button>
-
-      </div>
-
-    </div>
-  );
-}
-
-
-// ========================================
-// PAYMENT TOGGLE
-// ========================================
-
-function TogglePay({
-  title,
-  value,
-  paid,
-  onClick
-}){
-
-  if(!value){
-
-    return(
-      <div className="payCard missing">
-
-        <small>
-          {title}
-        </small>
-
-        <b>
-          {title} жок
-        </b>
-
-        <AlertCircle/>
-
-      </div>
-    );
-  }
-
-
-  return(
-    <button
-      className={
-        'payCard '+
-        (
-          paid
-            ?'paid'
-            :'unpaid'
-        )
-      }
-      onClick={onClick}
-    >
-
-      <small>
-        {title} · {money(value)}
-      </small>
-
-      <b>
-        {
-          paid
-            ?'ТӨЛӨНДҮ'
-            :'ТӨЛӨНӨ ЭЛЕК'
-        }
-      </b>
-
-      {
-        paid
-          ?<CheckCircle2/>
-          :<AlertCircle/>
-      }
-
-    </button>
-  );
-}
-
-
-// ========================================
 // DOCUMENTS
 // ========================================
 
@@ -1433,57 +1253,55 @@ function Documents({
   close
 }){
 
-  const[drafts,setDrafts]=
-    useState(t.docs||{});
+  const[drafts,setDrafts]=useState(t.docs||{});
+  const[adding,setAdding]=useState(false);
+  const[selectedDoc,setSelectedDoc]=useState('');
+  const inputs=useRef({});
 
-  const inputs=
-    useRef({});
-
-
-  const attach=(name,file)=>{
-
+  const attach=async(name,file)=>{
     if(!file)return;
+
+    const fileKey=`${t.id}::${name}`;
+    await saveRealFile(fileKey,file);
 
     setDrafts(d=>({
       ...d,
-
       [name]:{
         name:file.name,
         size:file.size,
-        type:file.type
+        type:file.type,
+        fileKey
       }
-
     }));
+
+    setAdding(false);
+    setSelectedDoc('');
   };
 
+  const del=async name=>{
+    const meta=drafts[name];
 
-  const del=name=>
+    if(meta?.fileKey){
+      await deleteRealFile(meta.fileKey);
+    }
+
     setDrafts(d=>{
-
-      let n={...d};
-
+      const n={...d};
       delete n[name];
-
       return n;
     });
-
+  };
 
   const save=()=>{
-
-    update(
-      t.id,
-      {
-        docs:drafts
-      }
-    );
-
+    update(t.id,{docs:drafts});
     close();
   };
 
+  const addedDocs=Object.keys(drafts);
+  const availableDocs=DOCS.filter(name=>!drafts[name]);
 
   return(
     <div className="drawerShade">
-
       <div className="docsModal">
 
         <button
@@ -1493,140 +1311,180 @@ function Documents({
           <X/>
         </button>
 
-
         <small>
           ТЕНДЕР № {t.id}
         </small>
 
-
         <h2>
-          Керектүү документтер
+          Документтер
         </h2>
 
-
         <p className="modalSub">
-          Документти тандап, файлды прикрепить кылыңыз.
-          Бүткөндө «Сохранить» басыңыз.
+          Бул жерде тендерге кошулган документтер гана көрсөтүлөт.
         </p>
-
 
         <div className="docList">
 
-          {DOCS.map(name=>
-
-            <div
-              className={
-                'docItem '+
-                (
-                  drafts[name]
-                    ?'ready'
-                    :''
-                )
-              }
-              key={name}
-            >
-
-              <div className="docState">
-
-                {
-                  drafts[name]
-                    ?<CheckCircle2/>
-                    :<FileText/>
-                }
-
-              </div>
-
-
-              <div className="docName">
-
-                <b>
-                  {name}
-                </b>
-
-                <small>
-                  {
-                    drafts[name]
-                      ?drafts[name].name
-                      :'Файл тиркеле элек'
-                  }
-                </small>
-
-              </div>
-
-
-              <input
-                ref={el=>
-                  inputs.current[name]=el
-                }
-                type="file"
-                hidden
-                onChange={e=>
-                  attach(
-                    name,
-                    e.target.files?.[0]
-                  )
-                }
-              />
-
-
-              {
-                drafts[name]
-                  ?(
-                    <>
-
-                      <button
-                        className="replace"
-                        onClick={()=>
-                          inputs.current[name]
-                            ?.click()
-                        }
-                      >
-                        <Upload/>
-                        Алмаштыруу
-                      </button>
-
-
-                      <button
-                        className="miniDel"
-                        onClick={()=>
-                          del(name)
-                        }
-                      >
-                        <Trash2/>
-                      </button>
-
-                    </>
-                  )
-                  :(
-                    <button
-                      className="attach"
-                      onClick={()=>
-                        inputs.current[name]
-                          ?.click()
-                      }
-                    >
-                      <Paperclip/>
-                      Прикрепить файл
-                    </button>
-                  )
-              }
-
+          {addedDocs.length===0 ? (
+            <div className="docsEmpty">
+              <FileText/>
+              <b>Документ кошула элек</b>
+              <small>
+                Төмөнкү «Добавить документ» кнопкасы менен документ кошуңуз.
+              </small>
             </div>
+          ) : (
+            addedDocs.map(name=>{
+              const doc=drafts[name];
 
+              return(
+                <div className="docItem ready" key={name}>
+
+                  <div className="docState">
+                    <CheckCircle2/>
+                  </div>
+
+                  <div className="docName">
+                    <b>{name}</b>
+                    <small>{doc.name}</small>
+                  </div>
+
+                  <input
+                    ref={el=>inputs.current[name]=el}
+                    type="file"
+                    hidden
+                    onChange={e=>attach(name,e.target.files?.[0])}
+                  />
+
+                  <button
+                    type="button"
+                    className="downloadBtn"
+                    title="Скачать"
+                    onClick={()=>downloadRealFile(
+                      doc.fileKey||`${t.id}::${name}`,
+                      doc.name
+                    )}
+                  >
+                    <Download/>
+                    Скачать
+                  </button>
+
+                  <button
+                    type="button"
+                    className="replace"
+                    onClick={()=>inputs.current[name]?.click()}
+                  >
+                    <Upload/>
+                    Алмаштыруу
+                  </button>
+
+                  <button
+                    type="button"
+                    className="miniDel"
+                    title="Өчүрүү"
+                    onClick={()=>del(name)}
+                  >
+                    <Trash2/>
+                  </button>
+
+                </div>
+              );
+            })
           )}
 
         </div>
 
+        {adding&&(
+          <div className="addDocumentBox">
+
+            <div className="addDocumentHead">
+              <div>
+                <small>ЖАҢЫ ДОКУМЕНТ</small>
+                <b>Кайсы документти кошосуз?</b>
+              </div>
+
+              <button
+                type="button"
+                className="cancelAddDoc"
+                onClick={()=>{
+                  setAdding(false);
+                  setSelectedDoc('');
+                }}
+              >
+                <X/>
+              </button>
+            </div>
+
+            {availableDocs.length===0 ? (
+              <div className="allDocsAdded">
+                <CheckCircle2/>
+                Бардык документтер кошулган
+              </div>
+            ) : (
+              <>
+                <select
+                  className="documentSelect"
+                  value={selectedDoc}
+                  onChange={e=>setSelectedDoc(e.target.value)}
+                >
+                  <option value="">
+                    Документти тандаңыз
+                  </option>
+
+                  {availableDocs.map(name=>(
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  ref={el=>{
+                    if(selectedDoc){
+                      inputs.current['__new__']=el;
+                    }
+                  }}
+                  type="file"
+                  hidden
+                  onChange={e=>{
+                    if(selectedDoc){
+                      attach(
+                        selectedDoc,
+                        e.target.files?.[0]
+                      );
+                    }
+                  }}
+                />
+
+                <button
+                  type="button"
+                  className="chooseDocumentFile"
+                  disabled={!selectedDoc}
+                  onClick={()=>inputs.current['__new__']?.click()}
+                >
+                  <Paperclip/>
+                  Файлды тандап кошуу
+                </button>
+              </>
+            )}
+
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="addDocumentBtn"
+          onClick={()=>setAdding(v=>!v)}
+        >
+          <Plus/>
+          Добавить документ
+        </button>
 
         <div className="docsFooter">
 
           <span>
-            {Object.keys(drafts).length}
-            {' / '}
-            {DOCS.length}
-            {' документ'}
+            {addedDocs.length} документ кошулган
           </span>
-
 
           <button
             className="primary saveBtn"
@@ -1639,7 +1497,6 @@ function Documents({
         </div>
 
       </div>
-
     </div>
   );
 }
@@ -1677,28 +1534,6 @@ function Modal({
         {children}
 
       </div>
-
-    </div>
-  );
-}
-
-
-// ========================================
-// INFO
-// ========================================
-
-function Info({k,v}){
-
-  return(
-    <div className="infoBox">
-
-      <small>
-        {k}
-      </small>
-
-      <b>
-        {v}
-      </b>
 
     </div>
   );
