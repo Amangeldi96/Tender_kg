@@ -175,9 +175,11 @@ function App(){
   const[resetCode,setResetCode]=useState(
     new URLSearchParams(window.location.search).get('oobCode')||''
   );
-  const[resetMode,setResetMode]=useState(
-    new URLSearchParams(window.location.search).get('mode')==='resetPassword'
-  );
+  const[resetMode,setResetMode]=useState(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const path=window.location.pathname.replace(/\/+$/,'');
+    return params.get('mode')==='resetPassword' || path==='/reset-password';
+  });
   const[resetEmail,setResetEmail]=useState('');
   const[resetVerified,setResetVerified]=useState(false);
 
@@ -674,7 +676,7 @@ function App(){
       setResetMode(false);
       setResetCode('');
       setResetVerified(false);
-      window.history.replaceState({},'',window.location.pathname);
+      window.history.replaceState({},'', '/');
       alert('PIN-код ийгиликтүү жаңыланды. Эми жаңы PIN менен кириңиз.');
     }catch(err){
       console.error(err);
