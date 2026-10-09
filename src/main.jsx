@@ -1692,7 +1692,7 @@ function CompanyAuth({
           <form onSubmit={createAccount} className="authForm">
             <label>
               Компаниянын аты
-              <input name="company" required placeholder="Мисалы: Кел кел"/>
+              <input name="company" required placeholder="Мисалы: АлаТоо групп"/>
             </label>
 
             <label>
