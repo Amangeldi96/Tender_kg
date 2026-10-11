@@ -522,10 +522,12 @@ function App(){
   }
 
   // ТАБЛИЦА СТАКТАЛГАН ТОЛУК СТИЛЬ КОЛОНКАЛАРЫ
-  const tableGridStyle = {
-    gridTemplateColumns: '40px 35px 140px 110px minmax(180px, 1fr) 110px 110px 90px 85px 95px 100px 80px 50px'
-  };
-
+const tableGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: '40px 40px 150px 100px 220px 130px 140px 100px 90px 110px 110px 90px 60px',
+  alignItems: 'center',
+  width: 'max-content'
+};
   return(
     <div className="shell">
 
@@ -822,249 +824,252 @@ function App(){
               )}
 
               {/* ТАБЛИЦА */}
-              <div className="bigTable" style={{minWidth:'1250px'}}>
-                <div className="row head" style={tableGridStyle}>
-                  <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <input
-                      type="checkbox"
-                      checked={filtered.length>0 && selectedIds.length===filtered.length}
-                      onChange={toggleSelectAll}
-                      style={{cursor:'pointer',width:'14px',height:'14px'}}
-                    />
-                  </span>
-                  <span>№</span>
-                  <span>Тендер номер</span>
-                  <span>Мекемелер</span>
-                  <span>Lot аталышы</span>
-                  <span>Суммасы</span>
-                  <span>Төлөнгөн суммалар</span>
-                  <span>ГОПП</span>
-                  <span>ГОИК</span>
-                  <span>Таблица цен</span>
-                  <span>Срок вскрытия</span>
-                  <span>Файлдар</span>
-                  <span style={{textAlign:'center'}}>Оңдоо</span>
-                </div>
+            {/* ТАБЛИЦА БӨЛҮГҮ */}
+<div className="bigTable">
+  {/* ШАПКАСЫ */}
+  <div className="row head" style={tableGridStyle}>
+    <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <input
+        type="checkbox"
+        checked={filtered.length>0 && selectedIds.length===filtered.length}
+        onChange={toggleSelectAll}
+        style={{cursor:'pointer',width:'14px',height:'14px'}}
+      />
+    </span>
+    <span>№</span>
+    <span>ТЕНДЕР НОМЕР</span>
+    <span>МЕКЕМЕЛЕР</span>
+    <span>LOT АТАЛЫШЫ</span>
+    <span>СУММАСЫ</span>
+    <span>ТӨЛӨНГӨН СУММАЛАР</span>
+    <span>ГОПП</span>
+    <span>ГОИК</span>
+    <span>ТАБЛИЦА ЦЕН</span>
+    <span>СРОК ВСКРЫТИЯ</span>
+    <span>ФАЙЛДАР</span>
+    <span style={{textAlign:'center'}}>ОҢДОО</span>
+  </div>
 
-                {filtered.map((t,i)=>{
-                  const editing=editingId===t.id;
-                  const paymentEditing=paymentEditId===t.id;
-                  const isChecked=selectedIds.includes(t.id);
+  {/* СТРОКАЛАРЫ */}
+  {filtered.map((t,i)=>{
+    const editing=editingId===t.id;
+    const paymentEditing=paymentEditId===t.id;
+    const isChecked=selectedIds.includes(t.id);
 
-                  return(
-                    <div
-                      className={'row '+(editing?'editingRow':'')}
-                      key={t.id}
-                      style={tableGridStyle}
-                    >
-                      {/* ЧЕКБОКС */}
-                      <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={()=>toggleSelect(t.id)}
-                          style={{cursor:'pointer',width:'14px',height:'14px'}}
-                        />
-                      </span>
+    return(
+      <div
+        className={'row '+(editing?'editingRow':'')}
+        key={t.id}
+        style={tableGridStyle}
+      >
+        {/* ЧЕКБОКС */}
+        <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={()=>toggleSelect(t.id)}
+            style={{cursor:'pointer',width:'14px',height:'14px'}}
+          />
+        </span>
 
-                      <span>{i+1}</span>
+        <span>{i+1}</span>
 
-                      {/* ТЕНДЕР НОМЕР */}
-                      <span>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            value={editDraft.id}
-                            onChange={e=>changeEdit('id',e.target.value)}
-                          />
-                        ):(
-                          <span className="tenderLink">{t.id}</span>
-                        )}
-                      </span>
+        {/* ТЕНДЕР НОМЕР */}
+        <span>
+          {editing ? (
+            <input
+              className="tableInput"
+              value={editDraft.id}
+              onChange={e=>changeEdit('id',e.target.value)}
+            />
+          ):(
+            <span className="tenderLink">{t.id}</span>
+          )}
+        </span>
 
-                      {/* МЕКЕМЕ */}
-                      <span>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            value={editDraft.org}
-                            onChange={e=>changeEdit('org',e.target.value)}
-                          />
-                        ):(
-                          t.org
-                        )}
-                      </span>
+        {/* МЕКЕМЕ */}
+        <span>
+          {editing ? (
+            <input
+              className="tableInput"
+              value={editDraft.org}
+              onChange={e=>changeEdit('org',e.target.value)}
+            />
+          ):(
+            t.org
+          )}
+        </span>
 
-                      {/* LOT АТАЛЫШЫ */}
-                      <span style={{fontWeight:'500'}}>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            value={editDraft.name}
-                            onChange={e=>changeEdit('name',e.target.value)}
-                          />
-                        ):(
-                          t.name
-                        )}
-                      </span>
+        {/* LOT АТАЛЫШЫ */}
+        <span style={{fontWeight:'500', paddingRight:'10px'}}>
+          {editing ? (
+            <input
+              className="tableInput"
+              value={editDraft.name}
+              onChange={e=>changeEdit('name',e.target.value)}
+            />
+          ):(
+            t.name
+          )}
+        </span>
 
-                      {/* ЖАЛПЫ СУММА */}
-                      <span style={{fontWeight:'700'}}>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            type="number"
-                            min="0"
-                            value={editDraft.sum}
-                            onChange={e=>changeEdit('sum',e.target.value)}
-                          />
-                        ):(
-                          money(t.sum)
-                        )}
-                      </span>
+        {/* ЖАЛПЫ СУММА */}
+        <span style={{fontWeight:'700'}}>
+          {editing ? (
+            <input
+              className="tableInput"
+              type="number"
+              min="0"
+              value={editDraft.sum}
+              onChange={e=>changeEdit('sum',e.target.value)}
+            />
+          ):(
+            money(t.sum)
+          )}
+        </span>
 
-                      {/* ТӨЛӨНГӨН СУММА */}
-                      <span>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            type="number"
-                            min="0"
-                            max={editDraft.sum}
-                            value={editDraft.paid}
-                            onChange={e=>changeEdit('paid',e.target.value)}
-                          />
-                        ):paymentEditing ? (
-                          <div className="paymentEditor">
-                            <input
-                              type="number"
-                              min="0"
-                              max={t.sum}
-                              autoFocus
-                              value={paymentValue}
-                              onChange={e=>setPaymentValue(e.target.value)}
-                              onKeyDown={e=>{
-                                if(e.key==='Enter')savePayment(t);
-                                if(e.key==='Escape')setPaymentEditId(null);
-                              }}
-                            />
-                            <button
-                              className="paymentSave"
-                              title="Сохранить"
-                              onClick={()=>savePayment(t)}
-                            >
-                              <Save/>
-                            </button>
-                          </div>
-                        ):(
-                          <PaidAmount
-                            t={t}
-                            onClick={()=>startPayment(t)}
-                          />
-                        )}
-                      </span>
+        {/* ТӨЛӨНГӨН СУММА */}
+        <span>
+          {editing ? (
+            <input
+              className="tableInput"
+              type="number"
+              min="0"
+              max={editDraft.sum}
+              value={editDraft.paid}
+              onChange={e=>changeEdit('paid',e.target.value)}
+            />
+          ):paymentEditing ? (
+            <div className="paymentEditor">
+              <input
+                type="number"
+                min="0"
+                max={t.sum}
+                autoFocus
+                value={paymentValue}
+                onChange={e=>setPaymentValue(e.target.value)}
+                onKeyDown={e=>{
+                  if(e.key==='Enter')savePayment(t);
+                  if(e.key==='Escape')setPaymentEditId(null);
+                }}
+              />
+              <button
+                className="paymentSave"
+                title="Сохранить"
+                onClick={()=>savePayment(t)}
+              >
+                <Save size={13}/>
+              </button>
+            </div>
+          ):(
+            <PaidAmount
+              t={t}
+              onClick={()=>startPayment(t)}
+            />
+          )}
+        </span>
 
-                      {/* ГОПП */}
-                      <span>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            value={editDraft.gopp}
-                            placeholder="Жок"
-                            onChange={e=>changeEdit('gopp',e.target.value)}
-                          />
-                        ):(
-                          <PayPill
-                            t={t}
-                            type="gopp"
-                            openStatus={()=>setPayStatusModal({t,type:'gopp'})}
-                          />
-                        )}
-                      </span>
+        {/* ГОПП */}
+        <span>
+          {editing ? (
+            <input
+              className="tableInput"
+              value={editDraft.gopp}
+              placeholder="Жок"
+              onChange={e=>changeEdit('gopp',e.target.value)}
+            />
+          ):(
+            <PayPill
+              t={t}
+              type="gopp"
+              openStatus={()=>setPayStatusModal({t,type:'gopp'})}
+            />
+          )}
+        </span>
 
-                      {/* ГОИК */}
-                      <span>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            value={editDraft.goik}
-                            placeholder="Жок"
-                            onChange={e=>changeEdit('goik',e.target.value)}
-                          />
-                        ):(
-                          <PayPill
-                            t={t}
-                            type="goik"
-                            openStatus={()=>setPayStatusModal({t,type:'goik'})}
-                          />
-                        )}
-                      </span>
+        {/* ГОИК */}
+        <span>
+          {editing ? (
+            <input
+              className="tableInput"
+              value={editDraft.goik}
+              placeholder="Жок"
+              onChange={e=>changeEdit('goik',e.target.value)}
+            />
+          ):(
+            <PayPill
+              t={t}
+              type="goik"
+              openStatus={()=>setPayStatusModal({t,type:'goik'})}
+            />
+          )}
+        </span>
 
-                      {/* ТАБЛИЦА ЦЕН */}
-                      <span>
-                        <b
-                          className={
-                            (t.docs||{})['Таблица цен']
-                              ?'pill green'
-                              :'pill gray'
-                          }
-                        >
-                          {(t.docs||{})['Таблица цен']?'✓ Тиркелген':'Жок'}
-                        </b>
-                      </span>
+        {/* ТАБЛИЦА ЦЕН */}
+        <span>
+          <b
+            className={
+              (t.docs||{})['Таблица цен']
+                ?'pill green'
+                :'pill gray'
+            }
+          >
+            {(t.docs||{})['Таблица цен']?'✓ Тиркелген':'Жок'}
+          </b>
+        </span>
 
-                      {/* СРОК */}
-                      <span style={{whiteSpace:'nowrap',fontSize:'11px',color:'#475569'}}>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            type="date"
-                            value={editDraft.date}
-                            onChange={e=>changeEdit('date',e.target.value)}
-                          />
-                        ):(
-                          niceDate(t.date)
-                        )}
-                      </span>
+        {/* СРОК */}
+        <span style={{whiteSpace:'nowrap',fontSize:'12px',color:'#475569'}}>
+          {editing ? (
+            <input
+              className="tableInput"
+              type="date"
+              value={editDraft.date}
+              onChange={e=>changeEdit('date',e.target.value)}
+            />
+          ):(
+            niceDate(t.date)
+          )}
+        </span>
 
-                      {/* ФАЙЛДАР */}
-                      <span>
-                        <button
-                          className="filesBtn"
-                          onClick={()=>{
-                            setActive(t);
-                            setDocsOpen(true);
-                          }}
-                        >
-                          <FolderOpen size={13}/>
-                          ({Object.keys(t.docs||{}).length})
-                        </button>
-                      </span>
+        {/* ФАЙЛДАР */}
+        <span>
+          <button
+            className="filesBtn"
+            onClick={()=>{
+              setActive(t);
+              setDocsOpen(true);
+            }}
+          >
+            <FolderOpen size={13}/>
+            ({Object.keys(t.docs||{}).length})
+          </button>
+        </span>
 
-                      {/* КАРАНДАШ / SAVE */}
-                      <span style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
-                        {editing ? (
-                          <button
-                            className="rowSaveBtn"
-                            title="Сохранить"
-                            onClick={()=>saveEdit(t.id)}
-                          >
-                            <Save size={14}/>
-                          </button>
-                        ):(
-                          <button
-                            className="editBtn"
-                            title="Изменить"
-                            onClick={()=>startEdit(t)}
-                          >
-                            <Pencil size={14}/>
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+        {/* КАРАНДАШ / SAVE */}
+        <span style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
+          {editing ? (
+            <button
+              className="rowSaveBtn"
+              title="Сохранить"
+              onClick={()=>saveEdit(t.id)}
+            >
+              <Save size={14}/>
+            </button>
+          ):(
+            <button
+              className="editBtn"
+              title="Изменить"
+              onClick={()=>startEdit(t)}
+            >
+              <Pencil size={14}/>
+            </button>
+          )}
+        </span>
+      </div>
+    );
+  })}
+</div>
             </div>
           </>
         ) : (

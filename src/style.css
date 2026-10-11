@@ -319,31 +319,37 @@ button.primary:hover{background:#1e55c3}
 }
 
 /* ТАБЛИЦА ТАКТАЛГАН СТИЛИ */
-.bigTable{
-  display:grid;
-  width:100%;
-  overflow-x:auto;
+.panel.tablePanel {
+  overflow-x: auto; 
 }
 
-.bigTable .row{
-  display:grid;
-  align-items:center;
-  padding:0 12px;
-  min-height:58px;
-  border-top:1px solid #edf1f6;
-  font-size:12px;
-  gap:6px;
+.bigTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
 }
 
-.bigTable .row.head{
-  background:#f8fafc;
-  color:#64748b;
-  font-size:10px;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:.3px;
-  min-height:48px;
-  border-top:0;
+.bigTable .row {
+  padding: 0 16px;
+  min-height: 56px;
+  border-top: 1px solid #edf1f6;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.bigTable .row.head {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  min-height: 46px;
+  border-top: 0;
+}
+
+.bigTable .row:hover {
+  background: #f8fafc;
 }
 
 .bigTable .row:not(.head):hover{
