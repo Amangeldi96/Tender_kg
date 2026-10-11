@@ -318,125 +318,42 @@ button.primary:hover{background:#1e55c3}
   font-weight:700;
 }
 
-/* ==========================================
-   TENDERFLOW PRO — TABLE LAYOUT FIX
-   ========================================== */
-
-/* Негизги панель */
+/* ТАБЛИЦА ТАКТАЛГАН СТИЛИ */
 .panel.tablePanel {
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  box-sizing: border-box;
+  overflow-x: auto; 
 }
 
-/* Таблица — горизонталдуу скролл */
 .bigTable {
-  width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
 }
 
-/* Баш сап жана маалымат саптары */
 .bigTable .row {
-  min-width: 1500px;
-  width: 100%;
-
-  min-height: 58px;
-  padding: 0 18px;
-
-  box-sizing: border-box;
-
+  padding: 0 16px;
+  min-height: 56px;
   border-top: 1px solid #edf1f6;
-
   font-size: 12px;
-  color: #172b4d;
-
-  /* Grid колонкалары JSX аркылуу берилет */
+  box-sizing: border-box;
 }
 
-/* Таблицанын баш саптары */
 .bigTable .row.head {
-  min-height: 48px;
-
   background: #f8fafc;
   color: #64748b;
-
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-
-  border-top: none;
-  border-bottom: 1px solid #e5eaf1;
+  letter-spacing: .4px;
+  min-height: 46px;
+  border-top: 0;
 }
 
-/* Маалымат саптары */
-.bigTable .row:not(.head) {
-  background: #ffffff;
-  transition: background 0.15s ease;
+.bigTable .row:hover {
+  background: #f8fafc;
 }
 
-.bigTable .row:not(.head):hover {
-  background: #f5f8ff;
-}
-
-/* Ар бир колонканын мазмуну */
-.bigTable .row > span {
-  min-width: 0;
-  max-width: 100%;
-
-  display: flex;
-  align-items: center;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  box-sizing: border-box;
-}
-
-/* Узун тексттер */
-.bigTable .row > span > input,
-.bigTable .row > span > button {
-  max-width: 100%;
-  min-width: 0;
-}
-
-/* Баш саптардын туура жайгашуусу */
-.bigTable .row.head > span {
-  min-width: 0;
-  white-space: normal;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-/* Чекбокс */
-.bigTable input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-/* Горизонталдуу скроллдун дизайны */
-.bigTable::-webkit-scrollbar {
-  height: 8px;
-}
-
-.bigTable::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.bigTable::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.bigTable::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.bigTable .row:not(.head):hover{
+  background:#f8fafc;
 }
 
 .bigTable .row.editingRow{
