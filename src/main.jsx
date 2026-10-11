@@ -102,8 +102,8 @@ const persist=v=>
 
 const niceDate=v=>v||'—';
 
-const CLOUDINARY_CLOUD_NAME='tender';
-const CLOUDINARY_UPLOAD_PRESET='tender';
+const CLOUDINARY_CLOUD_NAME = 'dqzgtlvlu';
+const CLOUDINARY_UPLOAD_PRESET = 'tender';
 
 async function uploadToCloudinary(file,tenderId,docName){
   const form=new FormData();
