@@ -33,8 +33,7 @@ import{
   ArrowRight,
   ChevronDown,
   ChevronRight,
-  User,
-  Building2
+  User
 }from'lucide-react';
 import'./style.css';
 
@@ -166,6 +165,9 @@ function App(){
   const[page,setPage]=useState('tenders');
   const[payStatusModal,setPayStatusModal]=useState(null);
 
+  // Менюдагы аткаруучулардын аккордеон абалын сактоо
+  const[openExecutorsNav,setOpenExecutorsNav]=useState({});
+
   const[user,setUser]=useState(null);
   const[authReady,setAuthReady]=useState(false);
   const[companies,setCompanies]=useState(readCompanyCache);
@@ -272,6 +274,17 @@ function App(){
     ),
     [tenders]
   );
+
+  // Аткаруучулар боюнча топко бөлүү (меню үчүн)
+  const executorsGroup=useMemo(()=>{
+    const map={};
+    tenders.forEach(t=>{
+      const ex=t.executor||'Аткаруучу жок';
+      if(!map[ex]) map[ex]=[];
+      map[ex].push(t);
+    });
+    return map;
+  },[tenders]);
 
   const update=(id,patch)=>{
     const a=tenders.map(t=>
@@ -645,6 +658,7 @@ function App(){
   return(
     <div className="shell">
 
+      {/* СОЛ ЖАКТАГЫ КАПТАЛ МЕНЮ */}
       <aside>
         <div className="brand">
           <div className="logo">TF</div>
@@ -662,6 +676,43 @@ function App(){
             <LayoutDashboard/>
             Тендерлер
           </a>
+
+          {/* МЕНЮДАГЫ АТКАРУУЧУЛАР АККОРДЕОНУ */}
+          <div className="navAccordionSection">
+            <div className="navAccordionSectionTitle">АТКАРУУЧУЛАР</div>
+            {Object.entries(executorsGroup).map(([execName, execTenders])=>{
+              const isOpen=!!openExecutorsNav[execName];
+              return(
+                <div className="navAccordionItem" key={execName}>
+                  <button
+                    type="button"
+                    className="navAccordionHeader"
+                    onClick={()=>setOpenExecutorsNav(prev=>({...prev,[execName]:!prev[execName]}))}
+                  >
+                    <span className="navExecName"><User size={14}/> {execName}</span>
+                    {isOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                  </button>
+
+                  {isOpen&&(
+                    <div className="navAccordionSubList">
+                      {execTenders.map(t=>(
+                        <div
+                          key={t.id}
+                          className="navSubTenderItem"
+                          onClick={()=>{
+                            setPage('tenders');
+                            setQ(t.name); // Басканда издөөгө аты түшүп же тандалып калат
+                          }}
+                        >
+                          • {t.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
           <a
             className={page==='files'?'on':''}
@@ -709,7 +760,7 @@ function App(){
                   <input
                     value={q}
                     onChange={e=>setQ(e.target.value)}
-                    placeholder="Тендер номер, мекеме, аткаруучу..."
+                    placeholder="Тендер номер, мекеме, товар..."
                   />
                 </div>
 
@@ -765,7 +816,6 @@ function App(){
                   <span>№</span>
                   <span>тендер номер</span>
                   <span>Мекемелер</span>
-                  <span>Аткаруучу</span>
                   <span>Lot аталышы</span>
                   <span>суммасы</span>
                   <span>төлөнгөн суммалар</span>
@@ -811,20 +861,6 @@ function App(){
                           />
                         ):(
                           t.org
-                        )}
-                      </span>
-
-                      {/* АТКАРУУЧУ */}
-                      <span>
-                        {editing ? (
-                          <input
-                            className="tableInput"
-                            value={editDraft.executor}
-                            placeholder="Ким аткарды"
-                            onChange={e=>changeEdit('executor',e.target.value)}
-                          />
-                        ):(
-                          <span className="executorTag">{t.executor||'Көрсөтүлгөн эмес'}</span>
                         )}
                       </span>
 
@@ -1011,7 +1047,7 @@ function App(){
         )}
       </main>
 
-      {/* ТЕНДЕР КОШУУ МОДАЛКАСЫ */}
+      {/* ТЕНДЕР КОШУУ МОДАЛКАСЫ (АТКАРУУЧУ МЕНЕН) */}
       {addOpen&&
         <Modal close={()=>setAddOpen(false)}>
           <form onSubmit={add}>
@@ -1450,24 +1486,12 @@ function PaymentStatusModal({t,type,update,close}){
 }
 
 // ========================================
-// ФАЙЛДАР БӨЛҮМҮ (ГАРМОШКА / АККОРДЕОН СТИЛДЕ)
+// ФАЙЛДАР БӨЛҮМҮ (ГАРМОШКА СТИЛДЕ ДОКУМЕНТТЕР ҮЧҮН)
 // ========================================
 
 function FilesPage({tenders,openDocs}){
-  // Аткаруучулар боюнча топтоо
-  const executorsMap={};
-  tenders.forEach(t=>{
-    const exec=t.executor||'Аткаруучу жок';
-    if(!executorsMap[exec]) executorsMap[exec]=[];
-    executorsMap[exec].push(t);
-  });
-
-  const[openExecutors,setOpenExecutors]=useState({});
+  // Файлдар бөлүмүндө дароо тендерлердин өзүнчө гармошкасы
   const[openTenderDocs,setOpenTenderDocs]=useState({});
-
-  const toggleExecutor=exec=>{
-    setOpenExecutors(prev=>({...prev,[exec]:!prev[exec]}));
-  };
 
   const toggleTenderDocs=tenderId=>{
     setOpenTenderDocs(prev=>({...prev,[tenderId]:!prev[tenderId]}));
@@ -1484,7 +1508,7 @@ function FilesPage({tenders,openDocs}){
         <div>
           <small>ДОКУМЕНТТЕР БАЗАСЫ</small>
           <h1>Файлдар</h1>
-          <p>Бардык тендерлердин документтери аткаруучулар боюнча гармошка стилинде</p>
+          <p>Ар бир тендердин документтери гармошка стилинде</p>
         </div>
       </header>
 
@@ -1500,106 +1524,75 @@ function FilesPage({tenders,openDocs}){
       <div className="panel tablePanel filesPagePanel">
         <div className="panelhead">
           <div>
-            <small>АТКАРУУЧУЛАР ЖАНА ДОКУМЕНТТЕР</small>
-            <h2>Тендерлер жана документтер (Гармошка)</h2>
+            <small>ТЕНДЕРЛЕР ЖАНА ДОКУМЕНТТЕР</small>
+            <h2>Документтер (Гармошка)</h2>
           </div>
-          <span className="count">{Object.keys(executorsMap).length} аткаруучу</span>
+          <span className="count">{tenders.length} тендер</span>
         </div>
 
-        {Object.keys(executorsMap).length===0 ? (
+        {tenders.length===0 ? (
           <div className="docsEmpty filesPageEmpty">
             <FolderOpen/>
-            <b>Азырынча аткаруучулар жок</b>
-            <small>Тендер кошулганда аткаруучунун аты жазылат.</small>
+            <b>Азырынча тендер жок</b>
           </div>
         ) : (
           <div className="accordionContainer">
-            {Object.entries(executorsMap).map(([execName, execTenders])=>{
-              const isExecOpen=!!openExecutors[execName];
+            {tenders.map(tender=>{
+              const isTenderOpen=!!openTenderDocs[tender.id];
+              const docEntries=Object.entries(tender.docs||{});
 
               return(
-                <div className="accordionGroup" key={execName}>
-                  {/* Аткаруучунун баскычы (Аккордеон 1-деңгээл) */}
+                <div className="tenderAccordionSubGroup" key={tender.id}>
                   <button
                     type="button"
-                    className="accordionHeader"
-                    onClick={()=>toggleExecutor(execName)}
+                    className="tenderAccordionHeader"
+                    onClick={()=>toggleTenderDocs(tender.id)}
                   >
-                    <div className="accordionHeaderTitle">
-                      <User size={18}/>
-                      <b>{execName}</b>
-                      <span className="execBadge">{execTenders.length} тендер</span>
+                    <div className="tenderAccordionTitleText">
+                      <span>{tender.name}</span>
+                      <small>({tender.org} — {money(tender.sum)} | Аткаруучу: {tender.executor||'Жок'})</small>
                     </div>
-                    {isExecOpen ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}
+                    <div className="tenderAccordionMeta">
+                      <span className="fileCountPill">
+                        {docEntries.length} документ
+                      </span>
+                      {isTenderOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+                    </div>
                   </button>
 
-                  {/* Аткаруучунун тендерлери */}
-                  {isExecOpen&&(
-                    <div className="accordionBody">
-                      {execTenders.map(tender=>{
-                        const isTenderOpen=!!openTenderDocs[tender.id];
-                        const docEntries=Object.entries(tender.docs||{});
+                  {isTenderOpen&&(
+                    <div className="tenderAccordionDocsList">
+                      {docEntries.length===0 ? (
+                        <div className="noDocsInline">Бул тендерге документ тиркеле элек</div>
+                      ) : (
+                        docEntries.map(([docTypeName, fileObj])=>(
+                          <div className="fileAccordionRow" key={docTypeName}>
+                            <div className="fileIconSmall"><FileText size={14}/></div>
+                            <div className="fileInfoSmall">
+                              <b>{docTypeName}</b>
+                              <small>{fileObj?.name||'Файл'}</small>
+                            </div>
 
-                        return(
-                          <div className="tenderAccordionSubGroup" key={tender.id}>
-                            {/* Тендердин аты (Номерлери чыкпайт, аты гана чыгат) */}
                             <button
                               type="button"
-                              className="tenderAccordionHeader"
-                              onClick={()=>toggleTenderDocs(tender.id)}
+                              className="downloadBtn"
+                              onClick={()=>downloadCloudFile(fileObj?.url,fileObj?.name)}
+                              disabled={!fileObj?.url}
                             >
-                              <div className="tenderAccordionTitleText">
-                                <Building2 size={16}/>
-                                <span>{tender.name}</span>
-                                <small>({tender.org} — {money(tender.sum)})</small>
-                              </div>
-                              <div className="tenderAccordionMeta">
-                                <span className="fileCountPill">
-                                  {docEntries.length} документ
-                                </span>
-                                {isTenderOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
-                              </div>
+                              <Download size={14}/>
+                              Скачать
                             </button>
 
-                            {/* Ар бир тендердин өзүнчө документтери (Гармошка 2-деңгээл) */}
-                            {isTenderOpen&&(
-                              <div className="tenderAccordionDocsList">
-                                {docEntries.length===0 ? (
-                                  <div className="noDocsInline">Бул тендерге документ тиркеле элек</div>
-                                ) : (
-                                  docEntries.map(([docTypeName, fileObj])=>(
-                                    <div className="fileAccordionRow" key={docTypeName}>
-                                      <div className="fileIconSmall"><FileText size={14}/></div>
-                                      <div className="fileInfoSmall">
-                                        <b>{docTypeName}</b>
-                                        <small>{fileObj?.name||'Файл'}</small>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        className="downloadBtn"
-                                        onClick={()=>downloadCloudFile(fileObj?.url,fileObj?.name)}
-                                        disabled={!fileObj?.url}
-                                      >
-                                        <Download size={14}/>
-                                        Скачать
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        className="filesBtn"
-                                        onClick={()=>openDocs(tender)}
-                                      >
-                                        Ачуу
-                                      </button>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              className="filesBtn"
+                              onClick={()=>openDocs(tender)}
+                            >
+                              Ачуу
+                            </button>
                           </div>
-                        );
-                      })}
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -1664,10 +1657,10 @@ function Documents({
           <X/>
         </button>
 
-        <small>АТКАРУУЧУ: {t.executor||'Жок'} | ТЕНДЕР: {t.name}</small>
+        <small>ТЕНДЕР: {t.name} (АТКАРУУЧУ: {t.executor||'Жок'})</small>
         <h2>Документтер</h2>
         <p className="modalSub">
-          Бул жерде тендерге кошулган документтер гармошка стилинде башкарылат.
+          Бул жерде тендерге кошулган документтер башкарылат.
         </p>
 
         <div className="docList">
@@ -1840,6 +1833,7 @@ function Stat({
   icon,
   label,
   value
+  
 }){
   return(
     <div className="stat">
