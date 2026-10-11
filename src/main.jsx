@@ -524,10 +524,26 @@ function App(){
   // ТАБЛИЦА СТАКТАЛГАН ТОЛУК СТИЛЬ КОЛОНКАЛАРЫ
 const tableGridStyle = {
   display: 'grid',
-  gridTemplateColumns: '38px 32px minmax(130px, auto) minmax(90px, auto) 1fr minmax(110px, auto) minmax(120px, auto) minmax(90px, auto) minmax(80px, auto) minmax(100px, auto) minmax(100px, auto) minmax(85px, auto) 50px',
+  gridTemplateColumns: `
+    38px
+    32px
+    minmax(145px, 1.3fr)
+    minmax(90px, 0.8fr)
+    minmax(180px, 2fr)
+    minmax(125px, 1.1fr)
+    minmax(135px, 1.2fr)
+    minmax(105px, 0.9fr)
+    minmax(90px, 0.8fr)
+    minmax(105px, 0.9fr)
+    minmax(115px, 1fr)
+    minmax(90px, 0.8fr)
+    55px
+  `.replace(/\s+/g, ' ').trim(),
   alignItems: 'center',
+  columnGap: '12px',
   width: '100%',
-  gap: '12px'
+  minWidth: '1500px',
+  boxSizing: 'border-box'
 };
   return(
     <div className="shell">
