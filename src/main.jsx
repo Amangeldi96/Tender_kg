@@ -521,6 +521,11 @@ function App(){
     );
   }
 
+  // ТАБЛИЦА СТАКТАЛГАН ТОЛУК СТИЛЬ КОЛОНКАЛАРЫ
+  const tableGridStyle = {
+    gridTemplateColumns: '40px 35px 140px 110px minmax(180px, 1fr) 110px 110px 90px 85px 95px 100px 80px 50px'
+  };
+
   return(
     <div className="shell">
 
@@ -546,7 +551,6 @@ function App(){
             Тендерлер
           </a>
 
-          {/* КАПТАЛ МЕНЮДАГЫ АТКАРУУЧУЛАР АККОРДЕОНУ */}
           <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
             <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
               АТКАРУУЧУЛАР
@@ -742,7 +746,7 @@ function App(){
                 </div>
               </div>
 
-              {/* ТАНДАЛГАН АТКАРУУЧУЛАР КӨП БОЛГОНДО АР КАЙСЫ АТКАРУУЧУ БОЮНЧА ГАРМОШКА (1 ЖЕ АНДАН КӨП БОЛСО ЧЫГАТ) */}
+              {/* ГАРМОШКА - СЕКЦИЯСЫ ТАНДАЛГАН ТЕНДЕРЛЕР БАР БОЛГОНДО ГАНА КӨРҮНӨТ */}
               {selectedExecutorsSet.length>0 && (
                 <div style={{
                   margin:'12px 16px 16px 16px',
@@ -817,9 +821,9 @@ function App(){
                 </div>
               )}
 
-              {/* ТАБЛИЦА (МЕКЕМЕ МЕНЕН LOT АТАЛЫШЫНЫН АРАСЫН ТУУРАЛАП, БААРДЫК КОЛОНКАЛАР ТАК БӨЛҮНДҮ) */}
-              <div className="bigTable" style={{minWidth:'1100px'}}>
-                <div className="row head" style={{gridTemplateColumns:'36px 40px 115px 95px minmax(130px,1.2fr) 95px 105px 75px 75px 85px 85px 70px 50px'}}>
+              {/* ТАБЛИЦА */}
+              <div className="bigTable" style={{minWidth:'1250px'}}>
+                <div className="row head" style={tableGridStyle}>
                   <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                     <input
                       type="checkbox"
@@ -829,11 +833,11 @@ function App(){
                     />
                   </span>
                   <span>№</span>
-                  <span>тендер номер</span>
+                  <span>Тендер номер</span>
                   <span>Мекемелер</span>
                   <span>Lot аталышы</span>
-                  <span>суммасы</span>
-                  <span>төлөнгөн суммалар</span>
+                  <span>Суммасы</span>
+                  <span>Төлөнгөн суммалар</span>
                   <span>ГОПП</span>
                   <span>ГОИК</span>
                   <span>Таблица цен</span>
@@ -851,9 +855,9 @@ function App(){
                     <div
                       className={'row '+(editing?'editingRow':'')}
                       key={t.id}
-                      style={{gridTemplateColumns:'36px 40px 115px 95px minmax(130px,1.2fr) 95px 105px 75px 75px 85px 85px 70px 50px'}}
+                      style={tableGridStyle}
                     >
-                      {/* ЧЕКБОКС (ЖЕКЕ-ЖЕКЕ ТАНДОО ҮЧҮН ТУУРА ЖАЙГАШТЫ) */}
+                      {/* ЧЕКБОКС */}
                       <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <input
                           type="checkbox"
@@ -892,7 +896,7 @@ function App(){
                       </span>
 
                       {/* LOT АТАЛЫШЫ */}
-                      <span>
+                      <span style={{fontWeight:'500'}}>
                         {editing ? (
                           <input
                             className="tableInput"
@@ -905,7 +909,7 @@ function App(){
                       </span>
 
                       {/* ЖАЛПЫ СУММА */}
-                      <span>
+                      <span style={{fontWeight:'700'}}>
                         {editing ? (
                           <input
                             className="tableInput"
@@ -1010,7 +1014,7 @@ function App(){
                       </span>
 
                       {/* СРОК */}
-                      <span>
+                      <span style={{whiteSpace:'nowrap',fontSize:'11px',color:'#475569'}}>
                         {editing ? (
                           <input
                             className="tableInput"

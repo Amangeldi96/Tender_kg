@@ -318,7 +318,7 @@ button.primary:hover{background:#1e55c3}
   font-weight:700;
 }
 
-/* БИГ ТАБЛИЦА (КОЛОНКАЛАР ТАК ЖАЙГАШТЫРУУ ҮЧҮН) */
+/* ТАБЛИЦА ТАКТАЛГАН СТИЛИ */
 .bigTable{
   display:grid;
   width:100%;
@@ -328,25 +328,26 @@ button.primary:hover{background:#1e55c3}
 .bigTable .row{
   display:grid;
   align-items:center;
-  padding:0 16px;
-  min-height:54px;
+  padding:0 12px;
+  min-height:58px;
   border-top:1px solid #edf1f6;
   font-size:12px;
+  gap:6px;
 }
 
 .bigTable .row.head{
-  background:#f7f9fd;
-  color:#7a8ba3;
+  background:#f8fafc;
+  color:#64748b;
   font-size:10px;
   font-weight:800;
   text-transform:uppercase;
-  letter-spacing:.35px;
-  min-height:46px;
+  letter-spacing:.3px;
+  min-height:48px;
   border-top:0;
 }
 
 .bigTable .row:not(.head):hover{
-  background:#fbfcff;
+  background:#f8fafc;
 }
 
 .bigTable .row.editingRow{
@@ -355,7 +356,7 @@ button.primary:hover{background:#1e55c3}
 
 .tableInput{
   width:100%;
-  padding:6px 8px;
+  padding:5px 7px;
   border:1px solid #cbd5e1;
   border-radius:6px;
   font-size:12px;
@@ -373,12 +374,13 @@ button.primary:hover{background:#1e55c3}
 
 .paidAmount{
   border:0;
-  padding:6px 10px;
+  padding:6px 8px;
   border-radius:8px;
   font-size:11px;
   font-weight:700;
   cursor:pointer;
-  text-align:left;
+  text-align:center;
+  white-space:nowrap;
 }
 .paidAmount.red{background:#ffebeb;color:#cf4b4b}
 .paidAmount.yellow{background:#fff5d9;color:#a77718}
@@ -387,10 +389,12 @@ button.primary:hover{background:#1e55c3}
 .pill{
   border:0;
   border-radius:8px;
-  padding:6px 10px;
+  padding:6px 8px;
   font-size:11px;
   font-weight:700;
   display:inline-block;
+  white-space:nowrap;
+  text-align:center;
 }
 .pill.green{background:#e6f8ef;color:#198251}
 .pill.red{background:#ffebeb;color:#cf4b4b}
@@ -401,14 +405,15 @@ button.primary:hover{background:#1e55c3}
   background:#eef4ff;
   border:0;
   color:#3369c7;
-  padding:6px 10px;
+  padding:6px 8px;
   border-radius:8px;
-  font-size:12px;
+  font-size:11px;
   font-weight:700;
   display:inline-flex;
   align-items:center;
-  gap:5px;
+  gap:4px;
   cursor:pointer;
+  white-space:nowrap;
 }
 .filesBtn:hover{background:#dfeaee}
 
@@ -444,8 +449,8 @@ button.primary:hover{background:#1e55c3}
   gap:4px;
 }
 .paymentEditor input{
-  width:85px;
-  padding:5px 6px;
+  width:75px;
+  padding:5px;
   border:1px solid #cbd5e1;
   border-radius:6px;
   font-size:12px;
@@ -454,14 +459,14 @@ button.primary:hover{background:#1e55c3}
   background:#e6f8ef;
   border:0;
   color:#198251;
-  padding:6px;
+  padding:5px;
   border-radius:6px;
   display:grid;
   place-items:center;
   cursor:pointer;
 }
 
-/* МОДАЛКА ЖАНА АУТЕНТИФИКАЦИЯ */
+/* МОДАЛКАЛАР ЖАНА АУТЕНТИФИКАЦИЯ */
 .overlay{
   position:fixed;
   inset:0;
