@@ -524,9 +524,10 @@ function App(){
   // ТАБЛИЦА СТАКТАЛГАН ТОЛУК СТИЛЬ КОЛОНКАЛАРЫ
 const tableGridStyle = {
   display: 'grid',
-  gridTemplateColumns: '40px 40px 150px 100px 220px 130px 140px 100px 90px 110px 110px 90px 60px',
+  gridTemplateColumns: '38px 32px minmax(130px, auto) minmax(90px, auto) 1fr minmax(110px, auto) minmax(120px, auto) minmax(90px, auto) minmax(80px, auto) minmax(100px, auto) minmax(100px, auto) minmax(85px, auto) 50px',
   alignItems: 'center',
-  width: 'max-content'
+  width: '100%',
+  gap: '12px'
 };
   return(
     <div className="shell">
