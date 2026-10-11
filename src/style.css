@@ -320,12 +320,13 @@ button.primary:hover{background:#1e55c3}
 
 /* ТАБЛИЦА ТАКТАЛГАН СТИЛИ */
 .panel.tablePanel {
-  overflow-x: auto; 
+  overflow-x: auto;
+  width: 100%;
 }
 
 .bigTable {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 1100px; /* Кичине экрандарда скролл чыгуусу үчүн */
   border-collapse: collapse;
 }
 
@@ -352,8 +353,11 @@ button.primary:hover{background:#1e55c3}
   background: #f8fafc;
 }
 
-.bigTable .row:not(.head):hover{
-  background:#f8fafc;
+/* ТЕКСТТЕР МЕНЕН БАСКЫЧТАРДЫН КЫСЫЛЫП КЕТИШИНЕН КОРГОО */
+.bigTable .row > span {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
 }
 
 .bigTable .row.editingRow{
