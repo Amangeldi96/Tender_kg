@@ -296,6 +296,13 @@ function App(){
     return Array.from(set);
   },[selectedTenders]);
 
+  // Таблица аталышы үчүн аткаруучулардын атын аныктоо
+  const headerExecutorTitle=useMemo(()=>{
+    if(selectedExecutor) return selectedExecutor;
+    if(selectedExecutorsSet.length>0) return selectedExecutorsSet.join(', ');
+    return null;
+  },[selectedExecutor,selectedExecutorsSet]);
+
   const total=useMemo(
     ()=>tenders.reduce(
       (a,b)=>a+Number(b.sum||0),
@@ -308,6 +315,14 @@ function App(){
     setSelectedIds(prev=>
       prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]
     );
+  };
+
+  const toggleSelectAll=()=>{
+    if(selectedIds.length===filtered.length){
+      setSelectedIds([]);
+    }else{
+      setSelectedIds(filtered.map(t=>t.id));
+    }
   };
 
   const deleteSelected=()=>{
@@ -529,7 +544,7 @@ function App(){
             Тендерлер
           </a>
 
-          {/* КАПТАЛ МЕНЮДАГЫ АТКАРУУЧУЛАР АККОРДЕОНУ */}
+          {/* КАПТАЛ МЕНЮДАГЫ АТКАРУУЧУЛАР АГКОРДЕОНУ */}
           <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
             <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
               АТКАРУУЧУЛАР
@@ -694,7 +709,7 @@ function App(){
                 <div>
                   <small>КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР</small>
                   <h2>
-                    Таблица {selectedExecutor ? `— ${selectedExecutor}` : ''}
+                    Таблица {headerExecutorTitle ? `— ${headerExecutorTitle}` : ''}
                   </h2>
                 </div>
 
@@ -707,14 +722,15 @@ function App(){
                         background:'#ef4444',
                         color:'#fff',
                         border:'none',
-                        padding:'6px 14px',
-                        borderRadius:'6px',
+                        padding:'8px 16px',
+                        borderRadius:'8px',
                         display:'flex',
                         alignItems:'center',
                         gap:'6px',
                         cursor:'pointer',
                         fontWeight:'600',
-                        fontSize:'13px'
+                        fontSize:'13px',
+                        boxShadow:'0 2px 8px rgba(239,68,68,0.3)'
                       }}
                     >
                       <Trash2 size={15}/> Өчүрүү ({selectedIds.length})
@@ -724,56 +740,91 @@ function App(){
                 </div>
               </div>
 
-              {/* Эгер белгиленгендер арасында ар кайсы аткаруучулар болсо гармошка болуп чыгат */}
+              {/* СТИЛДҮҮ ГАРМОШКА СЕКЦИЯСЫ (АР КАЙСЫ АТКАРУУЧУЛАР БӨЛҮНГӨНДӨ) */}
               {selectedExecutorsSet.length>1 && (
-                <div style={{padding:'12px 16px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
-                  <div style={{fontSize:'12px',fontWeight:'700',color:'#64748b',marginBottom:'8px'}}>
-                    ТАНДАЛГАН АТКАРУУЧУЛАР СЕКЦИЯСЫ (ГАРМОШКА)
+                <div style={{
+                  margin:'12px 16px 16px 16px',
+                  padding:'16px',
+                  background:'rgba(241, 245, 249, 0.8)',
+                  borderRadius:'12px',
+                  border:'1px solid #e2e8f0',
+                  boxShadow:'0 2px 6px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{fontSize:'11px',fontWeight:'800',color:'#64748b',marginBottom:'10px',letterSpacing:'0.5px'}}>
+                    ТАНДАЛГАН АТКАРУУЧУЛАР (ГАРМОШКА)
                   </div>
-                  {selectedExecutorsSet.map(execName=>{
-                    const isOpen=!!openAccordionMap[execName];
-                    const execTenders=selectedTenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===execName);
+                  <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                    {selectedExecutorsSet.map(execName=>{
+                      const isOpen=!!openAccordionMap[execName];
+                      const execTenders=selectedTenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===execName);
 
-                    return(
-                      <div key={execName} style={{marginBottom:'6px',border:'1px solid #cbd5e1',borderRadius:'6px',overflow:'hidden'}}>
-                        <button
-                          type="button"
-                          onClick={()=>setOpenAccordionMap(prev=>({...prev,[execName]:!prev[execName]}))}
-                          style={{
-                            width:'100%',
-                            padding:'8px 12px',
-                            background:'#fff',
-                            border:'none',
-                            display:'flex',
-                            justifyContent:'space-between',
-                            alignItems:'center',
-                            cursor:'pointer',
-                            fontWeight:'600',
-                            fontSize:'13px'
-                          }}
-                        >
-                          <span><User size={14} style={{verticalAlign:'middle',marginRight:'4px'}}/> {execName} ({execTenders.length})</span>
-                          {isOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
-                        </button>
+                      return(
+                        <div key={execName} style={{
+                          border:'1px solid #cbd5e1',
+                          borderRadius:'8px',
+                          overflow:'hidden',
+                          background:'#ffffff'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={()=>setOpenAccordionMap(prev=>({...prev,[execName]:!prev[execName]}))}
+                            style={{
+                              width:'100%',
+                              padding:'10px 14px',
+                              background:'#ffffff',
+                              border:'none',
+                              display:'flex',
+                              justifyContent:'space-between',
+                              alignItems:'center',
+                              cursor:'pointer',
+                              fontWeight:'600',
+                              fontSize:'13px',
+                              color:'var(--text-main)'
+                            }}
+                          >
+                            <span style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                              <User size={15} color="#475569"/>
+                              <b>{execName}</b>
+                              <span style={{
+                                background:'#e2e8f0',
+                                padding:'2px 8px',
+                                borderRadius:'12px',
+                                fontSize:'11px',
+                                color:'#475569'
+                              }}>
+                                {execTenders.length} тендер
+                              </span>
+                            </span>
+                            {isOpen ? <ChevronDown size={15} color="#475569"/> : <ChevronRight size={15} color="#475569"/>}
+                          </button>
 
-                        {isOpen&&(
-                          <div style={{padding:'8px 12px',background:'#f1f5f9',fontSize:'12px'}}>
-                            {execTenders.map(t=>(
-                              <div key={t.id} style={{padding:'4px 0',borderBottom:'1px dashed #cbd5e1'}}>
-                                <b>№ {t.id}</b> — {t.name} ({money(t.sum)})
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          {isOpen&&(
+                            <div style={{padding:'10px 14px',background:'#f8fafc',borderTop:'1px solid #f1f5f9',fontSize:'12px'}}>
+                              {execTenders.map(t=>(
+                                <div key={t.id} style={{padding:'6px 0',display:'flex',justifyContent:'space-between',borderBottom:'1px dashed #e2e8f0'}}>
+                                  <span><b>№ {t.id}</b> — {t.name} ({t.org})</span>
+                                  <b style={{color:'var(--primary)'}}>{money(t.sum)}</b>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
               <div className="bigTable">
                 <div className="row head">
-                  <span style={{width:'40px',textAlign:'center'}}>✓</span>
+                  <span style={{width:'32px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <input
+                      type="checkbox"
+                      checked={filtered.length>0 && selectedIds.length===filtered.length}
+                      onChange={toggleSelectAll}
+                      style={{cursor:'pointer',width:'15px',height:'15px'}}
+                    />
+                  </span>
                   <span>№</span>
                   <span>тендер номер</span>
                   <span>Мекемелер</span>
@@ -785,7 +836,7 @@ function App(){
                   <span>Таблица цен</span>
                   <span>Срок вскрытия</span>
                   <span>Файлдар</span>
-                  <span></span>
+                  <span style={{textAlign:'center'}}>Оңдоо</span>
                 </div>
 
                 {filtered.map((t,i)=>{
@@ -798,7 +849,8 @@ function App(){
                       className={'row '+(editing?'editingRow':'')}
                       key={t.id}
                     >
-                      <span style={{width:'40px',textAlign:'center'}}>
+                      {/* ВЫДЕЛИТЬ ЧЕКБОКСУ */}
+                      <span style={{width:'32px',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <input
                           type="checkbox"
                           checked={isChecked}
@@ -981,8 +1033,8 @@ function App(){
                         </button>
                       </span>
 
-                      {/* ИЗМЕНИТЬ / SAVE */}
-                      <span>
+                      {/* КАРАНДАШ / SAVE (АКЫРКЫ ТИЛКЕДЕ ӨЗ ОРДУНДА) */}
+                      <span style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
                         {editing ? (
                           <button
                             className="rowSaveBtn"
