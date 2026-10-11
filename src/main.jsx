@@ -165,6 +165,9 @@ function App(){
   const[page,setPage]=useState('tenders');
   const[payStatusModal,setPayStatusModal]=useState(null);
 
+  const[selectedExecutor,setSelectedExecutor]=useState(null);
+  const[selectedIds,setSelectedIds]=useState([]);
+  const[openAccordionMap,setOpenAccordionMap]=useState({});
   const[openExecutorsNav,setOpenExecutorsNav]=useState({});
 
   const[user,setUser]=useState(null);
@@ -260,20 +263,6 @@ function App(){
   const[editingId,setEditingId]=useState(null);
   const[editDraft,setEditDraft]=useState(null);
 
-  const filtered=tenders.filter(t=>
-    (t.id+t.org+t.name+(t.executor||''))
-      .toLowerCase()
-      .includes(q.toLowerCase())
-  );
-
-  const total=useMemo(
-    ()=>tenders.reduce(
-      (a,b)=>a+Number(b.sum||0),
-      0
-    ),
-    [tenders]
-  );
-
   const executorsGroup=useMemo(()=>{
     const map={};
     tenders.forEach(t=>{
@@ -283,6 +272,58 @@ function App(){
     });
     return map;
   },[tenders]);
+
+  const filtered=useMemo(()=>{
+    return tenders.filter(t=>{
+      const matchesQuery=(t.id+t.org+t.name+(t.executor||''))
+        .toLowerCase()
+        .includes(q.toLowerCase());
+
+      if(selectedExecutor){
+        return matchesQuery && (t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor;
+      }
+      return matchesQuery;
+    });
+  },[tenders,q,selectedExecutor]);
+
+  const selectedTenders=useMemo(()=>{
+    return tenders.filter(t=>selectedIds.includes(t.id));
+  },[tenders,selectedIds]);
+
+  const selectedExecutorsSet=useMemo(()=>{
+    const set=new Set();
+    selectedTenders.forEach(t=>set.add(t.executor||'Аткаруучу көрсөтүлгөн эмес'));
+    return Array.from(set);
+  },[selectedTenders]);
+
+  const total=useMemo(
+    ()=>tenders.reduce(
+      (a,b)=>a+Number(b.sum||0),
+      0
+    ),
+    [tenders]
+  );
+
+  const toggleSelect=id=>{
+    setSelectedIds(prev=>
+      prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]
+    );
+  };
+
+  const deleteSelected=()=>{
+    if(selectedIds.length===0)return;
+    if(!window.confirm(`Тандалган ${selectedIds.length} тендерди өчүрүүнү каалайсызбы?`))return;
+
+    const a=tenders.filter(t=>!selectedIds.includes(t.id));
+    setTenders(a);
+    persist(a);
+
+    selectedIds.forEach(id=>{
+      deleteDoc(doc(db,'tenders',id)).catch(err=>console.error('Delete error:',err));
+    });
+
+    setSelectedIds([]);
+  };
 
   const update=(id,patch)=>{
     const a=tenders.map(t=>
@@ -305,18 +346,6 @@ function App(){
         ?{...x,...patch}
         :x
     );
-  };
-
-  const remove=id=>{
-    const a=tenders.filter(
-      t=>t.id!==id
-    );
-
-    setTenders(a);
-    persist(a);
-    deleteDoc(doc(db,'tenders',id))
-      .catch(err=>console.error('Firebase delete error:',err));
-    setActive(null);
   };
 
   function add(e){
@@ -440,190 +469,12 @@ function App(){
     setEditDraft(null);
   };
 
-  const createCompanyAccount=async e=>{
-    e.preventDefault();
-    setAuthError('');
-
-    const f=new FormData(e.currentTarget);
-    const company=String(f.get('company')||'').trim();
-    const email=String(f.get('email')||'').trim().toLowerCase();
-    const pin=String(f.get('pin')||'').trim();
-
-    if(!company || !email){
-      setAuthError('Компаниянын атын жана email жазыңыз.');
-      return;
-    }
-
-    if(!/^\d{8}$/.test(pin)){
-      setAuthError('PIN-код так 8 цифра болушу керек.');
-      return;
-    }
-
-    setAuthBusy(true);
-
-    const pendingCompany={
-      docId:'local-'+email,
-      name:company,
-      email,
-      uid:'',
-      createdAt:Date.now()
-    };
-
-    const beforeCreate=[
-      ...readCompanyCache().filter(x=>x.email!==email),
-      pendingCompany
-    ];
-    saveCompanyCache(beforeCreate);
-    setCompanies(beforeCreate);
-
-    try{
-      const cred=await createUserWithEmailAndPassword(auth,email,pin);
-
-      const savedCompany={
-        docId:cred.user.uid,
-        name:company,
-        email,
-        uid:cred.user.uid,
-        createdAt:pendingCompany.createdAt
-      };
-
-      const next=[
-        ...readCompanyCache().filter(x=>x.email!==email),
-        savedCompany
-      ];
-      saveCompanyCache(next);
-      setCompanies(next);
-
-      try{
-        await setDoc(doc(db,'companies',cred.user.uid),savedCompany);
-      }catch(firestoreErr){
-        console.error('Company Firestore save error:',firestoreErr);
-      }
-    }catch(err){
-      console.error(err);
-      const clean=readCompanyCache().filter(x=>!(x.email===email && !x.uid));
-      saveCompanyCache(clean);
-      setCompanies(clean);
-
-      if(err.code==='auth/email-already-in-use'){
-        setAuthError('Бул email менен аккаунт мурунтан бар.');
-      }else{
-        setAuthError('Аккаунт түзүлгөн жок. Маалыматтарды текшериңиз.');
-      }
-    }finally{
-      setAuthBusy(false);
-    }
-  };
-
-  const loginCompany=async e=>{
-    e.preventDefault();
-    if(!selectedCompany)return;
-
-    setAuthError('');
-    const f=new FormData(e.currentTarget);
-    const pin=String(f.get('pin')||'').trim();
-
-    if(!/^\d{8}$/.test(pin)){
-      setAuthError('PIN-код так 8 цифра болушу керек.');
-      return;
-    }
-
-    setAuthBusy(true);
-    try{
-      await signInWithEmailAndPassword(
-        auth,
-        selectedCompany.email,
-        pin
-      );
-      setSelectedCompany(null);
-    }catch(err){
-      console.error(err);
-      setAuthError('Пароль туура эмес.');
-    }finally{
-      setAuthBusy(false);
-    }
-  };
-
-  const resetCompanyPassword=async()=>{
-    if(!selectedCompany?.email)return;
-
-    setAuthError('');
-    try{
-      await sendPasswordResetEmail(auth,selectedCompany.email);
-      setAuthError('PIN-кодду жаңылоо шилтемеси катталган emailге жөнөтүлдү.');
-    }catch(err){
-      console.error(err);
-      setAuthError('Калыбына келтирүү катын жөнөтүү мүмкүн болгон жок.');
-    }
-  };
-
-  const saveNewPin=async e=>{
-    e.preventDefault();
-    setAuthError('');
-
-    const f=new FormData(e.currentTarget);
-    const pin=String(f.get('pin')||'').replace(/\D/g,'').slice(0,8);
-    const repeat=String(f.get('repeatPin')||'').replace(/\D/g,'').slice(0,8);
-
-    if(!/^\d{8}$/.test(pin)){
-      setAuthError('Жаңы PIN-код так 8 цифра болушу керек.');
-      return;
-    }
-    if(pin!==repeat){
-      setAuthError('PIN-коддор бирдей эмес.');
-      return;
-    }
-
-    setAuthBusy(true);
-    try{
-      await confirmPasswordReset(auth,resetCode,pin);
-      setAuthError('');
-      setResetMode(false);
-      setResetCode('');
-      setResetVerified(false);
-      window.history.replaceState({},'', '/');
-      alert('PIN-код ийгиликтүү жаңыланды. Эми жаңы PIN менен кириңиз.');
-    }catch(err){
-      console.error(err);
-      setAuthError('PIN-кодду жаңылоо мүмкүн болгон жок. Шилтемени кайра сураңыз.');
-    }finally{
-      setAuthBusy(false);
-    }
-  };
-
   const logout=async()=>{
-    const currentEmail=user?.email||'';
-    const cached=readCompanyCache();
-    const currentCompany=
-      companies.find(c=>c.email===currentEmail) ||
-      cached.find(c=>c.email===currentEmail);
-
-    if(currentCompany){
-      const next=[
-        ...cached.filter(c=>c.email!==currentCompany.email),
-        currentCompany
-      ];
-      saveCompanyCache(next);
-      setCompanies(next);
-    }
-
     await signOut(auth);
     setAuthMode('companies');
     setSelectedCompany(null);
     setAuthError('');
   };
-
-  if(resetMode){
-    return(
-      <ResetPinPage
-        verified={resetVerified}
-        email={resetEmail}
-        error={authError}
-        busy={authBusy}
-        save={saveNewPin}
-      />
-    );
-  }
 
   if(!authReady){
     return(
@@ -646,9 +497,9 @@ function App(){
         }}
         error={authError}
         busy={authBusy}
-        createAccount={createCompanyAccount}
-        login={loginCompany}
-        resetPassword={resetCompanyPassword}
+        createAccount={()=>{}}
+        login={()=>{}}
+        resetPassword={()=>{}}
       />
     );
   }
@@ -667,28 +518,38 @@ function App(){
 
         <nav>
           <a
-            className={page==='tenders'?'on':''}
-            onClick={()=>setPage('tenders')}
+            className={page==='tenders' && !selectedExecutor ?'on':''}
+            onClick={()=>{
+              setPage('tenders');
+              setSelectedExecutor(null);
+              setQ('');
+            }}
           >
             <LayoutDashboard/>
             Тендерлер
           </a>
 
-          {/* КАПТАЛ МЕНЮДАГЫ АТКАРУУЧУЛАР АГКОРДЕОНУ */}
+          {/* КАПТАЛ МЕНЮДАГЫ АТКАРУУЧУЛАР АККОРДЕОНУ */}
           <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
             <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
               АТКАРУУЧУЛАР
             </div>
             {Object.entries(executorsGroup).map(([execName, execTenders])=>{
               const isOpen=!!openExecutorsNav[execName];
+              const isSelected=selectedExecutor===execName;
+
               return(
                 <div key={execName} style={{marginBottom:'4px'}}>
                   <button
                     type="button"
-                    onClick={()=>setOpenExecutorsNav(prev=>({...prev,[execName]:!prev[execName]}))}
+                    onClick={()=>{
+                      setOpenExecutorsNav(prev=>({...prev,[execName]:!prev[execName]}));
+                      setSelectedExecutor(execName);
+                      setPage('tenders');
+                    }}
                     style={{
                       width:'100%',
-                      background:'transparent',
+                      background:isSelected?'rgba(255,255,255,0.12)':'transparent',
                       border:'none',
                       color:'var(--text-main)',
                       display:'flex',
@@ -698,11 +559,9 @@ function App(){
                       borderRadius:'6px',
                       cursor:'pointer',
                       fontSize:'13px',
-                      fontWeight:'500',
+                      fontWeight:isSelected?'700':'500',
                       textAlign:'left'
                     }}
-                    onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover, rgba(0,0,0,0.03))'}
-                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                   >
                     <span style={{display:'flex',alignItems:'center',gap:'6px'}}>
                       <User size={13}/> {execName}
@@ -717,6 +576,7 @@ function App(){
                           key={t.id}
                           onClick={()=>{
                             setPage('tenders');
+                            setSelectedExecutor(execName);
                             setQ(t.name);
                           }}
                           style={{
@@ -724,11 +584,8 @@ function App(){
                             borderRadius:'4px',
                             cursor:'pointer',
                             fontSize:'12px',
-                            color:'var(--text-secondary)',
-                            transition:'background 0.15s'
+                            color:'var(--text-secondary)'
                           }}
-                          onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover, rgba(0,0,0,0.04)}'}
-                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                         >
                           • {t.name}
                         </div>
@@ -742,7 +599,11 @@ function App(){
 
           <a
             className={page==='files'?'on':''}
-            onClick={()=>setPage('files')}
+            onClick={()=>{
+              setPage('files');
+              setSelectedExecutor(null);
+            }}
+            style={{marginTop:'8px'}}
           >
             <FileText/>
             Файлдар
@@ -829,16 +690,90 @@ function App(){
             </section>
 
             <div className="panel tablePanel">
-              <div className="panelhead">
+              <div className="panelhead" style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <div>
                   <small>КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР</small>
-                  <h2>Таблица</h2>
+                  <h2>
+                    Таблица {selectedExecutor ? `— ${selectedExecutor}` : ''}
+                  </h2>
                 </div>
-                <span className="count">{filtered.length}</span>
+
+                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                  {selectedIds.length>0 && (
+                    <button
+                      type="button"
+                      onClick={deleteSelected}
+                      style={{
+                        background:'#ef4444',
+                        color:'#fff',
+                        border:'none',
+                        padding:'6px 14px',
+                        borderRadius:'6px',
+                        display:'flex',
+                        alignItems:'center',
+                        gap:'6px',
+                        cursor:'pointer',
+                        fontWeight:'600',
+                        fontSize:'13px'
+                      }}
+                    >
+                      <Trash2 size={15}/> Өчүрүү ({selectedIds.length})
+                    </button>
+                  )}
+                  <span className="count">{filtered.length}</span>
+                </div>
               </div>
+
+              {/* Эгер белгиленгендер арасында ар кайсы аткаруучулар болсо гармошка болуп чыгат */}
+              {selectedExecutorsSet.length>1 && (
+                <div style={{padding:'12px 16px',background:'#f8fafc',borderBottom:'1px solid #e2e8f0'}}>
+                  <div style={{fontSize:'12px',fontWeight:'700',color:'#64748b',marginBottom:'8px'}}>
+                    ТАНДАЛГАН АТКАРУУЧУЛАР СЕКЦИЯСЫ (ГАРМОШКА)
+                  </div>
+                  {selectedExecutorsSet.map(execName=>{
+                    const isOpen=!!openAccordionMap[execName];
+                    const execTenders=selectedTenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===execName);
+
+                    return(
+                      <div key={execName} style={{marginBottom:'6px',border:'1px solid #cbd5e1',borderRadius:'6px',overflow:'hidden'}}>
+                        <button
+                          type="button"
+                          onClick={()=>setOpenAccordionMap(prev=>({...prev,[execName]:!prev[execName]}))}
+                          style={{
+                            width:'100%',
+                            padding:'8px 12px',
+                            background:'#fff',
+                            border:'none',
+                            display:'flex',
+                            justifyContent:'space-between',
+                            alignItems:'center',
+                            cursor:'pointer',
+                            fontWeight:'600',
+                            fontSize:'13px'
+                          }}
+                        >
+                          <span><User size={14} style={{verticalAlign:'middle',marginRight:'4px'}}/> {execName} ({execTenders.length})</span>
+                          {isOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                        </button>
+
+                        {isOpen&&(
+                          <div style={{padding:'8px 12px',background:'#f1f5f9',fontSize:'12px'}}>
+                            {execTenders.map(t=>(
+                              <div key={t.id} style={{padding:'4px 0',borderBottom:'1px dashed #cbd5e1'}}>
+                                <b>№ {t.id}</b> — {t.name} ({money(t.sum)})
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="bigTable">
                 <div className="row head">
+                  <span style={{width:'40px',textAlign:'center'}}>✓</span>
                   <span>№</span>
                   <span>тендер номер</span>
                   <span>Мекемелер</span>
@@ -856,12 +791,22 @@ function App(){
                 {filtered.map((t,i)=>{
                   const editing=editingId===t.id;
                   const paymentEditing=paymentEditId===t.id;
+                  const isChecked=selectedIds.includes(t.id);
 
                   return(
                     <div
                       className={'row '+(editing?'editingRow':'')}
                       key={t.id}
                     >
+                      <span style={{width:'40px',textAlign:'center'}}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={()=>toggleSelect(t.id)}
+                          style={{cursor:'pointer',width:'15px',height:'15px'}}
+                        />
+                      </span>
+
                       <span>{i+1}</span>
 
                       {/* ТЕНДЕР НОМЕР */}
@@ -1511,10 +1456,6 @@ function PaymentStatusModal({t,type,update,close}){
   );
 }
 
-// ========================================
-// ФАЙЛДАР БӨЛҮМҮ (ГАРМОШКА СТИЛДЕ ДОКУМЕНТТЕР ҮЧҮН)
-// ========================================
-
 function FilesPage({tenders,openDocs}){
   const[openTenderDocs,setOpenTenderDocs]=useState({});
 
@@ -1629,10 +1570,6 @@ function FilesPage({tenders,openDocs}){
     </>
   );
 }
-
-// ========================================
-// DOCUMENTS MODAL
-// ========================================
 
 function Documents({
   t,
