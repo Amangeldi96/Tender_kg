@@ -165,7 +165,6 @@ function App(){
   const[page,setPage]=useState('tenders');
   const[payStatusModal,setPayStatusModal]=useState(null);
 
-  // Менюдагы аткаруучулардын аккордеон абалы
   const[openExecutorsNav,setOpenExecutorsNav]=useState({});
 
   const[user,setUser]=useState(null);
@@ -275,11 +274,10 @@ function App(){
     [tenders]
   );
 
-  // Аткаруучулар боюнча топтоо (меню аккордеону үчүн)
   const executorsGroup=useMemo(()=>{
     const map={};
     tenders.forEach(t=>{
-      const ex=t.executor||'Аткаруучу жок';
+      const ex=t.executor||'Аткаруучу көрсөтүлгөн эмес';
       if(!map[ex]) map[ex]=[];
       map[ex].push(t);
     });
@@ -330,7 +328,7 @@ function App(){
       id:String(f.get('id')).trim(),
       org:String(f.get('org')).trim(),
       name:String(f.get('name')).trim(),
-      executor:String(f.get('executor')||'Жок').trim(),
+      executor:String(f.get('executor')||'Аткаруучу').trim(),
       sum:+f.get('sum'),
       paid:0,
       gopp:String(f.get('gopp')||'').trim(),
@@ -658,7 +656,6 @@ function App(){
   return(
     <div className="shell">
 
-      {/* СОЛ ЖАКТАГЫ КАПТАЛ МЕНЮ */}
       <aside>
         <div className="brand">
           <div className="logo">TF</div>
@@ -677,33 +674,61 @@ function App(){
             Тендерлер
           </a>
 
-          {/* ТЕНДЕРЛЕР АЛДЫНДАГЫ АТКАРУУЧУЛАР АГКОРДЕОНУ */}
-          <div className="menuAccordionGroup">
-            <div className="menuAccordionTitle">АТКАРУУЧУЛАРГА ГОРОШКА</div>
+          {/* КАПТАЛ МЕНЮДАГЫ АТКАРУУЧУЛАР АГКОРДЕОНУ */}
+          <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
+            <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
+              АТКАРУУЧУЛАР
+            </div>
             {Object.entries(executorsGroup).map(([execName, execTenders])=>{
               const isOpen=!!openExecutorsNav[execName];
               return(
-                <div className="menuExecAccordion" key={execName}>
+                <div key={execName} style={{marginBottom:'4px'}}>
                   <button
                     type="button"
-                    className="menuExecHeader"
                     onClick={()=>setOpenExecutorsNav(prev=>({...prev,[execName]:!prev[execName]}))}
+                    style={{
+                      width:'100%',
+                      background:'transparent',
+                      border:'none',
+                      color:'var(--text-main)',
+                      display:'flex',
+                      alignItems:'center',
+                      justifyContent:'space-between',
+                      padding:'8px 10px',
+                      borderRadius:'6px',
+                      cursor:'pointer',
+                      fontSize:'13px',
+                      fontWeight:'500',
+                      textAlign:'left'
+                    }}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover, rgba(0,0,0,0.03))'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                   >
-                    <span className="menuExecLabel"><User size={14}/> {execName}</span>
-                    {isOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                    <span style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                      <User size={13}/> {execName}
+                    </span>
+                    {isOpen ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
                   </button>
 
                   {isOpen&&(
-                    <div className="menuExecSubList">
+                    <div style={{paddingLeft:'20px',display:'flex',flexDirection:'column',gap:'2px',marginTop:'2px'}}>
                       {execTenders.map(t=>(
                         <div
                           key={t.id}
-                          className="menuSubTenderName"
                           onClick={()=>{
                             setPage('tenders');
                             setQ(t.name);
                           }}
-                          title="Басканда издөөгө түшөт"
+                          style={{
+                            padding:'6px 8px',
+                            borderRadius:'4px',
+                            cursor:'pointer',
+                            fontSize:'12px',
+                            color:'var(--text-secondary)',
+                            transition:'background 0.15s'
+                          }}
+                          onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover, rgba(0,0,0,0.04)}'}
+                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                         >
                           • {t.name}
                         </div>
@@ -1048,7 +1073,7 @@ function App(){
         )}
       </main>
 
-      {/* ТЕНДЕР КОШУУ (АТКАРУУЧУ МЕНЕН) */}
+      {/* ТЕНДЕР КОШУУ МОДАЛКАСЫ */}
       {addOpen&&
         <Modal close={()=>setAddOpen(false)}>
           <form onSubmit={add}>
