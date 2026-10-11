@@ -742,8 +742,8 @@ function App(){
                 </div>
               </div>
 
-              {/* СТИЛДҮҮ ГАРМОШКА СЕКЦИЯСЫ */}
-              {selectedExecutorsSet.length>1 && (
+              {/* ТАНДАЛГАН АТКАРУУЧУЛАР КӨП БОЛГОНДО АР КАЙСЫ АТКАРУУЧУ БОЮНЧА ГАРМОШКА (1 ЖЕ АНДАН КӨП БОЛСО ЧЫГАТ) */}
+              {selectedExecutorsSet.length>0 && (
                 <div style={{
                   margin:'12px 16px 16px 16px',
                   padding:'16px',
@@ -753,7 +753,7 @@ function App(){
                   boxShadow:'0 2px 6px rgba(0,0,0,0.02)'
                 }}>
                   <div style={{fontSize:'11px',fontWeight:'800',color:'#64748b',marginBottom:'10px',letterSpacing:'0.5px'}}>
-                    ТАНДАЛГАН АТКАРУУЧУЛАР (ГАРМОШКА)
+                    ТАНДАЛГАН ТЕНДЕРЛЕРДИН АТКАРУУЧУЛАРЫ (ГАРМОШКА)
                   </div>
                   <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
                     {selectedExecutorsSet.map(execName=>{
@@ -817,9 +817,9 @@ function App(){
                 </div>
               )}
 
-              {/* ТАБЛИЦА (КАРАНДАШ ЖАНА ӨЧҮРҮҮ КНОПКАЛАРЫ БИР КАТАРДА ТАК ТУРУШУ ҮЧҮН КОЛОНКАЛАР ТУУРАЛДЫ) */}
-              <div className="bigTable" style={{minWidth:'1050px'}}>
-                <div className="row head" style={{gridTemplateColumns:'36px 42px minmax(110px,1fr) minmax(80px,1fr) minmax(110px,1fr) 95px 105px 80px 80px 90px 90px 75px 50px'}}>
+              {/* ТАБЛИЦА (МЕКЕМЕ МЕНЕН LOT АТАЛЫШЫНЫН АРАСЫН ТУУРАЛАП, БААРДЫК КОЛОНКАЛАР ТАК БӨЛҮНДҮ) */}
+              <div className="bigTable" style={{minWidth:'1100px'}}>
+                <div className="row head" style={{gridTemplateColumns:'36px 40px 115px 95px minmax(130px,1.2fr) 95px 105px 75px 75px 85px 85px 70px 50px'}}>
                   <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                     <input
                       type="checkbox"
@@ -851,9 +851,9 @@ function App(){
                     <div
                       className={'row '+(editing?'editingRow':'')}
                       key={t.id}
-                      style={{gridTemplateColumns:'36px 42px minmax(110px,1fr) minmax(80px,1fr) minmax(110px,1fr) 95px 105px 80px 80px 90px 90px 75px 50px'}}
+                      style={{gridTemplateColumns:'36px 40px 115px 95px minmax(130px,1.2fr) 95px 105px 75px 75px 85px 85px 70px 50px'}}
                     >
-                      {/* ЧЕКБОКС */}
+                      {/* ЧЕКБОКС (ЖЕКЕ-ЖЕКЕ ТАНДОО ҮЧҮН ТУУРА ЖАЙГАШТЫ) */}
                       <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <input
                           type="checkbox"
@@ -891,7 +891,7 @@ function App(){
                         )}
                       </span>
 
-                      {/* LOT */}
+                      {/* LOT АТАЛЫШЫ */}
                       <span>
                         {editing ? (
                           <input
@@ -1037,7 +1037,7 @@ function App(){
                         </button>
                       </span>
 
-                      {/* КАРАНДАШ / SAVE (АКЫРКЫ ТИЛКЕДЕ БИР СТРОКАГА ТАК ЖАЙГАШТЫ) */}
+                      {/* КАРАНДАШ / SAVE */}
                       <span style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
                         {editing ? (
                           <button
