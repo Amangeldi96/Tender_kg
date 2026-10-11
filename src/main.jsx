@@ -165,7 +165,7 @@ function App(){
   const[page,setPage]=useState('tenders');
   const[payStatusModal,setPayStatusModal]=useState(null);
 
-  // Менюдагы аткаруучулардын аккордеон абалын сактоо
+  // Менюдагы аткаруучулардын аккордеон абалы
   const[openExecutorsNav,setOpenExecutorsNav]=useState({});
 
   const[user,setUser]=useState(null);
@@ -275,7 +275,7 @@ function App(){
     [tenders]
   );
 
-  // Аткаруучулар боюнча топко бөлүү (меню үчүн)
+  // Аткаруучулар боюнча топтоо (меню аккордеону үчүн)
   const executorsGroup=useMemo(()=>{
     const map={};
     tenders.forEach(t=>{
@@ -677,32 +677,33 @@ function App(){
             Тендерлер
           </a>
 
-          {/* МЕНЮДАГЫ АТКАРУУЧУЛАР АККОРДЕОНУ */}
-          <div className="navAccordionSection">
-            <div className="navAccordionSectionTitle">АТКАРУУЧУЛАР</div>
+          {/* ТЕНДЕРЛЕР АЛДЫНДАГЫ АТКАРУУЧУЛАР АГКОРДЕОНУ */}
+          <div className="menuAccordionGroup">
+            <div className="menuAccordionTitle">АТКАРУУЧУЛАРГА ГОРОШКА</div>
             {Object.entries(executorsGroup).map(([execName, execTenders])=>{
               const isOpen=!!openExecutorsNav[execName];
               return(
-                <div className="navAccordionItem" key={execName}>
+                <div className="menuExecAccordion" key={execName}>
                   <button
                     type="button"
-                    className="navAccordionHeader"
+                    className="menuExecHeader"
                     onClick={()=>setOpenExecutorsNav(prev=>({...prev,[execName]:!prev[execName]}))}
                   >
-                    <span className="navExecName"><User size={14}/> {execName}</span>
+                    <span className="menuExecLabel"><User size={14}/> {execName}</span>
                     {isOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                   </button>
 
                   {isOpen&&(
-                    <div className="navAccordionSubList">
+                    <div className="menuExecSubList">
                       {execTenders.map(t=>(
                         <div
                           key={t.id}
-                          className="navSubTenderItem"
+                          className="menuSubTenderName"
                           onClick={()=>{
                             setPage('tenders');
-                            setQ(t.name); // Басканда издөөгө аты түшүп же тандалып калат
+                            setQ(t.name);
                           }}
+                          title="Басканда издөөгө түшөт"
                         >
                           • {t.name}
                         </div>
@@ -1047,7 +1048,7 @@ function App(){
         )}
       </main>
 
-      {/* ТЕНДЕР КОШУУ МОДАЛКАСЫ (АТКАРУУЧУ МЕНЕН) */}
+      {/* ТЕНДЕР КОШУУ (АТКАРУУЧУ МЕНЕН) */}
       {addOpen&&
         <Modal close={()=>setAddOpen(false)}>
           <form onSubmit={add}>
@@ -1490,7 +1491,6 @@ function PaymentStatusModal({t,type,update,close}){
 // ========================================
 
 function FilesPage({tenders,openDocs}){
-  // Файлдар бөлүмүндө дароо тендерлердин өзүнчө гармошкасы
   const[openTenderDocs,setOpenTenderDocs]=useState({});
 
   const toggleTenderDocs=tenderId=>{
@@ -1833,7 +1833,6 @@ function Stat({
   icon,
   label,
   value
-  
 }){
   return(
     <div className="stat">
