@@ -1,4 +1,4 @@
-import React,{useMemo,useRef,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import{collection,deleteDoc,doc,getDocs,setDoc,query,where,onSnapshot}from'firebase/firestore';
 import{db}from'./firebase';
@@ -37,18 +37,16 @@ import{
 }from'lucide-react';
 import'./style.css';
 
-const DOCS=[
-  'Таблица цен',
-  'Техническая спецификация',
-  'Коммерческое предложение',
-  'Сертификат соответствия',
-  'Декларация соответствия',
-  'Гарантийное письмо',
-  'Реквизиты компании',
-  'Справка об отсутствии задолженности',
-  'Лицензия / разрешительные документы',
-  'Другие документы'
-];
+const DOC_GROUPS={
+  'Тендерге катышуу': ['Таблица цен','Техническая спецификация','Коммерческое предложение','Заявка на участие','Гарантийное письмо','Сертификат соответствия','Декларация соответствия','Реквизиты компании','Справка об отсутствии задолженности','Лицензия / разрешительные документы','Доверенность','Учредительные документы'],
+  'Договор жана жеткирүү': ['Договор','Дополнительное соглашение','Спецификация к договору','Счет на оплату','Счет-фактура','Накладная','Акт приема-передачи','Акт выполненных работ','Акт сверки','Платежное поручение'],
+  'Кепилдиктер жана кайтаруу': ['ГОПП — гарантийное обеспечение предложения','ГОИК — гарантийное обеспечение исполнения контракта','ГОКЗ — гарантийное обеспечение качества','Заявление на возврат ГОПП','Возврат ГОПП — подтверждение','Заявление на возврат ГОИК','Возврат ГОИК — подтверждение','Заявление на возврат ГОКЗ','Возврат ГОКЗ — подтверждение'],
+  'Башка': ['Другие документы']
+};
+const DOCS=Object.values(DOC_GROUPS).flat();
+const matches=(value,term)=>String(value||'').toLocaleLowerCase().includes(term.trim().toLocaleLowerCase());
+const fileSize=n=>n ? (n<1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`) : '—';
+
 
 const COMPANY_CACHE_KEY='tf-companies';
 
@@ -112,7 +110,7 @@ async function uploadToCloudinary(file,tenderId,docName){
   form.append('folder',`tenderflow/${tenderId}`);
 
   const res=await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${file.type.startsWith('image/')||file.type.startsWith('video/')||file.name.toLowerCase().endsWith('.pdf')?'auto':'raw'}/upload`,
     {method:'POST',body:form}
   );
   const data=await res.json();
@@ -166,6 +164,7 @@ function App(){
   const[payStatusModal,setPayStatusModal]=useState(null);
 
   const[selectedExecutor,setSelectedExecutor]=useState(null);
+  const[executorQuery,setExecutorQuery]=useState('');
   const[selectedIds,setSelectedIds]=useState([]);
   const[openAccordionMap,setOpenAccordionMap]=useState({});
   const[openExecutorsNav,setOpenExecutorsNav]=useState({});
@@ -565,7 +564,9 @@ const tableGridStyle = {
             <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
               АТКАРУУЧУЛАР
             </div>
-            {Object.entries(executorsGroup).map(([execName, execTenders])=>{
+            <label className="executorSearch"><Search size={15}/><input aria-label="Аткаруучуларды издөө" placeholder="Аткаруучуну издөө…" value={executorQuery} onChange={e=>setExecutorQuery(e.target.value)}/></label>
+            {!Object.keys(executorsGroup).some(name=>matches(name,executorQuery))&&<p className="searchEmpty">Аткаруучу табылган жок</p>}
+            {Object.entries(executorsGroup).filter(([name])=>matches(name,executorQuery)).map(([execName, execTenders])=>{
               const isOpen=!!openExecutorsNav[execName];
               const isSelected=selectedExecutor===execName;
 
@@ -1531,6 +1532,9 @@ function PaymentStatusModal({t,type,update,close}){
 
 function FilesPage({tenders,openDocs}){
   const[openTenderDocs,setOpenTenderDocs]=useState({});
+  const[fileQuery,setFileQuery]=useState('');
+  const[preview,setPreview]=useState(null);
+  const visibleTenders=tenders.filter(t=>matches([t.id,t.name,t.org,t.executor,...Object.entries(t.docs||{}).flatMap(([k,v])=>[k,v?.name])].join(' '),fileQuery));
 
   const toggleTenderDocs=tenderId=>{
     setOpenTenderDocs(prev=>({...prev,[tenderId]:!prev[tenderId]}));
@@ -1547,7 +1551,7 @@ function FilesPage({tenders,openDocs}){
         <div>
           <small>ДОКУМЕНТТЕР БАЗАСЫ</small>
           <h1>Файлдар</h1>
-          <p>Ар бир тендердин документтери гармошка стилинде</p>
+          <p>Тендер, аткаруучу же файлдын аталышы боюнча издеңиз</p>
         </div>
       </header>
 
@@ -1564,21 +1568,23 @@ function FilesPage({tenders,openDocs}){
         <div className="panelhead">
           <div>
             <small>ТЕНДЕРЛЕР ЖАНА ДОКУМЕНТТЕР</small>
-            <h2>Документтер (Гармошка)</h2>
+            <h2>Документтер архиви</h2>
           </div>
           <span className="count">{tenders.length} тендер</span>
         </div>
 
-        {tenders.length===0 ? (
+        <label className="librarySearch"><Search size={18}/><input aria-label="Файлдарды издөө" placeholder="Файл, документ, тендер же аткаруучу…" value={fileQuery} onChange={e=>setFileQuery(e.target.value)}/></label>
+        {visibleTenders.length===0 ? (
           <div className="docsEmpty filesPageEmpty">
             <FolderOpen/>
-            <b>Азырынча тендер жок</b>
+            <b>{fileQuery ? "Издөө боюнча файл табылган жок" : "Азырынча тендер жок"}</b>
           </div>
         ) : (
           <div className="accordionContainer">
-            {tenders.map(tender=>{
-              const isTenderOpen=!!openTenderDocs[tender.id];
-              const docEntries=Object.entries(tender.docs||{});
+            {visibleTenders.map(tender=>{
+              const isTenderOpen=!!fileQuery.trim()||!!openTenderDocs[tender.id];
+              const tenderMatch=matches([tender.id,tender.name,tender.org,tender.executor].join(' '),fileQuery);
+              const docEntries=Object.entries(tender.docs||{}).filter(([k,v])=>tenderMatch||matches(k+' '+v?.name,fileQuery));
 
               return(
                 <div className="tenderAccordionSubGroup" key={tender.id}>
@@ -1625,7 +1631,7 @@ function FilesPage({tenders,openDocs}){
                             <button
                               type="button"
                               className="filesBtn"
-                              onClick={()=>openDocs(tender)}
+                              onClick={()=>setPreview(fileObj)} disabled={!fileObj?.url}
                             >
                               Ачуу
                             </button>
@@ -1640,212 +1646,78 @@ function FilesPage({tenders,openDocs}){
           </div>
         )}
       </div>
+      {preview&&<FilePreview file={preview} close={()=>setPreview(null)}/>}
     </>
   );
 }
 
-function Documents({
-  t,
-  update,
-  close
-}){
-
+function Documents({t,update,close}){
   const[drafts,setDrafts]=useState(t.docs||{});
-  const[adding,setAdding]=useState(false);
-  const[selectedDoc,setSelectedDoc]=useState('');
-  const inputs=useRef({});
-
-  const attach=async(name,file)=>{
-    if(!file)return;
-
-    try{
-      const uploaded=await uploadToCloudinary(file,t.id,name);
-      setDrafts(d=>({...d,[name]:uploaded}));
-      setAdding(false);
-      setSelectedDoc('');
-    }catch(err){
-      console.error(err);
-      alert("Файлды Cloudinary'ге жүктөөдө ката: "+err.message);
-    }
+  const[term,setTerm]=useState('');
+  const[categoryTerm,setCategoryTerm]=useState('');
+  const[selected,setSelected]=useState(DOCS.find(k=>!t.docs?.[k])||DOCS[0]);
+  const[custom,setCustom]=useState('');
+  const[busy,setBusy]=useState(false);
+  const[saving,setSaving]=useState(false);
+  const[error,setError]=useState('');
+  const[preview,setPreview]=useState(null);
+  const picker=useRef(null);
+  const uploadLock=useRef(false);
+  const category=selected==='Другие документы'&&custom.trim() ? custom.trim() : selected;
+  const attach=async(file,name=category)=>{
+    if(!file||!name||uploadLock.current)return;
+    uploadLock.current=true;setBusy(true);setError('');
+    try{const uploaded=await uploadToCloudinary(file,t.id,name);setDrafts(d=>({...d,[name]:uploaded}));}
+    catch(e){setError('Жүктөө ишке ашкан жок: '+e.message);}
+    finally{uploadLock.current=false;setBusy(false);if(picker.current)picker.current.value='';}
   };
+  const save=async()=>{setSaving(true);setError('');try{const ok=await update(t.id,{docs:drafts});if(ok)close();else setError('Сактоо ишке ашкан жок. Кайра аракет кылыңыз.');}catch(e){setError(e.message);}finally{setSaving(false);}};
+  const entries=Object.entries(drafts).filter(([k,v])=>matches(k+' '+v?.name,term));
+  return <div className="drawerShade"><div className="docsModal" role="dialog" aria-modal="true" aria-label="Тендердин документтери">
+    <button className="close" aria-label="Жабуу" disabled={busy||saving} onClick={close}><X/></button>
+    <small>ДОКУМЕНТТЕР • {t.id}</small><h2>{t.name}</h2><p className="modalSub">Аткаруучу: {t.executor||'—'} · Өзгөртүүлөрдү сактоону унутпаңыз</p>
+    <div className="documentWorkspace"><section className="categoryPanel"><h3>01 / Документтин түрү</h3>
+      <input aria-label="Документтин түрүн издөө" placeholder="Документтин түрүн издөө…" value={categoryTerm} onChange={e=>setCategoryTerm(e.target.value)}/>
+      <div className="categoryList">{Object.entries(DOC_GROUPS).map(([group,names])=>{const filtered=names.filter(n=>matches(n,categoryTerm));return filtered.length>0&&<div key={group}><h4>{group}</h4>{filtered.map(name=><button type="button" key={name} className={'categoryChoice '+(selected===name?'selected':'')} disabled={busy} onClick={()=>setSelected(name)}><FileText size={15}/><span>{name}</span>{drafts[name]&&<CheckCircle2 size={15}/>}</button>)}</div>;})}</div>
+    </section><section className="uploadPanel"><h3>02 / Файлды тиркөө</h3><b className="selectedCategory">{category}</b>
+      {selected==='Другие документы'&&<input aria-label="Документтин аталышы" placeholder="Өзүңүздүн документтин аталышы" value={custom} onChange={e=>setCustom(e.target.value)}/>}
+      <input ref={picker} type="file" hidden onChange={e=>attach(e.target.files?.[0])}/>
+      <button type="button" className="dropZone" disabled={busy||saving} onClick={()=>picker.current?.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(!saving)attach(e.dataTransfer.files?.[0]);}}><Upload size={32}/><b>{busy?'Файл жүктөлүүдө…':'Файлды тандаңыз же ушул жерге таштаңыз'}</b><span>PDF · Word · Excel · сүрөт · башка форматтар</span><small>{drafts[category]?'Бул түрдөгү мурдагы файл алмаштырылат':'Бир түргө бир файл тиркелет'}</small></button>
+      {error&&<p className="authError" role="alert">{error}</p>}
+      <label className="librarySearch"><Search size={16}/><input aria-label="Тиркелген файлдарды издөө" placeholder="Тиркелген файлдарды издөө…" value={term} onChange={e=>setTerm(e.target.value)}/></label>
+      <div className="docList">{entries.length===0?<div className="docsEmpty"><FolderOpen/><b>{term?'Файл табылган жок':'Документ тиркеле элек'}</b></div>:entries.map(([name,file])=><div className="docItem ready" key={name}><div className="docState"><FileText/></div><div className="docName"><b>{name}</b><small>{file.name} · {fileSize(file.size)}</small></div><button className="filesBtn" disabled={!file.url} onClick={()=>setPreview(file)}>Ачуу</button><button className="downloadBtn" onClick={()=>downloadCloudFile(file.url,file.name)} aria-label="Жүктөп алуу"><Download size={16}/></button><button className="miniDel" disabled={busy||saving} aria-label="Документти өчүрүү" onClick={()=>setDrafts(d=>{const n={...d};delete n[name];return n;})}><Trash2 size={16}/></button></div>)}</div>
+    </section></div><div className="docsFooter"><span>{Object.keys(drafts).length} документ тиркелген</span><button className="primary saveBtn" disabled={busy||saving} onClick={save}><Save size={17}/>{saving?'Сакталууда…':'Өзгөртүүлөрдү сактоо'}</button></div>
+    {preview&&<FilePreview file={preview} close={()=>setPreview(null)}/>}
+  </div></div>;
+}
 
-  const del=async name=>{
-    setDrafts(d=>{
-      const n={...d};
-      delete n[name];
-      return n;
-    });
-  };
-
-  const save=async()=>{
-    const ok=await update(t.id,{docs:drafts});
-    if(ok)close();
-  };
-
-  const addedDocs=Object.keys(drafts);
-  const availableDocs=DOCS.filter(name=>!drafts[name]);
-
-  return(
-    <div className="drawerShade" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}>
-      <div className="docsModal" role="dialog" aria-modal="true" aria-label="Документтер">
-        <button className="close" onClick={close}>
-          <X/>
-        </button>
-
-        <small>ТЕНДЕР: {t.name} (АТКАРУУЧУ: {t.executor||'Жок'})</small>
-        <h2>Документтер</h2>
-        <p className="modalSub">
-          Бул жерде тендерге кошулган документтер башкарылат.
-        </p>
-
-        <div className="docList">
-          {addedDocs.length===0 ? (
-            <div className="docsEmpty">
-              <FileText/>
-              <b>Документ кошула элек</b>
-              <small>Төмөнкү «Добавить документ» кнопкасы менен документ кошуңуз.</small>
-            </div>
-          ) : (
-            addedDocs.map(name=>{
-              const doc=drafts[name];
-
-              return(
-                <div className="docItem ready" key={name}>
-                  <div className="docState">
-                    <CheckCircle2/>
-                  </div>
-
-                  <div className="docName">
-                    <b>{name}</b>
-                    <small>{doc.name}</small>
-                  </div>
-
-                  <input
-                    ref={el=>inputs.current[name]=el}
-                    type="file"
-                    hidden
-                    onChange={e=>attach(name,e.target.files?.[0])}
-                  />
-
-                  <button
-                    type="button"
-                    className="downloadBtn"
-                    title="Скачать"
-                    onClick={()=>downloadCloudFile(doc.url,doc.name)}
-                  >
-                    <Download/>
-                    Скачать
-                  </button>
-
-                  <button
-                    type="button"
-                    className="replace"
-                    onClick={()=>inputs.current[name]?.click()}
-                  >
-                    <Upload/>
-                    Алмаштыруу
-                  </button>
-
-                  <button
-                    type="button"
-                    className="miniDel"
-                    title="Өчүрүү"
-                    onClick={()=>del(name)}
-                  >
-                    <Trash2/>
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {adding&&(
-          <div className="addDocumentBox">
-            <div className="addDocumentHead">
-              <div>
-                <small>ЖАҢЫ ДОКУМЕНТ</small>
-                <b>Кайсы документти кошосуз?</b>
-              </div>
-
-              <button
-                type="button"
-                className="cancelAddDoc"
-                onClick={()=>{
-                  setAdding(false);
-                  setSelectedDoc('');
-                }}
-              >
-                <X/>
-              </button>
-            </div>
-
-            {availableDocs.length===0 ? (
-              <div className="allDocsAdded">
-                <CheckCircle2/>
-                Бардык документтер кошулган
-              </div>
-            ) : (
-              <>
-                <select
-                  className="documentSelect"
-                  value={selectedDoc}
-                  onChange={e=>setSelectedDoc(e.target.value)}
-                >
-                  <option value="">Документти тандаңыз</option>
-                  {availableDocs.map(name=>(
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-
-                <input
-                  ref={el=>{
-                    if(selectedDoc){
-                      inputs.current['__new__']=el;
-                    }
-                  }}
-                  type="file"
-                  hidden
-                  onChange={e=>{
-                    if(selectedDoc){
-                      attach(selectedDoc,e.target.files?.[0]);
-                    }
-                  }}
-                />
-
-                <button
-                  type="button"
-                  className="chooseDocumentFile"
-                  disabled={!selectedDoc}
-                  onClick={()=>inputs.current['__new__']?.click()}
-                >
-                  <Paperclip/>
-                  Файлды тандап кошуу
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        <button
-          type="button"
-          className="addDocumentBtn"
-          onClick={()=>setAdding(v=>!v)}
-        >
-          <Plus/>
-          Добавить документ
-        </button>
-
-        <div className="docsFooter">
-          <span>{addedDocs.length} документ кошулган</span>
-          <button className="primary saveBtn" onClick={save}>
-            <Save/>
-            Сохранить
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function FilePreview({file,close}){
+  const[view,setView]=useState(null),[error,setError]=useState(''),[sheet,setSheet]=useState(0);
+  const ext=(file.name||'').split('.').pop().toLowerCase();
+  useEffect(()=>{
+    let alive=true,objectUrl;const controller=new AbortController();
+    const load=async()=>{try{
+      if(!file.url)throw new Error('Файлдын дареги жок');
+      const response=await fetch(file.url,{signal:controller.signal});if(!response.ok)throw new Error(`Сервер файлды берген жок (${response.status})`);
+      const bytes=await response.arrayBuffer();if(!alive)return;
+      if(['docx'].includes(ext)){
+        const mammoth=await import('mammoth/mammoth.browser');const result=await (mammoth.default||mammoth).extractRawText({arrayBuffer:bytes});if(alive)setView({kind:'text',text:result.value});
+      }else if(['xlsx','xls','csv','ods'].includes(ext)){
+        const XLSX=await import('xlsx');const workbook=XLSX.read(bytes,{type:'array'});if(alive)setView({kind:'sheets',sheets:workbook.SheetNames.map(name=>({name,rows:XLSX.utils.sheet_to_json(workbook.Sheets[name],{header:1,defval:'',raw:false})}))});
+      }else if(ext==='pdf'||file.type==='application/pdf'){
+        objectUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));if(alive)setView({kind:'pdf',url:objectUrl});
+      }else if(/^(png|jpg|jpeg|gif|webp|svg|bmp|avif)$/.test(ext)||file.type?.startsWith('image/')){
+        objectUrl=URL.createObjectURL(new Blob([bytes],{type:file.type||'image/'+ext}));if(alive)setView({kind:'image',url:objectUrl});
+      }else if(/^(txt|json|md|xml|log|html|css|js|ts|yaml|yml)$/.test(ext)||file.type?.startsWith('text/')){if(alive)setView({kind:'text',text:new TextDecoder().decode(bytes)});
+      }else if(file.type?.startsWith('audio/')||file.type?.startsWith('video/')){objectUrl=URL.createObjectURL(new Blob([bytes],{type:file.type}));if(alive)setView({kind:file.type.split('/')[0],url:objectUrl});}
+      else if(alive)setView({kind:'unsupported'});
+    }catch(e){if(alive&&e.name!=='AbortError')setError(e.message);}};load();
+    return()=>{alive=false;controller.abort();if(objectUrl)URL.revokeObjectURL(objectUrl);};
+  },[file.url,file.type,ext]);
+  useEffect(()=>{const fn=e=>{if(e.key==='Escape'){e.stopPropagation();close();}};document.addEventListener('keydown',fn);return()=>document.removeEventListener('keydown',fn);},[close]);
+  return <div className="previewShade" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><section className="filePreview" role="dialog" aria-modal="true" aria-label={file.name}><div className="previewHead"><FileText/><div><b>{file.name}</b><small>{ext.toUpperCase()} · {fileSize(file.size)}</small></div><button className="downloadBtn" onClick={()=>downloadCloudFile(file.url,file.name)}><Download size={16}/>Жүктөп алуу</button><button aria-label="Көрүүнү жабуу" onClick={close}><X/></button></div><div className="previewBody">
+    {error?<div className="docsEmpty" role="alert"><b>Файлды көрсөтүү мүмкүн болгон жок</b><p>{error}</p><small>Файлдын жеткиликтүүлүгүн жана Cloudinary CORS жөндөөсүн текшериңиз.</small></div>:!view?<div className="docsEmpty" role="status">Файл ачылууда…</div>:view.kind==='pdf'?<iframe title={file.name} src={view.url}/>:view.kind==='image'?<img alt={file.name} src={view.url}/>:view.kind==='text'?<pre>{view.text}</pre>:view.kind==='sheets'?<><div className="sheetTabs">{view.sheets.map((s,i)=><button key={s.name} className={sheet===i?'selected':''} onClick={()=>setSheet(i)}>{s.name}</button>)}</div><div className="sheetScroll"><table><tbody>{view.sheets[sheet]?.rows.map((row,i)=><tr key={i}><th>{i+1}</th>{row.map((cell,j)=><td key={j}>{String(cell)}</td>)}</tr>)}</tbody></table></div></>:view.kind==='audio'?<audio controls src={view.url}/>:view.kind==='video'?<video controls src={view.url}/>:<div className="docsEmpty"><FileText/><b>Бул форматтын браузерде алдын ала көрүнүшү жок</b><p>Файлды жүктөп алып, тиешелүү программада ачыңыз. Эски .doc үчүн .docx форматын колдонуңуз.</p></div>}
+  </div></section></div>;
 }
 
 function Modal({
