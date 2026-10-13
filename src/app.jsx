@@ -2008,19 +2008,26 @@ function Documents({t,update,close}){
   const confirmRemoveDoc=async()=>{
     const name=deleteDocTarget;
     if(!name||busy||saving)return;
-    const previous={...drafts};
-    const next={...drafts};
-    delete next[name];
-    setDrafts(next);
     setSaving(true);
     setError('');
     try{
-      const ok=await update(tenderKey(t),{docs:next});
-      if(!ok)throw new Error('Өзгөртүүнү сактоо ишке ашкан жок');
+      const token=await auth.currentUser?.getIdToken();
+      if(!token)throw new Error('Аккаунтка кайра кириңиз');
+      const response=await fetch('/api/delete-file',{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+        body:JSON.stringify({tenderId:tenderKey(t),docName:name})
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error||`Өчүрүү катасы (${response.status})`);
+      setDrafts(previous=>{
+        const next={...previous};
+        delete next[name];
+        return next;
+      });
       setDeleteDocTarget(null);
     }catch(e){
-      setDrafts(previous);
-      setError(e.message);
+      setError('Файл өчүрүлгөн жок: '+e.message);
     }finally{
       setSaving(false);
     }
