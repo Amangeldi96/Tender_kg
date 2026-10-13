@@ -242,7 +242,7 @@ export default function App(){
       .catch(err=>{
         console.error('Reset code error:',err);
         setResetVerified(false);
-        setAuthError('Бул PIN-калыбына келтирүү шилтемеси жараксыз же мөөнөтү бүткөн.');
+        setAuthError('Бул пароль калыбына келтирүү шилтемеси жараксыз же мөөнөтү бүткөн.');
       });
   },[resetMode,resetCode]);
 
@@ -366,7 +366,7 @@ export default function App(){
     setAuthBusy(true);setAuthError('');
     try{
       await sendPasswordResetEmail(auth,selectedCompany.email);
-      setAuthError('Пароль/PIN алмаштыруу шилтемеси email дарегине жөнөтүлдү.');
+      setAuthError('Пароль алмаштыруу шилтемеси email дарегине жөнөтүлдү.');
     }catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
   };
   const saveReset=async e=>{
@@ -1567,12 +1567,12 @@ function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,cre
   const openRegister=()=>{setSelected(null);setMode('create');setVisiblePassword(false)};
   const openLogin=c=>{setMode('companies');setSelected(c);setVisiblePassword(false)};
   return <AuthFrame>
-    <div className="tfSlideRoot">
+    <div className={`tfSlideRoot ${isRegister ? "tfSlideRegisterOpen" : selected ? "tfSlideLoginOpen" : ""}`}>
       <div className="tfSlideHeader"><span className="tfSlideEyebrow">TENDERFLOW WORKSPACE</span><h2>Компаниялар</h2><p>Компанияңызды тандап, кабинетиңизге кириңиз.</p></div>
       <div className="tfSlideSearch"><Search size={19}/><input aria-label="Компанияны издөө" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Компанияны издөө..."/></div>
       <div className="tfSlideList">{filtered.map(c=><button type="button" className="tfSlideCompany" key={c.uid||c.docId||c.email} onClick={()=>openLogin(c)}><span className="tfSlideAvatar">{(c.name||'К').slice(0,1).toUpperCase()}</span><span className="tfSlideCompanyText"><strong>{c.name}</strong><small>{c.email}</small></span><ChevronRight size={20}/></button>)}{!filtered.length&&<p className="tfSlideEmpty">{companies.length?'Компания табылган жок':'Азырынча компания каттала элек'}</p>}</div>
       <button className="tfSlideAdd" type="button" onClick={openRegister}><Plus size={20}/> Жаңы компания каттоо</button>
-      <div className={'tfSlideOverlay '+(panelOpen?'isOpen':'')} aria-hidden={!panelOpen}>
+      <div className={'tfSlideOverlay '+(panelOpen?'isOpen':'')} aria-hidden={!panelOpen} inert={!panelOpen}>
         <div className="tfSlideOverlayHead"><button type="button" className="tfSlideBack" onClick={closePanel}><ArrowRight size={18}/> Артка</button><span>{isRegister?'КАТТАЛУУ':'КИРҮҮ'}</span></div>
         {isRegister?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound"><Plus size={24}/></span><h2>Жаңы компания</h2><p>Катталуу үчүн маалыматтарды толтуруңуз.</p></div><form className="tfSlideForm" onSubmit={createAccount}>
           <label>Компаниянын аты<input name="company" required placeholder="Компаниянын аталышы" autoComplete="organization"/></label>

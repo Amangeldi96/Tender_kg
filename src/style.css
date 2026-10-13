@@ -2140,3 +2140,56 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .tfSlideError{margin:0;background:#8d2a345c;color:#ffe5e6;padding:10px 12px;border-radius:9px;font-size:12px}
 @media(max-width:800px){.emeraldFormArea,.emeraldFormArea>.emeraldPanel,.tfSlideRoot{min-height:530px}.tfSlideRoot{padding:25px 20px}.tfSlideOverlay{padding:24px 20px}.tfSlideHeader h2{font-size:25px}.tfSlideInner{margin-top:27px}}
 @media(prefers-reduced-motion:reduce){.tfSlideOverlay{transition:none!important}}
+
+/* MOBILE AUTH FIX — natural page scrolling and full registration form */
+.emeraldAuth{min-height:100vh;min-height:100dvh;overflow-x:clip;overflow-y:visible}
+.emeraldLayout{height:auto;min-height:100vh;min-height:100dvh}
+.emeraldFormArea,.emeraldFormArea>.emeraldPanel{height:auto;min-height:0}
+.tfSlideRoot{min-height:590px;transition:min-height .25s ease}
+.tfSlideRoot.tfSlideRegisterOpen{min-height:770px}
+.tfSlideRoot.tfSlideLoginOpen{min-height:590px}
+.tfSlideOverlay{height:100%;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#7fd5b8 transparent;padding-bottom:35px}
+.tfSlideOverlay.isOpen{overflow-y:auto}
+.tfSlideForm{padding-bottom:6px}
+.tfSlideSubmit{min-height:53px;flex-shrink:0}
+@media(max-width:800px){
+  .emeraldAuth{overflow-x:clip;overflow-y:visible}
+  .emeraldLayout{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:100dvh;height:auto;padding:18px 14px max(34px,env(safe-area-inset-bottom));gap:19px}
+  .emeraldIntro{min-height:0;gap:12px}
+  .emeraldBrand{gap:11px}
+  .emeraldMessage h1{font-size:clamp(26px,7vw,37px);line-height:1.1;letter-spacing:-1.3px;margin:0 0 9px}
+  .emeraldMessage h1 br{display:none}
+  .emeraldMessage h1 br:after{content:' '}
+  .emeraldMessage>p{font-size:12px;line-height:1.5;margin:0;max-width:450px}
+  .emeraldFormArea,.emeraldFormArea>.emeraldPanel{width:100%;height:auto;min-height:0;border-radius:18px}
+  .tfSlideRoot{min-height:470px;padding:22px 18px 22px}
+  .tfSlideRoot.tfSlideRegisterOpen{min-height:735px}
+  .tfSlideRoot.tfSlideLoginOpen{min-height:500px}
+  .tfSlideOverlay{padding:20px 18px max(28px,env(safe-area-inset-bottom));overflow-y:auto}
+  .tfSlideInner{margin-top:19px}
+  .tfSlideHeading{margin-bottom:18px}
+  .tfSlideRound{width:48px;height:48px;border-radius:13px;font-size:20px;margin-bottom:10px}
+  .tfSlideHeading h2{font-size:22px;margin-bottom:5px}
+  .tfSlideForm{gap:12px}
+  .tfSlideForm>label{gap:6px}
+  .tfSlideForm>label>input,.tfSlidePassword input,.tfSlideForm>label>.tfSecret input{height:49px;font-size:16px}
+  .tfSlideSubmit{min-height:51px;padding:12px;font-size:15px;margin-top:4px}
+  .tfSlideSearch{margin:18px 0 12px}
+  .tfSlideList{max-height:235px}
+  .tfSlideCompany{min-height:62px;padding:10px}
+  .tfSlideAdd{margin-top:13px;padding:13px}
+}
+@media(max-width:380px){
+  .emeraldLayout{padding:12px 10px max(25px,env(safe-area-inset-bottom));gap:13px}
+  .emeraldMessage>p{font-size:11px}
+  .emeraldBrand strong{font-size:20px}
+  .emeraldMonogram{width:42px;height:42px}
+  .tfSlideRoot{padding:18px 13px}
+  .tfSlideRoot.tfSlideRegisterOpen{min-height:755px}
+  .tfSlideOverlay{padding:17px 13px 30px}
+  .tfSlideOptions{flex-wrap:wrap;row-gap:12px}
+}
+@media(max-height:650px) and (min-width:801px){
+  .emeraldLayout{padding-top:25px;padding-bottom:25px}
+  .emeraldIntro{min-height:650px}
+}
