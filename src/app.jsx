@@ -1,9 +1,12 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import{collection,deleteDoc,doc,getDocs,setDoc,query,where,onSnapshot}from'firebase/firestore';
 import { db, auth } from "./firebase";
+import { getApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import{
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithCustomToken,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -65,6 +68,8 @@ const matches=(value,term)=>String(value||'').toLocaleLowerCase().includes(term.
 const fileSize=n=>n ? (n<1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`) : '—';
 
 
+const pinFunctions=getFunctions(getApp());
+const pinCall=(name,data)=>httpsCallable(pinFunctions,name)(data).then(r=>r.data);
 const COMPANY_CACHE_KEY='tf-companies';
 
 const readCompanyCache=()=>{
@@ -245,10 +250,10 @@ export default function App(){
     const cached=readCompanyCache();
     setCompanies(cached);
 
-    getDocs(collection(db,'companies'))
+    Promise.all([getDocs(collection(db,'publicCompanies')),getDocs(collection(db,'companies')).catch(()=>null)])
       .then(snap=>{
-        const remote=snap.docs.map(d=>({docId:d.id,...d.data()}));
-        const remoteCompanies=remote.filter(company=>company?.email);
+        const remote=[...(snap[0]?.docs||[]),...(snap[1]?.docs||[])].map(d=>({docId:d.id,...d.data()}));
+        const remoteCompanies=[...new Map(remote.filter(company=>company?.email).map(company=>[company.uid||company.docId,company])).values()];
         setCompanies(remoteCompanies);
         saveCompanyCache(remoteCompanies);
       })
@@ -283,31 +288,64 @@ export default function App(){
 
   const createAccount=async e=>{
     e.preventDefault();setAuthError('');
-    const f=new FormData(e.currentTarget),email=String(f.get('email')||'').trim().toLowerCase();
-    const pin=String(f.get('pin')||''),name=String(f.get('company')||'').trim();
-    if(!/^\d{8}$/.test(pin)){setAuthError('PIN так 8 цифра болушу керек');return;}
+    const f=new FormData(e.currentTarget);
+    const email=String(f.get('email')||'').trim().toLowerCase();
+    const name=String(f.get('company')||'').trim();
+    const pin=String(f.get('pin')||'');
+    const recoveryPin=String(f.get('recoveryPin')||'');
+    if(!name || !email){setAuthError('Компаниянын аты жана email керек');return;}
+    if(!/^\d{4}$/.test(pin)||!/^\d{4}$/.test(recoveryPin)){
+      setAuthError('Эки PIN тең так 4 цифра болушу керек');return;
+    }
+    if(pin===recoveryPin){setAuthError('Кирүү PIN жана калыбына келтирүү PIN ар башка болсун');return;}
     setAuthBusy(true);
     try{
-      const credential=await createUserWithEmailAndPassword(auth,email,pin);
-      await setDoc(doc(db,'companies',credential.user.uid),{uid:credential.user.uid,email,name});
-      const next=[...companies.filter(c=>c.uid!==credential.user.uid),{uid:credential.user.uid,email,name}];
+      const result=await pinCall('tfRegisterCompany',{email,name,pin,recoveryPin});
+      await signInWithCustomToken(auth,result.token);
+      const next=[...companies.filter(c=>c.uid!==result.uid),{uid:result.uid,email,name,pinVersion:2}];
       setCompanies(next);saveCompanyCache(next);setAuthMode('companies');
-    }catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
+    }catch(err){setAuthError('Каттоо катасы: '+(err.message||err.code))}
+    finally{setAuthBusy(false)}
   };
   const login=async e=>{
     e.preventDefault();setAuthError('');
     const pin=String(new FormData(e.currentTarget).get('pin')||'');
-    if(!/^\d{8}$/.test(pin)){setAuthError('PIN так 8 цифра болушу керек');return;}
+    const isNew=selectedCompany?.pinVersion===2;
+    if(!new RegExp(isNew?'^\\d{4}$':'^\\d{8}$').test(pin)){
+      setAuthError(`PIN так ${isNew?4:8} цифра болушу керек`);return;
+    }
     setAuthBusy(true);
-    try{await signInWithEmailAndPassword(auth,selectedCompany.email,pin)}
-    catch(err){setAuthError('PIN туура эмес же аккаунт табылган жок: '+err.code)}
+    try{
+      if(isNew){
+        const result=await pinCall('tfLoginCompany',{uid:selectedCompany.uid,pin});
+        await signInWithCustomToken(auth,result.token);
+      }else await signInWithEmailAndPassword(auth,selectedCompany.email,pin);
+    }catch(err){setAuthError('PIN туура эмес же кирүү убактылуу чектелген: '+(err.message||err.code))}
     finally{setAuthBusy(false)}
   };
   const resetPassword=async()=>{
     if(!selectedCompany?.email)return;
+    if(selectedCompany.pinVersion===2){setAuthMode('recover');setAuthError('');return;}
     setAuthBusy(true);setAuthError('');
     try{await sendPasswordResetEmail(auth,selectedCompany.email);setAuthError('PIN алмаштыруу шилтемеси email дарегине жөнөтүлдү.');}
     catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
+  };
+  const recoverNewPin=async e=>{
+    e.preventDefault();setAuthError('');
+    const f=new FormData(e.currentTarget);
+    const recoveryPin=String(f.get('recoveryPin')||'');
+    const newPin=String(f.get('newPin')||'');
+    const repeatPin=String(f.get('repeatPin')||'');
+    if(!/^\d{4}$/.test(recoveryPin)||!/^\d{4}$/.test(newPin)||newPin!==repeatPin){
+      setAuthError('Бардык PIN 4 цифра болушу жана жаңы PIN дал келиши керек');return;
+    }
+    if(recoveryPin===newPin){setAuthError('Жаңы PIN калыбына келтирүү PINинен айырмалансын');return;}
+    setAuthBusy(true);
+    try{
+      await pinCall('tfRecoverCompanyPin',{uid:selectedCompany.uid,recoveryPin,newPin});
+      setAuthMode('companies');setAuthError('PIN ийгиликтүү алмаштырылды. Жаңы PIN менен кириңиз.');
+    }catch(err){setAuthError('Калыбына келтирүү катасы: '+(err.message||err.code))}
+    finally{setAuthBusy(false)}
   };
   const saveReset=async e=>{
     e.preventDefault();const f=new FormData(e.currentTarget);
@@ -551,6 +589,7 @@ export default function App(){
         createAccount={createAccount}
         login={login}
         resetPassword={resetPassword}
+        recoverNewPin={recoverNewPin}
       />
     );
   }
@@ -1207,12 +1246,12 @@ const tableGridStyle = {
   );
 }
 
-function PinInput({name,autoFocus=false}){
+function PinInput({name,autoFocus=false,length=8}){
   const[value,setValue]=useState('');
   const inputRef=useRef(null);
 
   const change=e=>{
-    setValue(e.target.value.replace(/\D/g,'').slice(0,8));
+    setValue(e.target.value.replace(/\D/g,'').slice(0,length));
   };
 
   return(
@@ -1228,12 +1267,12 @@ function PinInput({name,autoFocus=false}){
         onChange={change}
         inputMode="numeric"
         pattern="[0-9]*"
-        maxLength="8"
+        maxLength={length}
         autoComplete="off"
         autoFocus={autoFocus}
       />
       <div className="pinBoxes">
-        {Array.from({length:8}).map((_,i)=>(
+        {Array.from({length}).map((_,i)=>(
           <span
             key={i}
             className={'pinBox '+(i===value.length?'active ':'')+(value[i]?'filled':'')}
@@ -1295,8 +1334,23 @@ function CompanyAuth({
   busy,
   createAccount,
   login,
-  resetPassword
+  resetPassword,
+  recoverNewPin
 }){
+  if(selected && mode==='recover' && selected.pinVersion===2){
+    return <div className="authScreen"><div className="loginCard compactLogin">
+      <button className="authBack" onClick={()=>{setMode('companies');setSelected(null)}}>← Артка</button>
+      <div className="authLogo">TF</div><small>PIN КАЛЫБЫНА КЕЛТИРҮҮ</small>
+      <h1>{selected.name}</h1><p>Калыбына келтирүү PIN-кодун, андан кийин жаңы кирүү PIN-кодун жазыңыз.</p>
+      <form className="authForm" onSubmit={recoverNewPin}>
+        <label>Калыбына келтирүү PIN-коду<PinInput name="recoveryPin" length={4} autoFocus/></label>
+        <label>Жаңы кирүү PIN-коду<PinInput name="newPin" length={4}/></label>
+        <label>Жаңы PIN-кодду кайталаңыз<PinInput name="repeatPin" length={4}/></label>
+        {error&&<div className="authError">{error}</div>}
+        <button className="primary authSubmit" disabled={busy}>{busy?'Текшерилүүдө...':'Жаңы PIN сактоо'}</button>
+      </form>
+    </div></div>;
+  }
   if(selected){
     return(
       <div className="authScreen">
@@ -1308,12 +1362,12 @@ function CompanyAuth({
           <div className="authLogo">TF</div>
           <small>КОМПАНИЯГА КИРҮҮ</small>
           <h1>{selected.name}</h1>
-          <p>Кирүү үчүн пароль гана жазыңыз</p>
+          <p>Кирүү үчүн PIN-кодуңузду жазыңыз</p>
 
           <form onSubmit={login} className="authForm">
             <label>
               PIN-код
-              <PinInput name="pin" autoFocus/>
+              <PinInput name="pin" length={selected.pinVersion===2?4:8} autoFocus/>
             </label>
 
             {error&&<div className="authError">{error}</div>}
@@ -1365,9 +1419,13 @@ function CompanyAuth({
             </label>
 
             <label>
-              PIN-код
-              <PinInput name="pin"/>
-              <small className="pinHint">Так 8 цифра</small>
+              Кирүү PIN-коду (4 цифра)
+              <PinInput name="pin" length={4}/>
+            </label>
+            <label>
+              Калыбына келтирүү PIN-коду (4 цифра)
+              <PinInput name="recoveryPin" length={4}/>
+              <small className="pinHint">Кирүү PIN унутулганда керек. Эки PIN ар башка болсун.</small>
             </label>
 
             {error&&<div className="authError">{error}</div>}
