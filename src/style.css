@@ -1899,3 +1899,128 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .deleteApproveBtn:hover:not(:disabled){background:#b84242!important}
 .deleteConfirmActions button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:560px){.deleteConfirmDialog{padding:25px 18px 18px}.deleteConfirmActions{grid-template-columns:1fr}.deleteCancelBtn{order:2}.deleteApproveBtn{order:1}}
+
+/* ===== TENDER TABLE — FINAL CONSISTENT SIZING ===== */
+.tablePanel .bigTable .row{
+  align-items:stretch!important;
+}
+.tablePanel .bigTable .row>span{
+  min-height:56px!important;
+  height:56px!important;
+  padding:8px 6px!important;
+  display:flex!important;
+  align-items:center!important;
+  min-width:0!important;
+}
+.tablePanel .bigTable .row.head>span{
+  min-height:49px!important;
+  height:49px!important;
+  padding:7px 6px!important;
+  align-items:center!important;
+}
+.tablePanel .bigTable .editingRow>span{
+  background:transparent;
+}
+.tablePanel .tableInput,
+.tablePanel .paymentEditor>input{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:38px!important;
+  min-height:38px!important;
+  max-height:38px!important;
+  margin:0!important;
+  padding:0 10px!important;
+  border:1px solid #d6e1e6!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  color:#233648!important;
+  font-size:11px!important;
+  line-height:36px!important;
+  box-shadow:none!important;
+  outline:none!important;
+}
+.tablePanel .tableInput:focus,
+.tablePanel .paymentEditor>input:focus{
+  border-color:#76a69c!important;
+  box-shadow:0 0 0 3px rgba(40,103,95,.08)!important;
+}
+.tablePanel input[type="date"].tableInput{
+  padding-right:7px!important;
+  line-height:normal!important;
+}
+.tablePanel input[type="number"].tableInput{
+  appearance:textfield;
+  -moz-appearance:textfield;
+}
+.tablePanel input[type="number"].tableInput::-webkit-inner-spin-button,
+.tablePanel input[type="number"].tableInput::-webkit-outer-spin-button{
+  margin:0;
+  opacity:0;
+}
+.tablePanel .paymentEditor{
+  width:100%!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 38px!important;
+  gap:5px!important;
+  align-items:center!important;
+}
+.tablePanel .paymentSave,
+.tablePanel .rowSaveBtn,
+.tablePanel .editBtn{
+  width:38px!important;
+  min-width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:9px!important;
+}
+.tablePanel .filesBtn{
+  height:38px!important;
+  min-height:38px!important;
+  padding:0 10px!important;
+  border-radius:9px!important;
+}
+.tablePanel .pill,
+.tablePanel .paidAmount{
+  min-height:30px!important;
+  padding:0 9px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  line-height:1!important;
+  border-radius:7px!important;
+  white-space:nowrap!important;
+}
+.tablePanel .editingRow{
+  background:#f3f8f6!important;
+  box-shadow:inset 3px 0 0 #4c8a7e;
+}
+.tablePanel .editingRow:hover{
+  background:#f3f8f6!important;
+}
+.tablePanel .row>span:nth-child(1),
+.tablePanel .row>span:nth-child(2),
+.tablePanel .row>span:nth-child(8),
+.tablePanel .row>span:nth-child(9),
+.tablePanel .row>span:nth-child(10),
+.tablePanel .row>span:nth-child(12),
+.tablePanel .row>span:nth-child(13){
+  justify-content:center!important;
+}
+.tablePanel .row>span:nth-child(6){
+  font-variant-numeric:tabular-nums;
+}
+.tablePanel .row input[type="checkbox"]{
+  width:15px!important;
+  height:15px!important;
+  min-width:15px!important;
+  padding:0!important;
+  accent-color:#28675f;
+}
+.docsFooterAuto{justify-content:space-between}
+.autoSaveState{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 12px;border-radius:9px;background:#eaf3f0;color:#28675f!important;font-size:10px!important;font-weight:800}
