@@ -2193,3 +2193,58 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
   .emeraldLayout{padding-top:25px;padding-bottom:25px}
   .emeraldIntro{min-height:650px}
 }
+
+/* DOCUMENT MODAL: mobile-first reflow, attached files always visible */
+.docsModal .documentWorkspace{display:grid!important;grid-template-columns:300px minmax(0,1fr)!important;grid-template-rows:auto minmax(0,1fr)!important;gap:14px 20px!important;overflow:hidden!important}
+.docsModal .categoryPanel{grid-column:1;grid-row:1 / 3;min-height:0!important}
+.docsModal .uploadPanel{grid-column:2;grid-row:1;min-height:0!important}
+.docsModal .attachedPanel{grid-column:2;grid-row:2;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.docsModal .attachedPanel .librarySearch{margin:0 0 10px!important;min-height:42px;flex-shrink:0}
+.docsModal .attachedPanel .attachedHeading{margin:4px 0 10px!important;display:flex!important;align-items:center;justify-content:space-between;font-size:13px!important;color:#31594f!important}
+.docsModal .attachedPanel .attachedCount{display:inline-flex;align-items:center;justify-content:center;background:#e3f1eb;border-radius:8px;padding:5px 9px;color:#2c6c5d;font-size:12px}
+.docsModal .attachedPanel .docList{min-height:105px!important;max-height:none!important;flex:1 1 auto;overflow-y:auto!important;overflow-x:hidden}
+.docsModal .docItem{min-width:0}
+.docsModal .docItem .docName{min-width:0;flex:1 1 140px}
+.docsModal .docItem .docName b,.docsModal .docItem .docName small{overflow-wrap:anywhere}
+@media(max-width:900px){
+  .docsDrawerShade{padding:0!important;align-items:stretch!important;justify-content:stretch!important;overflow:hidden!important}
+  .docsDrawerShade>.docsModal{width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;margin:0!important;display:flex!important;flex-direction:column!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;padding:20px 16px 0!important;scrollbar-width:thin}
+  .docsModal>.close{position:sticky!important;top:0!important;align-self:flex-end;flex:none;z-index:10;margin:0 0 -32px auto!important;width:38px;height:38px;background:#edf3f0!important;color:#235e54!important}
+  .docsModal>small{font-size:10px!important;margin-top:2px}
+  .docsModal>h2{font-size:clamp(22px,6vw,28px)!important;line-height:1.18!important;letter-spacing:-.6px;margin:10px 40px 8px 0!important}
+  .docsModal>.tenderContext{font-size:12px!important;line-height:1.4}
+  .docsModal>.modalSub{font-size:11px!important;line-height:1.4;margin:8px 0 0!important}
+  .docsModal .documentWorkspace{display:flex!important;flex-direction:column!important;flex:0 0 auto!important;min-height:0!important;overflow:visible!important;gap:15px!important;margin-top:18px!important}
+  .docsModal .attachedPanel{order:0;display:flex!important;flex-direction:column!important;overflow:visible!important;min-height:0!important;background:#f6faf8;border:1px solid #dceae3;border-radius:13px;padding:12px!important}
+  .docsModal .attachedPanel .docList{min-height:0!important;max-height:none!important;overflow:visible!important;flex:none!important}
+  .docsModal .attachedPanel .librarySearch{margin:0 0 10px!important;background:#fff!important}
+  .docsModal .categoryPanel{order:1;display:flex!important;flex-direction:column!important;max-height:none!important;min-height:0!important;padding:13px!important;overflow:visible!important}
+  .docsModal .categoryPanel .categoryList{flex:0 0 auto!important;max-height:220px!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain}
+  .docsModal .uploadPanel{order:2;display:flex!important;min-height:0!important;padding:4px 0 0!important}
+  .docsModal .dropZone{min-height:145px!important;gap:8px!important;padding:15px!important}
+  .docsModal .dropZone>svg{width:28px;height:28px}
+  .docsModal .dropZone>b{font-size:13px!important}
+  .docsModal .dropZone .browsePill{padding:10px 14px!important;margin:0!important}
+  .docsModal .docsFooter{flex:none!important;margin:18px -16px 0!important;padding:13px 16px max(16px,env(safe-area-inset-bottom))!important;min-height:0!important;display:flex!important;flex-direction:row!important;flex-wrap:wrap;justify-content:space-between!important;gap:8px!important;text-align:left!important;position:relative!important;bottom:auto!important}
+  .docsModal .docItem{display:grid!important;grid-template-columns:38px minmax(0,1fr) repeat(3,auto)!important;gap:8px!important;align-items:center!important;padding:11px!important;margin:0 0 8px!important;background:#fff!important;border-radius:11px!important}
+  .docsModal .docItem .docState{grid-column:1;grid-row:1;display:grid;place-items:center;width:38px;height:38px;padding:7px}
+  .docsModal .docItem .docName{grid-column:2 / -1;grid-row:1;min-width:0!important;max-width:100%!important;flex:auto!important}
+  .docsModal .docItem .docName b{font-size:12px!important;color:#2c4751!important}
+  .docsModal .docItem .docName small{font-size:11px!important;color:#7d8d96!important}
+  .docsModal .docItem .filesBtn{grid-column:2;grid-row:2;justify-self:stretch;min-width:0!important;min-height:39px!important;background:#e4f2ec!important;color:#226e5c!important;font-size:12px!important}
+  .docsModal .docItem .downloadBtn{grid-column:3;grid-row:2;min-width:39px;min-height:39px;padding:8px!important}
+  .docsModal .docItem .miniDel{grid-column:4;grid-row:2;min-width:39px;min-height:39px;padding:8px!important}
+  .docsModal .docsEmpty{padding:20px 10px!important}
+  .docsModal .docsFooterAuto .autoSaveState{font-weight:700;color:#2e7363!important}
+  .docsModal .documentWorkspace .categoryPanel h3,.docsModal .documentWorkspace .uploadPanel h3{font-size:12px!important;margin-bottom:10px!important}
+  .docsModal .categoryChoice{font-size:12px!important;min-height:39px!important}
+  .docsModal .selectedCategory{font-size:15px!important}
+  .docsModal .attachedPanel .attachedHeading{font-size:14px!important}
+}
+@media(max-width:380px){
+  .docsDrawerShade>.docsModal{padding:15px 12px 0!important}
+  .docsModal .docsFooter{margin:16px -12px 0!important;padding-left:12px!important;padding-right:12px!important}
+  .docsModal .docItem{grid-template-columns:34px minmax(0,1fr) 39px 39px!important;gap:7px!important;padding:9px!important}
+  .docsModal .docItem .docState{width:34px;height:34px}
+  .docsModal .attachedPanel{padding:9px!important}
+}
