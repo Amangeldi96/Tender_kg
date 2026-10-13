@@ -192,6 +192,7 @@ export default function App(){
   const[executorsExpanded,setExecutorsExpanded]=useState(false);
   const[openExecutorsNav,setOpenExecutorsNav]=useState({});
   const[logoutConfirm,setLogoutConfirm]=useState(false);
+  const[deleteConfirmOpen,setDeleteConfirmOpen]=useState(false);
   const[accountMenuOpen,setAccountMenuOpen]=useState(false);
   const[switchCompany,setSwitchCompany]=useState(null);
   const[switchSecret,setSwitchSecret]=useState('');
@@ -505,13 +506,21 @@ export default function App(){
     setExecutorsExpanded(false);
   };
 
-  const deleteSelected=async()=>{
+  const deleteSelected=()=>{
     if(selectedIds.length===0)return;
-    if(!window.confirm(`Тандалган ${selectedIds.length} тендерди өчүрүүнү каалайсызбы?`))return;
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDeleteSelected=async()=>{
+    if(selectedIds.length===0){setDeleteConfirmOpen(false);return;}
     setBusy(true);
-    try{await Promise.all(selectedIds.map(id=>deleteDoc(doc(db,'tenders',id))));setSelectedIds([]);setNotice('Тандалган тендерлер өчүрүлдү');}
-    catch(err){reportError(err)}finally{setBusy(false)}
+    try{
+      await Promise.all(selectedIds.map(id=>deleteDoc(doc(db,'tenders',id))));
+      setSelectedIds([]);
+      setDeleteConfirmOpen(false);
+      setNotice('Тандалган тендерлер өчүрүлдү');
+    }catch(err){reportError(err)}
+    finally{setBusy(false)}
   };
 
   const update=async(id,patch)=>{
@@ -953,6 +962,24 @@ const tableGridStyle = {
         </div>
       )}
 
+      {deleteConfirmOpen&&(
+        <div className="deleteConfirmShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setDeleteConfirmOpen(false)}}>
+          <div className="deleteConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+            <button type="button" className="deleteConfirmClose" disabled={busy} onClick={()=>setDeleteConfirmOpen(false)} aria-label="Жабуу"><X size={17}/></button>
+            <div className="deleteConfirmIcon"><Trash2 size={23}/></div>
+            <small>ӨЧҮРҮҮНҮ ЫРАСТОО</small>
+            <h2 id="deleteConfirmTitle">{selectedIds.length} тендерди өчүрөсүзбү?</h2>
+            <p>Тандалган тендерлер өчүрүлөт. Бул аракетти артка кайтаруу мүмкүн эмес.</p>
+            <div className="deleteConfirmActions">
+              <button type="button" className="deleteCancelBtn" disabled={busy} onClick={()=>setDeleteConfirmOpen(false)}>Жок, калтыр</button>
+              <button type="button" className="deleteApproveBtn" disabled={busy} onClick={confirmDeleteSelected}>
+                <Trash2 size={16}/>{busy?'Өчүрүлүүдө...':'Ооба, өчүрүү'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {logoutConfirm&&<div className="logoutShade" onMouseDown={e=>{if(e.target===e.currentTarget)setLogoutConfirm(false)}}>
         <div className="logoutDialog" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
           <div className="logoutDialogIcon"><User size={22}/></div>
@@ -1022,7 +1049,7 @@ const tableGridStyle = {
                 <div>
                   <small>КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР</small>
                   <div className="tableTitleRow">
-                    <h2>Тендерлер {headerExecutorTitle ? `— ${headerExecutorTitle}` : ''}</h2>
+                    <h2>Таблица {headerExecutorTitle ? `— ${headerExecutorTitle}` : ''}</h2>
               {selectedExecutorsSet.length===1 && (
                 <div className="selectedExecutorSingle">
                   <User size={16}/>
