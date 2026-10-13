@@ -2248,3 +2248,43 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
   .docsModal .docItem .docState{width:34px;height:34px}
   .docsModal .attachedPanel{padding:9px!important}
 }
+
+
+/* MOBILE MODALS V3 — root portal removes sticky header stacking conflict */
+.docsDrawerShade{z-index:4500!important;isolation:isolate}
+.docsDrawerShade .docsModal{scrollbar-gutter:stable}
+@media(max-width:900px){
+  .docsDrawerShade{position:fixed!important;inset:0!important;width:100%!important;height:100dvh!important;z-index:4500!important;background:#fff!important;backdrop-filter:none!important;display:block!important;overflow:hidden!important}
+  .docsDrawerShade>.docsModal{position:relative!important;inset:auto!important;box-sizing:border-box!important;width:100%!important;height:100dvh!important;max-height:100dvh!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;display:block!important;border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important;padding:64px 14px max(22px,env(safe-area-inset-bottom))!important;-webkit-overflow-scrolling:touch;scrollbar-gutter:auto!important}
+  .docsModal>.close{position:fixed!important;top:calc(12px + env(safe-area-inset-top,0px))!important;right:14px!important;left:auto!important;z-index:4502!important;margin:0!important;display:grid!important;place-items:center!important;width:40px!important;height:40px!important;border-radius:12px!important;background:#e5f0ec!important;color:#246a5b!important;box-shadow:0 1px 5px #00000012!important}
+  .docsDrawerShade:before{content:'Документтер';position:absolute;top:0;left:0;right:0;height:64px;z-index:1;background:#fff;border-bottom:1px solid #e2eae8;display:flex;align-items:center;padding:0 66px 0 16px;color:#1c3f3a;font-weight:800;font-size:16px}
+  .docsModal>small{display:block!important;margin-top:14px!important;color:#69877f!important}
+  .docsModal>h2{font-size:clamp(22px,6vw,28px)!important;margin:9px 0 8px!important;color:#203b38!important}
+  .docsModal>.tenderContext,.docsModal>.modalSub{overflow-wrap:anywhere!important}
+  .docsModal .documentWorkspace{margin-top:17px!important;display:flex!important;flex-direction:column!important;gap:12px!important;overflow:visible!important}
+  .docsModal .attachedPanel{order:0!important}
+  .docsModal .categoryPanel{order:1!important}
+  .docsModal .uploadPanel{order:2!important}
+  .docsModal .categoryPanel .categoryList{max-height:190px!important;overflow:auto!important}
+  .docsModal .docItem{grid-template-columns:40px minmax(0,1fr) 43px 43px!important}
+  .docsModal .docItem .docName{grid-column:2/-1!important}
+  .docsModal .docItem .filesBtn{grid-column:2!important;grid-row:2!important}
+  .docsModal .docItem .downloadBtn{grid-column:3!important;grid-row:2!important}
+  .docsModal .docItem .miniDel{grid-column:4!important;grid-row:2!important}
+  .docsModal .docItem .filesBtn,.docsModal .docItem .downloadBtn,.docsModal .docItem .miniDel{min-height:44px!important}
+  .docsModal .docsFooter{margin:15px -14px 0!important;padding:15px 14px 22px!important;gap:10px!important}
+  .docsModal .dropZone{min-height:135px!important}
+  .docsModal .categoryChoice{padding:10px 8px!important;min-height:43px!important}
+  .docsModal .librarySearch input,.docsModal .categoryPanel>input{font-size:16px!important}
+  .docsModal .attachedPanel,.docsModal .categoryPanel{width:100%!important;min-width:0!important}
+  .docsModal .attachedHeading{gap:10px!important}
+  .docsModal .attachedHeading>span:first-child{min-width:0!important}
+  .previewShade{z-index:4800!important}
+  .previewShade .filePreview{height:100dvh!important;max-height:100dvh!important;border-radius:0!important}
+  .previewShade .previewBody{min-height:0!important;overflow:auto!important}
+}
+@media(max-width:380px){
+  .docsDrawerShade>.docsModal{padding:64px 11px 20px!important}
+  .docsModal .docItem{grid-template-columns:34px minmax(0,1fr) 41px 41px!important}
+  .docsModal .docsFooter{margin-left:-11px!important;margin-right:-11px!important}
+}

@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
 import{collection,deleteDoc,doc,getDocs,setDoc,query,where,onSnapshot}from'firebase/firestore';
 import { db, auth } from "./firebase";
 import{
@@ -1464,13 +1465,13 @@ const tableGridStyle = {
         </Modal>
       }
 
-      {active&&docsOpen&&
+      {active&&docsOpen&&createPortal(
         <Documents
           t={active}
           update={update}
           close={()=>setDocsOpen(false)}
-        />
-      }
+        />, document.body
+      )}
 
       {payStatusModal&&(
         <PaymentStatusModal
@@ -1861,6 +1862,12 @@ function FilesPage({tenders,openDocs}){
 }
 
 function Documents({t,update,close}){
+  useEffect(()=>{
+    const previous=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    return ()=>{document.body.style.overflow=previous;};
+  },[]);
+
   const[drafts,setDrafts]=useState(t.docs||{});
   const[term,setTerm]=useState('');
   const[categoryTerm,setCategoryTerm]=useState('');
