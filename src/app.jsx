@@ -1,17 +1,17 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import{collection,deleteDoc,doc,getDocs,setDoc,query,where,onSnapshot}from'firebase/firestore';
 import { db, auth } from "./firebase";
-import { getApp } from 'firebase/app';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import{
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithCustomToken,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
-  confirmPasswordReset
+  confirmPasswordReset,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential
 }from'firebase/auth';
 import{
   LayoutDashboard,
@@ -31,6 +31,7 @@ import{
   PackageCheck,
   Pencil,
   Download,
+  Printer,
   ArrowRight,
   ChevronDown,
   ChevronRight,
@@ -67,9 +68,6 @@ const sortTendersByDate = list => [...list].sort((a, b) => {
 const matches=(value,term)=>String(value||'').toLocaleLowerCase().includes(term.trim().toLocaleLowerCase());
 const fileSize=n=>n ? (n<1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`) : '—';
 
-
-const pinFunctions=getFunctions(getApp());
-const pinCall=(name,data)=>httpsCallable(pinFunctions,name)(data).then(r=>r.data);
 const COMPANY_CACHE_KEY='tf-companies';
 
 const readCompanyCache=()=>{
@@ -196,11 +194,17 @@ export default function App(){
   const[logoutConfirm,setLogoutConfirm]=useState(false);
   const[mobileNavOpen,setMobileNavOpen]=useState(false);
   useEffect(()=>{
-    if(!mobileNavOpen)return;
-    const old=document.body.style.overflow;
-    document.body.style.overflow='hidden';
-    return ()=>{document.body.style.overflow=old};
+    document.body.classList.toggle('nav-lock', mobileNavOpen);
+    return ()=>document.body.classList.remove('nav-lock');
   },[mobileNavOpen]);
+
+  useEffect(()=>{
+    // Every main menu page owns its scroll inside <main>.
+    // Reset it when switching pages and make sure no stale body lock survives.
+    if(!mobileNavOpen) document.body.classList.remove('nav-lock');
+    const main=document.querySelector('.shell > main');
+    if(main) main.scrollTo({top:0,left:0,behavior:'auto'});
+  },[page,mobileNavOpen]);
 
   const[user,setUser]=useState(null);
   const[authReady,setAuthReady]=useState(false);
@@ -250,12 +254,38 @@ export default function App(){
     const cached=readCompanyCache();
     setCompanies(cached);
 
-    Promise.all([getDocs(collection(db,'publicCompanies')),getDocs(collection(db,'companies')).catch(()=>null)])
+    // Эски localStorage тизмесин Firestore'догу компаниялар менен БИРИКТИРЕБИЗ.
+    // Мурда remoteCompanies setCompanies(...) менен cache'ти толук алмаштырып,
+    // Firestore'до жок эски аккаунттарды экрандан жоготуп жаткан.
+    Promise.all([
+      getDocs(collection(db,'publicCompanies')).catch(err=>{console.warn('publicCompanies load:',err);return null;}),
+      getDocs(collection(db,'companies')).catch(err=>{console.warn('companies load:',err);return null;})
+    ])
       .then(snap=>{
-        const remote=[...(snap[0]?.docs||[]),...(snap[1]?.docs||[])].map(d=>({docId:d.id,...d.data()}));
-        const remoteCompanies=[...new Map(remote.filter(company=>company?.email).map(company=>[company.uid||company.docId,company])).values()];
-        setCompanies(remoteCompanies);
-        saveCompanyCache(remoteCompanies);
+        const remote=[...(snap[0]?.docs||[]),...(snap[1]?.docs||[])]
+          .map(d=>({docId:d.id,...d.data()}))
+          .filter(company=>company?.email);
+
+        // Биринчи cache, анан Firestore: бир эле аккаунт болсо Firestore'догу жаңы маалымат үстүнөн жазат.
+        const mergedMap=new Map();
+        [...cached,...remote].forEach(company=>{
+          if(!company?.email)return;
+          const key=company.uid||company.docId||company.email.toLowerCase();
+          const previous=mergedMap.get(key)||{};
+          mergedMap.set(key,{...previous,...company});
+        });
+
+        // UID/docId өзгөрүп калган эски жазуулар email боюнча да кайталанбасын.
+        const byEmail=new Map();
+        Array.from(mergedMap.values()).forEach(company=>{
+          const key=String(company.email).trim().toLowerCase();
+          const previous=byEmail.get(key)||{};
+          byEmail.set(key,{...previous,...company});
+        });
+
+        const allCompanies=Array.from(byEmail.values());
+        setCompanies(allCompanies);
+        saveCompanyCache(allCompanies);
       })
       .catch(err=>{
         console.error('Companies load error:',err);
@@ -291,69 +321,115 @@ export default function App(){
     const f=new FormData(e.currentTarget);
     const email=String(f.get('email')||'').trim().toLowerCase();
     const name=String(f.get('company')||'').trim();
-    const pin=String(f.get('pin')||'');
-    const recoveryPin=String(f.get('recoveryPin')||'');
+    const password=String(f.get('password')||'');
+    const repeatPassword=String(f.get('repeatPassword')||'');
     if(!name || !email){setAuthError('Компаниянын аты жана email керек');return;}
-    if(!/^\d{4}$/.test(pin)||!/^\d{4}$/.test(recoveryPin)){
-      setAuthError('Эки PIN тең так 4 цифра болушу керек');return;
-    }
-    if(pin===recoveryPin){setAuthError('Кирүү PIN жана калыбына келтирүү PIN ар башка болсун');return;}
+    if(password.length<6){setAuthError('Пароль кеминде 6 символ болушу керек');return;}
+    if(password!==repeatPassword){setAuthError('Паролдор дал келиши керек');return;}
     setAuthBusy(true);
     try{
-      const result=await pinCall('tfRegisterCompany',{email,name,pin,recoveryPin});
-      await signInWithCustomToken(auth,result.token);
-      const next=[...companies.filter(c=>c.uid!==result.uid),{uid:result.uid,email,name,pinVersion:2}];
+      const credential=await createUserWithEmailAndPassword(auth,email,password);
+      const company={uid:credential.user.uid,email,name,authType:'password'};
+      await Promise.all([
+        setDoc(doc(db,'publicCompanies',credential.user.uid),company),
+        setDoc(doc(db,'companies',credential.user.uid),company).catch(()=>null)
+      ]);
+      const next=[...companies.filter(c=>(c.uid||c.docId)!==credential.user.uid),company];
       setCompanies(next);saveCompanyCache(next);setAuthMode('companies');
-    }catch(err){setAuthError('Каттоо катасы: '+(err.message||err.code))}
-    finally{setAuthBusy(false)}
+    }catch(err){
+      const code=err?.code||'';
+      if(code==='auth/email-already-in-use')setAuthError('Бул email менен аккаунт мурунтан катталган');
+      else if(code==='auth/weak-password')setAuthError('Пароль өтө жөнөкөй. Башка пароль жазыңыз');
+      else setAuthError('Каттоо катасы: '+(err.message||code));
+    }finally{setAuthBusy(false)}
   };
   const login=async e=>{
     e.preventDefault();setAuthError('');
-    const pin=String(new FormData(e.currentTarget).get('pin')||'');
-    const isNew=selectedCompany?.pinVersion===2;
-    if(!new RegExp(isNew?'^\\d{4}$':'^\\d{8}$').test(pin)){
-      setAuthError(`PIN так ${isNew?4:8} цифра болушу керек`);return;
+    const f=new FormData(e.currentTarget);
+    const isPassword=selectedCompany?.authType==='password';
+    const secret=String(f.get(isPassword?'password':'pin')||'');
+    if(isPassword){
+      if(!secret){setAuthError('Парольду жазыңыз');return;}
+    }else if(!/^\d{8}$/.test(secret)){
+      setAuthError('PIN так 8 цифра болушу керек');return;
     }
     setAuthBusy(true);
     try{
-      if(isNew){
-        const result=await pinCall('tfLoginCompany',{uid:selectedCompany.uid,pin});
-        await signInWithCustomToken(auth,result.token);
-      }else await signInWithEmailAndPassword(auth,selectedCompany.email,pin);
-    }catch(err){setAuthError('PIN туура эмес же кирүү убактылуу чектелген: '+(err.message||err.code))}
-    finally{setAuthBusy(false)}
+      await signInWithEmailAndPassword(auth,selectedCompany.email,secret);
+    }catch(err){
+      setAuthError(isPassword?'Email же пароль туура эмес':'PIN туура эмес');
+    }finally{setAuthBusy(false)}
   };
   const resetPassword=async()=>{
     if(!selectedCompany?.email)return;
-    if(selectedCompany.pinVersion===2){setAuthMode('recover');setAuthError('');return;}
     setAuthBusy(true);setAuthError('');
-    try{await sendPasswordResetEmail(auth,selectedCompany.email);setAuthError('PIN алмаштыруу шилтемеси email дарегине жөнөтүлдү.');}
-    catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
-  };
-  const recoverNewPin=async e=>{
-    e.preventDefault();setAuthError('');
-    const f=new FormData(e.currentTarget);
-    const recoveryPin=String(f.get('recoveryPin')||'');
-    const newPin=String(f.get('newPin')||'');
-    const repeatPin=String(f.get('repeatPin')||'');
-    if(!/^\d{4}$/.test(recoveryPin)||!/^\d{4}$/.test(newPin)||newPin!==repeatPin){
-      setAuthError('Бардык PIN 4 цифра болушу жана жаңы PIN дал келиши керек');return;
-    }
-    if(recoveryPin===newPin){setAuthError('Жаңы PIN калыбына келтирүү PINинен айырмалансын');return;}
-    setAuthBusy(true);
     try{
-      await pinCall('tfRecoverCompanyPin',{uid:selectedCompany.uid,recoveryPin,newPin});
-      setAuthMode('companies');setAuthError('PIN ийгиликтүү алмаштырылды. Жаңы PIN менен кириңиз.');
-    }catch(err){setAuthError('Калыбына келтирүү катасы: '+(err.message||err.code))}
-    finally{setAuthBusy(false)}
+      await sendPasswordResetEmail(auth,selectedCompany.email);
+      setAuthError('Пароль/PIN алмаштыруу шилтемеси email дарегине жөнөтүлдү.');
+    }catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
   };
   const saveReset=async e=>{
-    e.preventDefault();const f=new FormData(e.currentTarget);
-    const pin=String(f.get('pin')||''),repeat=String(f.get('repeatPin')||'');
-    if(!/^\d{8}$/.test(pin)||pin!==repeat){setAuthError('PIN 8 цифра болушу жана дал келиши керек');return;}
+    e.preventDefault();
+    const f=new FormData(e.currentTarget);
+    const password=String(f.get('password')||'');
+    const repeat=String(f.get('repeatPassword')||'');
+    if(password.length<6){setAuthError('Жаңы пароль кеминде 6 символ болушу керек');return;}
+    if(password!==repeat){setAuthError('Паролдор дал келиши керек');return;}
     setAuthBusy(true);
-    try{await confirmPasswordReset(auth,resetCode,pin);window.history.replaceState({},'', '/');setResetMode(false);setAuthError('');}
-    catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
+    try{
+      await confirmPasswordReset(auth,resetCode,password);
+      window.history.replaceState({},'', '/');
+      setResetMode(false);setAuthError('');
+    }catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
+  };
+
+
+  const currentCompany=companies.find(c=>(c.uid||c.docId)===user?.uid || c.email===user?.email)||null;
+
+  const updateCompanyName=async e=>{
+    e.preventDefault();
+    const name=String(new FormData(e.currentTarget).get('companyName')||'').trim();
+    if(name.length<2){setNotice('Компаниянын атын туура жазыңыз');return;}
+    setBusy(true);
+    try{
+      const uid=user.uid;
+      const updated={...(currentCompany||{}),uid,email:user.email,name,authType:currentCompany?.authType||'password'};
+      await Promise.all([
+        setDoc(doc(db,'publicCompanies',uid),updated,{merge:true}),
+        setDoc(doc(db,'companies',uid),updated,{merge:true}).catch(()=>null)
+      ]);
+      const next=[...companies.filter(c=>(c.uid||c.docId)!==uid && c.email!==user.email),updated];
+      setCompanies(next);saveCompanyCache(next);setNotice('Компаниянын аты өзгөртүлдү');
+    }catch(err){reportError(err)}finally{setBusy(false)}
+  };
+
+  const changeAccountPassword=async e=>{
+    e.preventDefault();
+    const f=new FormData(e.currentTarget);
+    const current=String(f.get('currentPassword')||'');
+    const next=String(f.get('newPassword')||'');
+    const repeat=String(f.get('repeatNewPassword')||'');
+    const legacy=currentCompany?.authType!=='password';
+    if(legacy && !/^\d{8}$/.test(current)){setNotice('Азыркы PIN так 8 цифра болушу керек');return;}
+    if(!current){setNotice('Азыркы парольду жазыңыз');return;}
+    if(next.length<6){setNotice('Жаңы пароль кеминде 6 символ болушу керек');return;}
+    if(next!==repeat){setNotice('Жаңы паролдор дал келген жок');return;}
+    setBusy(true);
+    try{
+      const credential=EmailAuthProvider.credential(user.email,current);
+      await reauthenticateWithCredential(user,credential);
+      await updatePassword(user,next);
+      const updated={...(currentCompany||{}),uid:user.uid,email:user.email,name:currentCompany?.name||'Компания',authType:'password'};
+      await Promise.all([
+        setDoc(doc(db,'publicCompanies',user.uid),updated,{merge:true}),
+        setDoc(doc(db,'companies',user.uid),updated,{merge:true}).catch(()=>null)
+      ]);
+      const list=[...companies.filter(c=>(c.uid||c.docId)!==user.uid && c.email!==user.email),updated];
+      setCompanies(list);saveCompanyCache(list);e.currentTarget.reset();setNotice('Пароль ийгиликтүү өзгөртүлдү');
+    }catch(err){
+      if(err?.code==='auth/invalid-credential'||err?.code==='auth/wrong-password')setNotice(legacy?'Азыркы PIN туура эмес':'Азыркы пароль туура эмес');
+      else reportError(err);
+    }finally{setBusy(false)}
   };
 
   const[paymentEditId,setPaymentEditId]=useState(null);
@@ -589,7 +665,6 @@ export default function App(){
         createAccount={createAccount}
         login={login}
         resetPassword={resetPassword}
-        recoverNewPin={recoverNewPin}
       />
     );
   }
@@ -723,7 +798,14 @@ const tableGridStyle = {
             Файлдар
           </a>
 
-          <a>
+          <a
+            className={page==='settings'?'on':''}
+            onClick={()=>{
+              setPage('settings');
+              setSelectedExecutor(null);
+              setMobileNavOpen(false);
+            }}
+          >
             <Settings/>
             Настройки
           </a>
@@ -749,7 +831,7 @@ const tableGridStyle = {
         <div className="logoutDialog" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
           <div className="logoutDialogIcon"><User size={22}/></div>
           <h2 id="logoutTitle">Аккаунттан чыгасызбы?</h2>
-          <p>Кайра кирүү үчүн компанияңызды тандап, PIN кодуңузду киргизесиз.</p>
+          <p>Кайра кирүү үчүн компанияңызды тандап, пароль же PIN кодуңузду киргизесиз.</p>
           <div className="logoutDialogActions">
             <button type="button" onClick={()=>setLogoutConfirm(false)}>Жок, калам</button>
             <button type="button" className="logoutConfirmButton" onClick={async()=>{setLogoutConfirm(false);await logout()}}>Ооба, чыгуу</button>
@@ -1136,13 +1218,26 @@ const tableGridStyle = {
 </div>
             </div>
           </>
-        ) : (
+        ) : page==='files' ? (
           <FilesPage
             tenders={tenders}
             openDocs={t=>{
               setActive(t);
               setDocsOpen(true);
             }}
+          />
+        ) : (
+          <SettingsPage
+            user={user}
+            company={currentCompany}
+            busy={busy}
+            updateCompanyName={updateCompanyName}
+            changeAccountPassword={changeAccountPassword}
+            sendReset={async()=>{
+              try{await sendPasswordResetEmail(auth,user.email);setNotice('Пароль алмаштыруу шилтемеси email дарегине жөнөтүлдү');}
+              catch(err){reportError(err)}
+            }}
+            logout={()=>setLogoutConfirm(true)}
           />
         )}
       </main>
@@ -1290,34 +1385,18 @@ function ResetPinPage({verified,email,error,busy,save}){
     <div className="authScreen">
       <div className="loginCard resetPinCard">
         <div className="authLogo">TF</div>
-        <small>PIN-КОДДУ КАЛЫБЫНА КЕЛТИРҮҮ</small>
-        <h1>Жаңы PIN-код</h1>
-        <p>
-          {verified
-            ?'Жаңы 8 цифралык PIN-кодду эки жолу жазыңыз.'
-            :'Шилтеме текшерилип жатат...'}
-        </p>
-
+        <small>ПАРОЛДУ КАЛЫБЫНА КЕЛТИРҮҮ</small>
+        <h1>Жаңы пароль</h1>
+        <p>{verified ? `${email} үчүн жаңы пароль жазыңыз.` : 'Шилтеме текшерилип жатат...'}</p>
         {verified&&(
           <form onSubmit={save} className="authForm">
-            <label>
-              Жаңы PIN-код
-              <PinInput name="pin" autoFocus/>
-            </label>
-
-            <label>
-              PIN-кодду кайталаңыз
-              <PinInput name="repeatPin"/>
-            </label>
-
+            <label>Жаңы пароль<input name="password" type="password" minLength="6" required autoFocus autoComplete="new-password"/></label>
+            <label>Парольду кайталаңыз<input name="repeatPassword" type="password" minLength="6" required autoComplete="new-password"/></label>
+            <small className="pinHint">Кеминде 6 символ. Тамга, цифра жана башка символдорду колдонсоңуз болот.</small>
             {error&&<div className="authError">{error}</div>}
-
-            <button className="primary authSubmit" disabled={busy}>
-              {busy?'Сакталууда...':'Сохранить PIN'}
-            </button>
+            <button className="primary authSubmit" disabled={busy}>{busy?'Сакталууда...':'Парольду сактоо'}</button>
           </form>
         )}
-
         {!verified&&error&&<div className="authError resetError">{error}</div>}
       </div>
     </div>
@@ -1334,23 +1413,8 @@ function CompanyAuth({
   busy,
   createAccount,
   login,
-  resetPassword,
-  recoverNewPin
+  resetPassword
 }){
-  if(selected && mode==='recover' && selected.pinVersion===2){
-    return <div className="authScreen"><div className="loginCard compactLogin">
-      <button className="authBack" onClick={()=>{setMode('companies');setSelected(null)}}>← Артка</button>
-      <div className="authLogo">TF</div><small>PIN КАЛЫБЫНА КЕЛТИРҮҮ</small>
-      <h1>{selected.name}</h1><p>Калыбына келтирүү PIN-кодун, андан кийин жаңы кирүү PIN-кодун жазыңыз.</p>
-      <form className="authForm" onSubmit={recoverNewPin}>
-        <label>Калыбына келтирүү PIN-коду<PinInput name="recoveryPin" length={4} autoFocus/></label>
-        <label>Жаңы кирүү PIN-коду<PinInput name="newPin" length={4}/></label>
-        <label>Жаңы PIN-кодду кайталаңыз<PinInput name="repeatPin" length={4}/></label>
-        {error&&<div className="authError">{error}</div>}
-        <button className="primary authSubmit" disabled={busy}>{busy?'Текшерилүүдө...':'Жаңы PIN сактоо'}</button>
-      </form>
-    </div></div>;
-  }
   if(selected){
     return(
       <div className="authScreen">
@@ -1362,12 +1426,14 @@ function CompanyAuth({
           <div className="authLogo">TF</div>
           <small>КОМПАНИЯГА КИРҮҮ</small>
           <h1>{selected.name}</h1>
-          <p>Кирүү үчүн PIN-кодуңузду жазыңыз</p>
+          <p>{selected.authType==='password'?'Кирүү үчүн паролуңузду жазыңыз':'Кирүү үчүн 8 цифралык PIN-кодуңузду жазыңыз'}</p>
 
           <form onSubmit={login} className="authForm">
             <label>
-              PIN-код
-              <PinInput name="pin" length={selected.pinVersion===2?4:8} autoFocus/>
+              {selected.authType==='password'?'Пароль':'PIN-код'}
+              {selected.authType==='password'
+                ? <input name="password" type="password" required autoFocus autoComplete="current-password" placeholder="Пароль"/>
+                : <PinInput name="pin" length={8} autoFocus/>}
             </label>
 
             {error&&<div className="authError">{error}</div>}
@@ -1386,7 +1452,7 @@ function CompanyAuth({
               className="forgotBtn"
               onClick={resetPassword}
             >
-              Забыли PIN-код?
+              {selected.authType==='password'?'Забыли пароль?':'Забыли PIN-код?'}
             </button>
           </form>
         </div>
@@ -1419,13 +1485,13 @@ function CompanyAuth({
             </label>
 
             <label>
-              Кирүү PIN-коду (4 цифра)
-              <PinInput name="pin" length={4}/>
+              Пароль
+              <input name="password" type="password" minLength="6" required autoComplete="new-password" placeholder="Кеминде 6 символ"/>
             </label>
             <label>
-              Калыбына келтирүү PIN-коду (4 цифра)
-              <PinInput name="recoveryPin" length={4}/>
-              <small className="pinHint">Кирүү PIN унутулганда керек. Эки PIN ар башка болсун.</small>
+              Парольду кайталаңыз
+              <input name="repeatPassword" type="password" minLength="6" required autoComplete="new-password" placeholder="Парольду кайра жазыңыз"/>
+              <small className="pinHint">Жаңы аккаунттар кадимки пароль менен кирет.</small>
             </label>
 
             {error&&<div className="authError">{error}</div>}
@@ -1600,6 +1666,43 @@ function PaymentStatusModal({t,type,update,close}){
   );
 }
 
+function SettingsPage({user,company,busy,updateCompanyName,changeAccountPassword,sendReset,logout}){
+  const legacy=company?.authType!=='password';
+  return <div className="settingsPage">
+    <header className="settingsHeader">
+      <div><small>АККАУНТ</small><h1>Настройки</h1><p>Компания жана аккаунт маалыматын ушул жерден башкарасыз.</p></div>
+    </header>
+    <div className="settingsGrid">
+      <section className="settingsCard">
+        <div className="settingsCardTitle"><User/><div><h2>Компания</h2><p>Компаниянын көрүнгөн атын өзгөртүү</p></div></div>
+        <form className="settingsForm" onSubmit={updateCompanyName}>
+          <label>Компаниянын аты<input name="companyName" defaultValue={company?.name||''} required/></label>
+          <label>Email<input value={user?.email||''} disabled/></label>
+          <button className="primary" disabled={busy}><Save/>{busy?'Сакталууда...':'Атын сактоо'}</button>
+        </form>
+      </section>
+      <section className="settingsCard">
+        <div className="settingsCardTitle"><Settings/><div><h2>Коопсуздук</h2><p>{legacy?'8 цифралык PINди кадимки парольго алмаштыра аласыз':'Паролуңузду өзгөртүңүз'}</p></div></div>
+        <form className="settingsForm" onSubmit={changeAccountPassword}>
+          <label>{legacy?'Азыркы 8 цифралык PIN':'Азыркы пароль'}<input name="currentPassword" type="password" inputMode={legacy?'numeric':undefined} maxLength={legacy?8:undefined} required/></label>
+          <label>Жаңы пароль<input name="newPassword" type="password" minLength="6" required placeholder="Кеминде 6 символ"/></label>
+          <label>Жаңы парольду кайталаңыз<input name="repeatNewPassword" type="password" minLength="6" required/></label>
+          <button className="primary" disabled={busy}><Save/>{busy?'Өзгөртүлүүдө...':'Парольду өзгөртүү'}</button>
+        </form>
+        <button type="button" className="settingsLinkButton" onClick={sendReset}>Email аркылуу парольду калыбына келтирүү</button>
+      </section>
+      <section className="settingsCard settingsInfoCard">
+        <div className="settingsCardTitle"><FileText/><div><h2>Аккаунт маалыматы</h2><p>Firebase аккаунтуңуздун негизги маалыматы</p></div></div>
+        <div className="settingsInfo"><span>Email<strong>{user?.email||'—'}</strong></span><span>Кирүү түрү<strong>{legacy?'8 цифралык PIN':'Кадимки пароль'}</strong></span><span>UID<strong>{user?.uid||'—'}</strong></span></div>
+      </section>
+      <section className="settingsCard dangerSettings">
+        <div className="settingsCardTitle"><X/><div><h2>Сеанс</h2><p>Бул түзмөктөгү аккаунттан чыгуу</p></div></div>
+        <button type="button" className="settingsLogout" onClick={logout}>Аккаунттан чыгуу</button>
+      </section>
+    </div>
+  </div>;
+}
+
 function FilesPage({tenders,openDocs}){
   const[openTenderDocs,setOpenTenderDocs]=useState({});
   const[fileQuery,setFileQuery]=useState('');
@@ -1616,23 +1719,18 @@ function FilesPage({tenders,openDocs}){
   );
 
   return(
-    <>
-      <header>
-        <div>
+    <div className="filesPage">
+      <div className="filesCompactTop">
+        <div className="filesCompactTitle">
           <small>ДОКУМЕНТТЕР БАЗАСЫ</small>
           <h1>Файлдар</h1>
-          <p>Тендер, аткаруучу же файлдын аталышы боюнча издеңиз</p>
         </div>
-      </header>
-
-      <section className="stats">
-        <Stat icon={<FileText/>} label="Бардык файлдар" value={totalFilesCount}/>
-        <Stat
-          icon={<Briefcase/>}
-          label="Документи бар тендер"
-          value={tenders.filter(t=>Object.keys(t.docs||{}).length>0).length}
-        />
-      </section>
+        <label className="librarySearch filesTopSearch"><Search size={17}/><input aria-label="Файлдарды издөө" placeholder="Файл, тендер же аткаруучу…" value={fileQuery} onChange={e=>setFileQuery(e.target.value)}/></label>
+        <div className="filesMiniStats">
+          <div className="filesMiniStat"><FileText size={17}/><span>Файлдар</span><b>{totalFilesCount}</b></div>
+          <div className="filesMiniStat"><Briefcase size={17}/><span>Документи бар</span><b>{tenders.filter(t=>Object.keys(t.docs||{}).length>0).length}</b></div>
+        </div>
+      </div>
 
       <div className="panel tablePanel filesPagePanel">
         <div className="panelhead">
@@ -1643,7 +1741,6 @@ function FilesPage({tenders,openDocs}){
           <span className="count">{tenders.length} тендер</span>
         </div>
 
-        <label className="librarySearch"><Search size={18}/><input aria-label="Файлдарды издөө" placeholder="Файл, документ, тендер же аткаруучу…" value={fileQuery} onChange={e=>setFileQuery(e.target.value)}/></label>
         {visibleTenders.length===0 ? (
           <div className="docsEmpty filesPageEmpty">
             <FolderOpen/>
@@ -1718,7 +1815,7 @@ function FilesPage({tenders,openDocs}){
         )}
       </div>
       {preview&&<FilePreview file={preview} close={()=>setPreview(null)}/>}
-    </>
+    </div>
   );
 }
 
@@ -1765,6 +1862,94 @@ function Documents({t,update,close}){
 function FilePreview({file,close}){
   const[view,setView]=useState(null),[error,setError]=useState(''),[sheet,setSheet]=useState(0);
   const ext=(file.name||'').split('.').pop().toLowerCase();
+
+  const printPreview=()=>{
+    if(!view)return;
+
+    // Печать терезесин түз эле click учурунда ачабыз.
+    // Бул Chrome/Edge popup блокировкасынан улам "Печать" иштебей калуусун алдын алат.
+    if(view.kind==='pdf'){
+      const printWindow=window.open(view.url,'_blank');
+      if(!printWindow){
+        alert('Печать терезеси блоктолду. Браузерден pop-up уруксатын бериңиз.');
+        return;
+      }
+      // PDF браузердин өз viewer'инде ачылат. Көпчүлүк Chrome/Edge версияларында
+      // print() PDF viewer жүктөлгөндөн кийин иштейт.
+      setTimeout(()=>{
+        try{
+          printWindow.focus();
+          printWindow.print();
+        }catch(e){
+          // PDF viewer өзү ачылып калат — андагы принтер белгисин басса болот.
+        }
+      },1200);
+      return;
+    }
+
+    const printWindow=window.open('','_blank','width=1100,height=800');
+    if(!printWindow){
+      alert('Печать терезеси блоктолду. Браузерден pop-up уруксатын бериңиз.');
+      return;
+    }
+
+    const esc=s=>String(s??'')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;');
+
+    let content='';
+
+    if(view.kind==='word'){
+      content=view.html;
+    }else if(view.kind==='image'){
+      content=`<div class="imageWrap"><img src="${view.url}" alt=""></div>`;
+    }else if(view.kind==='text'){
+      content=`<pre>${esc(view.text)}</pre>`;
+    }else if(view.kind==='sheets'){
+      const rows=view.sheets[sheet]?.rows||[];
+      content=`<table><tbody>${rows.map((row,i)=>
+        `<tr><th>${i+1}</th>${row.map(cell=>`<td>${esc(cell)}</td>`).join('')}</tr>`
+      ).join('')}</tbody></table>`;
+    }else{
+      printWindow.close();
+      alert('Бул файл форматын түз печать кылуу мүмкүн эмес.');
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${esc(file.name||'Документ')}</title>
+<style>
+  @page{margin:12mm}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,sans-serif}
+  body{padding:0}
+  img{max-width:100%;height:auto}
+  .imageWrap{width:100%;text-align:center}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12pt/1.5 Arial,sans-serif;margin:0}
+  table{border-collapse:collapse;width:100%;font-size:10pt}
+  th,td{border:1px solid #777;padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+  th{width:42px;background:#f3f3f3}
+  p{line-height:1.55}
+</style>
+</head>
+<body>${content}
+<script>
+window.addEventListener('load',function(){
+  setTimeout(function(){
+    window.focus();
+    window.print();
+  },250);
+});
+<\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+  };
   useEffect(()=>{
     let alive=true,objectUrl;const controller=new AbortController();
     const load=async()=>{try{
@@ -1786,7 +1971,7 @@ function FilePreview({file,close}){
     return()=>{alive=false;controller.abort();if(objectUrl)URL.revokeObjectURL(objectUrl);};
   },[file.url,file.type,ext]);
   useEffect(()=>{const fn=e=>{if(e.key==='Escape'){e.stopPropagation();close();}};document.addEventListener('keydown',fn);return()=>document.removeEventListener('keydown',fn);},[close]);
-  return <div className="previewShade" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><section className="filePreview" role="dialog" aria-modal="true" aria-label={file.name}><div className="previewHead"><FileText/><div><b>{file.name}</b><small>{ext.toUpperCase()} · {fileSize(file.size)}</small></div><button className="downloadBtn" onClick={()=>downloadCloudFile(file.url,file.name)}><Download size={16}/>Жүктөп алуу</button><button aria-label="Көрүүнү жабуу" onClick={close}><X/></button></div><div className="previewBody">
+  return <div className="previewShade" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><section className="filePreview" role="dialog" aria-modal="true" aria-label={file.name}><div className="previewHead"><FileText/><div><b>{file.name}</b><small>{ext.toUpperCase()} · {fileSize(file.size)}</small></div><button className="previewPrintBtn" type="button" disabled={!view||!!error} onClick={printPreview}><Printer size={16}/>Печать</button><button className="downloadBtn" onClick={()=>downloadCloudFile(file.url,file.name)}><Download size={16}/>Жүктөп алуу</button><button aria-label="Көрүүнү жабуу" onClick={close}><X/></button></div><div className="previewBody">
     {error?<div className="docsEmpty" role="alert"><b>Файлды көрсөтүү мүмкүн болгон жок</b><p>{error}</p><small>Файлдын жеткиликтүүлүгүн жана Cloudinary CORS жөндөөсүн текшериңиз.</small></div>:!view?<div className="docsEmpty" role="status">Файл ачылууда…</div>:view.kind==='pdf'?<iframe title={file.name} src={view.url}/>:view.kind==='image'?<img alt={file.name} src={view.url}/>:view.kind==='word'?<iframe title={file.name} sandbox="" srcDoc={`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{font:16px/1.7 system-ui;background:white;padding:35px;max-width:850px;margin:auto;color:#27324a}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}img{max-width:100%}</style> </head><body>${view.html}</body></html>`}/>:view.kind==='text'?<pre>{view.text}</pre>:view.kind==='sheets'?<><div className="sheetTabs">{view.sheets.map((s,i)=><button key={s.name} className={sheet===i?'selected':''} onClick={()=>setSheet(i)}>{s.name}</button>)}</div><div className="sheetScroll"><table><tbody>{view.sheets[sheet]?.rows.map((row,i)=><tr key={i}><th>{i+1}</th>{row.map((cell,j)=><td key={j}>{String(cell)}</td>)}</tr>)}</tbody></table></div></>:view.kind==='audio'?<audio controls src={view.url}/>:view.kind==='video'?<video controls src={view.url}/>:<div className="docsEmpty"><FileText/><b>Бул форматтын браузерде алдын ала көрүнүшү жок</b><p>Файлды жүктөп алып, тиешелүү программада ачыңыз. Эски .doc үчүн .docx форматын колдонуңуз.</p></div>}
   </div></section></div>;
 }
@@ -1822,3 +2007,4 @@ function Stat({
     </div>
   );
 }
+
