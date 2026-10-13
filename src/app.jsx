@@ -352,18 +352,13 @@ export default function App(){
   const login=async e=>{
     e.preventDefault();setAuthError('');
     const f=new FormData(e.currentTarget);
-    const isPassword=selectedCompany?.authType==='password';
-    const secret=String(f.get(isPassword?'password':'pin')||'');
-    if(isPassword){
-      if(!secret){setAuthError('Парольду жазыңыз');return;}
-    }else if(!/^\d{8}$/.test(secret)){
-      setAuthError('PIN так 8 цифра болушу керек');return;
-    }
+    const secret=String(f.get('password')||'');
+    if(!secret){setAuthError('Парольду жазыңыз');return;}
     setAuthBusy(true);
     try{
       await signInWithEmailAndPassword(auth,selectedCompany.email,secret);
     }catch(err){
-      setAuthError(isPassword?'Email же пароль туура эмес':'PIN туура эмес');
+      setAuthError('Email же пароль туура эмес');
     }finally{setAuthBusy(false)}
   };
   const resetPassword=async()=>{
@@ -664,12 +659,7 @@ export default function App(){
   const submitAccountSwitch=async e=>{
     e.preventDefault();
     if(!switchCompany)return;
-    const isPassword=switchCompany.authType==='password';
-    if(!isPassword && !/^\d{8}$/.test(switchSecret)){
-      setSwitchError('PIN так 8 цифра болушу керек');
-      return;
-    }
-    if(isPassword && !switchSecret){
+    if(!switchSecret){
       setSwitchError('Парольду жазыңыз');
       return;
     }
@@ -683,7 +673,7 @@ export default function App(){
       setSelectedExecutor(null);
       setNotice(`${switchCompany.name||'Компания'} аккаунтуна өттүңүз`);
     }catch(err){
-      setSwitchError(isPassword?'Пароль туура эмес':'PIN туура эмес');
+      setSwitchError('Пароль туура эмес');
     }finally{
       setSwitchBusy(false);
     }
@@ -1533,176 +1523,74 @@ function PinInput({name,autoFocus=false,length=8}){
   );
 }
 
+function SecretField({name,placeholder='Пароль',autoFocus=false,minLength=6}){
+  const [visible,setVisible]=useState(false);
+  return <div className="tfSecret"><input name={name} type={visible?'text':'password'} placeholder={placeholder} minLength={minLength} required autoFocus={autoFocus} autoComplete={name==='password'?'current-password':'new-password'}/><button type="button" onClick={()=>setVisible(v=>!v)} aria-label={visible?'Жашыруу':'Көрсөтүү'}>{visible?'Жашыруу':'Көрсөтүү'}</button></div>;
+}
+function AuthFrame({children}){
+  return <div className="emeraldAuth">
+    <div className="emeraldBackdrop" aria-hidden="true"/><div className="emeraldArchitecture" aria-hidden="true"/>
+    <div className="emeraldLayout">
+      <section className="emeraldIntro">
+        <div className="emeraldBrand"><div className="emeraldMonogram">TF</div><div><strong>Tender<span>Flow</span></strong><small>BUSINESS WORKSPACE</small></div></div>
+        <div className="emeraldMessage"><h1>Бардык<br/>тендерлер<br/><em>бир жерде</em></h1><p>Документтер, аткаруучулар, төлөмдөр жана бардык тендерлерди ыңгайлуу башкарыңыз.</p>
+        <div className="emeraldFeatures">
+          <div><span><FileText size={23}/></span><div><b>Документтер</b><small>Жүктөө, сактоо, түзөтүү</small></div></div>
+          <div><span><User size={23}/></span><div><b>Аткаруучулар</b><small>Тизме жана байланыш</small></div></div>
+          <div><span><Wallet size={23}/></span><div><b>Төлөмдөр</b><small>Ыңгайлуу эсепке алуу</small></div></div>
+          <div><span><CheckCircle2 size={23}/></span><div><b>Коопсуздук</b><small>Firebase менен коргоо</small></div></div>
+        </div></div>
+        <div className="emeraldBottom"><span className="emeraldLines"><i/><i/><i/><i/></span>Ишенимдүү система — ийгиликтүү тендерлер</div>
+      </section>
+      <section className="emeraldFormArea"><div className="emeraldPanel">{children}</div></section>
+    </div>
+  </div>;
+}
 function ResetPinPage({verified,email,error,busy,save}){
-  return(
-    <div className="authScreen">
-      <div className="loginCard resetPinCard">
-        <div className="authLogo">TF</div>
-        <small>ПАРОЛДУ КАЛЫБЫНА КЕЛТИРҮҮ</small>
-        <h1>Жаңы пароль</h1>
-        <p>{verified ? `${email} үчүн жаңы пароль жазыңыз.` : 'Шилтеме текшерилип жатат...'}</p>
-        {verified&&(
-          <form onSubmit={save} className="authForm">
-            <label>Жаңы пароль<input name="password" type="password" minLength="6" required autoFocus autoComplete="new-password"/></label>
-            <label>Парольду кайталаңыз<input name="repeatPassword" type="password" minLength="6" required autoComplete="new-password"/></label>
-            <small className="pinHint">Кеминде 6 символ. Тамга, цифра жана башка символдорду колдонсоңуз болот.</small>
-            {error&&<div className="authError">{error}</div>}
-            <button className="primary authSubmit" disabled={busy}>{busy?'Сакталууда...':'Парольду сактоо'}</button>
-          </form>
-        )}
-        {!verified&&error&&<div className="authError resetError">{error}</div>}
+  return <AuthFrame><div className="emeraldTitle"><h2>Жаңы пароль</h2><p>{verified?email:'Шилтеме текшерилип жатат...'}</p></div>
+    {verified&&<form className="emeraldForm" onSubmit={save}>
+      <label>Жаңы пароль<SecretField name="password" placeholder="Кеминде 6 символ"/></label>
+      <label>Парольду кайталоо<SecretField name="repeatPassword" placeholder="Кайра жазыңыз"/></label>
+      {error&&<p className="emeraldError" role="alert">{error}</p>}
+      <button className="emeraldSubmit" disabled={busy}>{busy?'Сакталууда...':'Парольду сактоо'}<ArrowRight size={19}/></button>
+    </form>}{!verified&&error&&<p className="emeraldError">{error}</p>}
+  </AuthFrame>;
+}
+function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,createAccount,login,resetPassword}){
+  const [search,setSearch]=useState('');
+  const [remember,setRemember]=useState(false);
+  const [visiblePassword,setVisiblePassword]=useState(false);
+  const isRegister=mode==='create';
+  const panelOpen=Boolean(selected)||isRegister;
+  const filtered=companies.filter(c=>`${c.name||''} ${c.email||''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  const closePanel=()=>{setSelected(null);setMode('companies');setVisiblePassword(false)};
+  const openRegister=()=>{setSelected(null);setMode('create');setVisiblePassword(false)};
+  const openLogin=c=>{setMode('companies');setSelected(c);setVisiblePassword(false)};
+  return <AuthFrame>
+    <div className="tfSlideRoot">
+      <div className="tfSlideHeader"><span className="tfSlideEyebrow">TENDERFLOW WORKSPACE</span><h2>Компаниялар</h2><p>Компанияңызды тандап, кабинетиңизге кириңиз.</p></div>
+      <div className="tfSlideSearch"><Search size={19}/><input aria-label="Компанияны издөө" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Компанияны издөө..."/></div>
+      <div className="tfSlideList">{filtered.map(c=><button type="button" className="tfSlideCompany" key={c.uid||c.docId||c.email} onClick={()=>openLogin(c)}><span className="tfSlideAvatar">{(c.name||'К').slice(0,1).toUpperCase()}</span><span className="tfSlideCompanyText"><strong>{c.name}</strong><small>{c.email}</small></span><ChevronRight size={20}/></button>)}{!filtered.length&&<p className="tfSlideEmpty">{companies.length?'Компания табылган жок':'Азырынча компания каттала элек'}</p>}</div>
+      <button className="tfSlideAdd" type="button" onClick={openRegister}><Plus size={20}/> Жаңы компания каттоо</button>
+      <div className={'tfSlideOverlay '+(panelOpen?'isOpen':'')} aria-hidden={!panelOpen}>
+        <div className="tfSlideOverlayHead"><button type="button" className="tfSlideBack" onClick={closePanel}><ArrowRight size={18}/> Артка</button><span>{isRegister?'КАТТАЛУУ':'КИРҮҮ'}</span></div>
+        {isRegister?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound"><Plus size={24}/></span><h2>Жаңы компания</h2><p>Катталуу үчүн маалыматтарды толтуруңуз.</p></div><form className="tfSlideForm" onSubmit={createAccount}>
+          <label>Компаниянын аты<input name="company" required placeholder="Компаниянын аталышы" autoComplete="organization"/></label>
+          <label>Email<input name="email" type="email" required placeholder="company@example.com" autoComplete="email"/></label>
+          <label>Пароль<SecretField name="password" placeholder="Кеминде 6 символ"/></label>
+          <label>Парольду кайталоо<SecretField name="repeatPassword" placeholder="Парольду кайталаңыз"/></label>
+          {error&&<p className="tfSlideError" role="alert">{error}</p>}
+          <button className="tfSlideSubmit" disabled={busy}>{busy?'Катталууда...':'Катталуу'}<ArrowRight size={19}/></button>
+        </form></div>:selected?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound">{(selected.name||'К').slice(0,1).toUpperCase()}</span><h2>{selected.name}</h2><p>{selected.email}</p></div><form className="tfSlideForm" onSubmit={e=>{localStorage.setItem('tf-remember-company',remember?'yes':'no');login(e)}}>
+          <label>Пароль<div className="tfSlidePassword"><input name="password" type={visiblePassword?'text':'password'} autoComplete="current-password" required placeholder="Паролуңузду жазыңыз"/><button type="button" onClick={()=>setVisiblePassword(v=>!v)} aria-label={visiblePassword?'Парольду жашыруу':'Парольду көрсөтүү'}>{visiblePassword?'Жашыруу':'Көрсөтүү'}</button></div></label>
+          <div className="tfSlideOptions"><label><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/> Эсимде сактоо</label><button type="button" disabled={busy} onClick={resetPassword}>Парольду унуттуңузбу?</button></div>
+          {error&&<p className="tfSlideError" role="alert">{error}</p>}
+          <button className="tfSlideSubmit" disabled={busy}>{busy?'Кирүүдө...':'Кирүү'}<ArrowRight size={19}/></button>
+        </form></div>:null}
       </div>
     </div>
-  );
+  </AuthFrame>;
 }
-
-function CompanyAuth({
-  companies,
-  mode,
-  setMode,
-  selected,
-  setSelected,
-  error,
-  busy,
-  createAccount,
-  login,
-  resetPassword
-}){
-  if(selected){
-    return(
-      <div className="authScreen">
-        <div className="loginCard compactLogin">
-          <button className="authBack" onClick={()=>setSelected(null)}>
-            ← Артка
-          </button>
-
-          <div className="authLogo">TF</div>
-          <small>КОМПАНИЯГА КИРҮҮ</small>
-          <h1>{selected.name}</h1>
-          <p>{selected.authType==='password'?'Кирүү үчүн паролуңузду жазыңыз':'Кирүү үчүн 8 цифралык PIN-кодуңузду жазыңыз'}</p>
-
-          <form onSubmit={login} className="authForm">
-            <label>
-              {selected.authType==='password'?'Пароль':'PIN-код'}
-              {selected.authType==='password'
-                ? <input name="password" type="password" required autoFocus autoComplete="current-password" placeholder="Пароль"/>
-                : <PinInput name="pin" length={8} autoFocus/>}
-            </label>
-
-            {error&&<div className="authError">{error}</div>}
-
-            <button
-              className="pinArrowSubmit"
-              disabled={busy}
-              aria-label="Кирүү"
-              title="Кирүү"
-            >
-              {busy ? <span className="pinArrowSpinner"/> : <ArrowRight/>}
-            </button>
-
-            <button
-              type="button"
-              className="forgotBtn"
-              onClick={resetPassword}
-            >
-              {selected.authType==='password'?'Забыли пароль?':'Забыли PIN-код?'}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  if(mode==='create'){
-    return(
-      <div className="authScreen">
-        <div className="loginCard">
-          <button className="authBack" onClick={()=>setMode('companies')}>
-            ← Артка
-          </button>
-
-          <div className="authLogo">TF</div>
-          <small>ЖАҢЫ АККАУНТ</small>
-          <h1>Создать аккаунт</h1>
-          <p>Компанияңыз үчүн TenderFlow аккаунтун түзүңүз</p>
-
-          <form onSubmit={createAccount} className="authForm">
-            <label>
-              Компаниянын аты
-              <input name="company" required placeholder="Мисалы: АлаТоо групп"/>
-            </label>
-
-            <label>
-              Email
-              <input name="email" type="email" required placeholder="company@email.com"/>
-            </label>
-
-            <label>
-              Пароль
-              <input name="password" type="password" minLength="6" required autoComplete="new-password" placeholder="Кеминде 6 символ"/>
-            </label>
-            <label>
-              Парольду кайталаңыз
-              <input name="repeatPassword" type="password" minLength="6" required autoComplete="new-password" placeholder="Парольду кайра жазыңыз"/>
-              <small className="pinHint">Жаңы аккаунттар кадимки пароль менен кирет.</small>
-            </label>
-
-            {error&&<div className="authError">{error}</div>}
-
-            <button className="primary authSubmit" disabled={busy}>
-              {busy?'Түзүлүүдө...':'Создать аккаунт'}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  return(
-    <div className="authScreen">
-      <div className="companyPicker">
-        <div className="authLogo">TF</div>
-        <small>TENDERFLOW</small>
-        <h1>Компаниялар</h1>
-        <p>Кирүү үчүн компанияңызды тандаңыз</p>
-
-        <div className="companyList">
-          {companies.map(company=>(
-            <button
-              key={company.uid||company.docId}
-              className="companyCard"
-              onClick={()=>setSelected(company)}
-            >
-              <span className="companyAvatar">
-                {(company.name||'К').slice(0,2).toUpperCase()}
-              </span>
-              <span>
-                <b>{company.name}</b>
-                <small>Аккаунтка кирүү</small>
-              </span>
-              <strong>›</strong>
-            </button>
-          ))}
-
-          {companies.length===0&&(
-            <div className="noCompanies">
-              Азырынча компания каттала элек
-            </div>
-          )}
-        </div>
-
-        <button
-          className="primary createCompanyBtn"
-          onClick={()=>setMode('create')}
-        >
-          <Plus/>
-          Создать аккаунт
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function PaidAmount({t,onClick}){
   const paid=Number(t.paid||0);
   const total=Number(t.sum||0);
