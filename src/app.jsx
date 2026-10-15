@@ -1,3 +1,5 @@
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import{collection,deleteDoc,doc,getDocs,setDoc,query,where,onSnapshot}from'firebase/firestore';
@@ -1861,106 +1863,238 @@ function FilesPage({tenders,openDocs}){
   );
 }
 
+
+pdfjsLib.GlobalWorkerOptions.workerSrc=pdfWorkerUrl;
+
+function TenderPdfViewer({url,name}){
+  const [pdf,setPdf]=useState(null);
+  const [pages,setPages]=useState(0);
+  const [zoom,setZoom]=useState(1);
+  const [fitWidth,setFitWidth]=useState(true);
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(true);
+  const scrollRef=useRef(null);
+  const [width,setWidth]=useState(850);
+  useEffect(()=>{
+    const node=scrollRef.current;
+    if(!node)return;
+    const observer=new ResizeObserver(entries=>{
+      const w=entries[0]?.contentRect?.width;
+      if(w)setWidth(Math.max(240,w-32));
+    });
+    observer.observe(node);
+    return ()=>observer.disconnect();
+  },[]);
+  useEffect(()=>{
+    let cancelled=false;
+    let task;
+    setPdf(null);setPages(0);setLoading(true);setError('');setZoom(1);setFitWidth(true);
+    (async()=>{
+      try{
+        // Cloudinary CORS must permit reading PDF bytes for canvas rendering.
+        task=pdfjsLib.getDocument({url,withCredentials:false});
+        const document=await task.promise;
+        if(cancelled){await document.destroy();return;}
+        setPdf(document);setPages(document.numPages);setLoading(false);
+      }catch(err){
+        if(!cancelled){setError('PDF жүктөлгөн жок: '+(err?.message||String(err)));setLoading(false);}
+      }
+    })();
+    return ()=>{cancelled=true;task?.destroy()?.catch?.(()=>{});};
+  },[url]);
+  const setScale=delta=>{setFitWidth(false);setZoom(z=>Math.min(3,Math.max(.4,Math.round((z+delta)*10)/10)));};
+  return <div className="tfPdfViewer">
+    <div className="tfPdfScroll" ref={scrollRef}>
+      {loading&&<div className="tfPdfStatus">PDF жүктөлүүдө…</div>}
+      {error&&<div className="tfPdfStatus tfPdfError">{error}<a href={url} target="_blank" rel="noopener noreferrer">Жаңы беттен ачуу</a></div>}
+      {pdf&&Array.from({length:pages},(_,i)=><TenderPdfPage key={`${url}-${i}`} pdf={pdf} pageNumber={i+1} width={width} zoom={zoom} fitWidth={fitWidth}/>)}
+    </div>
+  </div>;
+}
+function TenderPdfPage({pdf,pageNumber,width,zoom,fitWidth}){
+  const canvasRef=useRef(null);
+  const [state,setState]=useState('loading');
+  useEffect(()=>{
+    let cancelled=false,renderTask;
+    (async()=>{
+      try{
+        setState('loading');
+        const page=await pdf.getPage(pageNumber);
+        if(cancelled)return;
+        const base=page.getViewport({scale:1});
+        const scale=fitWidth?Math.min(2.5,width/base.width):zoom;
+        const viewport=page.getViewport({scale});
+        const pixelRatio=Math.min(window.devicePixelRatio||1,2);
+        const canvas=canvasRef.current;
+        if(!canvas)return;
+        canvas.width=Math.round(viewport.width*pixelRatio);
+        canvas.height=Math.round(viewport.height*pixelRatio);
+        canvas.style.width=`${viewport.width}px`;
+        canvas.style.height=`${viewport.height}px`;
+        const ctx=canvas.getContext('2d',{alpha:false});
+        renderTask=page.render({canvasContext:ctx,viewport,transform:pixelRatio!==1?[pixelRatio,0,0,pixelRatio,0,0]:undefined});
+        await renderTask.promise;
+        if(!cancelled)setState('ready');
+      }catch(err){if(!cancelled&&err?.name!=='RenderingCancelledException')setState('error');}
+    })();
+    return ()=>{cancelled=true;renderTask?.cancel();};
+  },[pdf,pageNumber,width,zoom,fitWidth]);
+  return <div className="tfPdfPage"><canvas ref={canvasRef} aria-label={`PDF барак ${pageNumber}`}/><small>{state==='error'?'Баракты көрсөтүүдө ката':`${pageNumber}`}</small></div>;
+}
+
 function Documents({t,update,close}){
+  const [drafts,setDrafts]=useState(t.docs||{});
+  const [docTitle,setDocTitle]=useState('');
+  const [selectedFiles,setSelectedFiles]=useState([]);
+  const [expanded,setExpanded]=useState(null);
+  const [preview,setPreview]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
+  const [deleteTarget,setDeleteTarget]=useState(null);
+  const [search,setSearch]=useState('');
+  const [showSuggestions,setShowSuggestions]=useState(false);
+  const picker=useRef(null);
+  const suggestionsRef=useRef(null);
+  const lock=useRef(false);
   useEffect(()=>{
     const previous=document.body.style.overflow;
     document.body.style.overflow='hidden';
-    return ()=>{document.body.style.overflow=previous;};
+    return ()=>{document.body.style.overflow=previous};
   },[]);
+  useEffect(()=>{setDrafts(t.docs||{});},[t.docs]);
+  useEffect(()=>{
+    if(!showSuggestions)return;
+    const dismiss=e=>{if(suggestionsRef.current&&!suggestionsRef.current.contains(e.target))setShowSuggestions(false)};
+    document.addEventListener('pointerdown',dismiss);
+    return ()=>document.removeEventListener('pointerdown',dismiss);
+  },[showSuggestions]);
 
-  const[drafts,setDrafts]=useState(t.docs||{});
-  const[term,setTerm]=useState('');
-  const[categoryTerm,setCategoryTerm]=useState('');
-  const[selected,setSelected]=useState(DOCS.find(k=>!t.docs?.[k])||DOCS[0]);
-  const[custom,setCustom]=useState('');
-  const[busy,setBusy]=useState(false);
-  const[saving,setSaving]=useState(false);
-  const[error,setError]=useState('');
-  const[preview,setPreview]=useState(null);
-  const[deleteDocTarget,setDeleteDocTarget]=useState(null);
-  const picker=useRef(null);
-  const uploadLock=useRef(false);
-  const category=selected==='Другие документы'&&custom.trim() ? custom.trim() : selected;
-  const attach=async(file,name=category)=>{
-    if(!file||!name||uploadLock.current)return;
-    uploadLock.current=true;setBusy(true);setError('');
+  const folders=useMemo(()=>{
+    const grouped=new Map();
+    Object.entries(drafts).forEach(([key,file])=>{
+      if(!file)return;
+      // Мурда сакталган документтер да папка катары көрсөтүлөт.
+      const folder=String(file.docName||key.split('__')[0]||'Документ').trim();
+      if(!grouped.has(folder))grouped.set(folder,[]);
+      grouped.get(folder).push({key,file});
+    });
+    return Array.from(grouped,([name,files])=>({name,files}))
+      .filter(folder=>matches(folder.name+' '+folder.files.map(x=>x.file.name).join(' '),search));
+  },[drafts,search]);
+
+  const folderSuggestions=Array.from(new Set(Object.entries(drafts).filter(([,f])=>!!f).map(([key,f])=>String(f.docName||key.split('__')[0]||'Документ').trim())))
+    .filter(name=>!docTitle.trim()||name.toLocaleLowerCase().includes(docTitle.trim().toLocaleLowerCase()));
+
+  const saveFiles=async e=>{
+    e.preventDefault();
+    const name=docTitle.trim();
+    if(!name){setError('Документтин атын жазыңыз');return;}
+    if(!selectedFiles.length){setError('Жок дегенде бир файл тандаңыз');return;}
+    if(lock.current)return;
+    lock.current=true;setBusy(true);setError('');
+    let next={...drafts},saved=0;
     try{
-      const uploaded=await uploadToCloudinary(file,t.id,name);
-      const next={...drafts,[name]:uploaded};
-      setDrafts(next);
-      setSaving(true);
-      const ok=await update(tenderKey(t),{docs:next});
-      if(!ok)throw new Error('Документти Firebase ге сактоо ишке ашкан жок');
-    }
-    catch(e){setError('Жүктөө ишке ашкан жок: '+e.message);}
-    finally{uploadLock.current=false;setSaving(false);setBusy(false);if(picker.current)picker.current.value='';}
-  };
-  const removeDoc=name=>{
-    if(busy||saving)return;
-    setDeleteDocTarget(name);
+      for(const file of selectedFiles){
+        if(file.size>20*1024*1024)throw new Error(`${file.name}: 20 МБдан чоң файл`);
+        const uploaded=await uploadToCloudinary(file,tenderKey(t),name);
+        const key=`${name}__${crypto.randomUUID()}`;
+        next={...next,[key]:{...uploaded,docName:name}};
+        const ok=await update(tenderKey(t),{docs:next});
+        if(!ok)throw new Error('Firebase сактоо катасы');
+        setDrafts(next);
+        saved++;
+      }
+      setExpanded(name);
+      setDocTitle('');setSelectedFiles([]);setShowSuggestions(false);
+      if(picker.current)picker.current.value='';
+    }catch(err){
+      setError(`${saved} файл сакталды. ${err.message}`);
+      setSelectedFiles(selectedFiles.slice(saved));
+    }finally{lock.current=false;setBusy(false);}
   };
 
-  const confirmRemoveDoc=async()=>{
-    const name=deleteDocTarget;
-    if(!name||busy||saving)return;
-    setSaving(true);
-    setError('');
+  const removeFile=async()=>{
+    if(!deleteTarget||busy)return;
+    setBusy(true);setError('');
     try{
       const token=await auth.currentUser?.getIdToken();
       if(!token)throw new Error('Аккаунтка кайра кириңиз');
       const response=await fetch('/api/delete-file',{
         method:'POST',
         headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
-        body:JSON.stringify({tenderId:tenderKey(t),docName:name})
+        body:JSON.stringify({tenderId:tenderKey(t),docName:deleteTarget.key})
       });
       const result=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(result.error||`Өчүрүү катасы (${response.status})`);
-      setDrafts(previous=>{
-        const next={...previous};
-        delete next[name];
-        return next;
-      });
-      setDeleteDocTarget(null);
-    }catch(e){
-      setError('Файл өчүрүлгөн жок: '+e.message);
-    }finally{
-      setSaving(false);
-    }
+      const next={...drafts};delete next[deleteTarget.key];
+      setDrafts(next);
+      if(preview?.key===deleteTarget.key)setPreview(null);
+      setDeleteTarget(null);
+    }catch(err){setError('Өчүрүү ишке ашкан жок: '+err.message)}
+    finally{setBusy(false)}
   };
-  const entries=Object.entries(drafts).filter(([k,v])=>matches(k+' '+v?.name,term));
-  return <div className="drawerShade docsDrawerShade"><div className="docsModal" role="dialog" aria-modal="true" aria-label="Тендердин документтери">
-    <button className="close" aria-label="Жабуу" disabled={busy||saving} onClick={close}><X/></button>
-    <small>ДОКУМЕНТТЕР • {t.id}</small><h2>Документтерди тиркөө</h2><p className="tenderContext">{t.name}</p><p className="modalSub">Аткаруучу: {t.executor||'—'} · Файлдар автоматтык түрдө сакталат</p>
-    <div className="documentWorkspace"><section className="categoryPanel"><h3><span>1</span> Документтин түрүн тандаңыз</h3>
-      <input aria-label="Документтин түрүн издөө" placeholder="Документтин түрүн издөө…" value={categoryTerm} onChange={e=>setCategoryTerm(e.target.value)}/>
-      <div className="categoryList">{Object.entries(DOC_GROUPS).map(([group,names])=>{const filtered=names.filter(n=>matches(n,categoryTerm));return filtered.length>0&&<div key={group}><h4>{group}</h4>{filtered.map(name=><button type="button" key={name} className={'categoryChoice '+(selected===name?'selected':'')} disabled={busy} onClick={()=>setSelected(name)}><FileText size={15}/><span>{name}</span>{drafts[name]&&<CheckCircle2 size={15}/>}</button>)}</div>;})}</div>
-    </section><section className="uploadPanel"><h3><span>2</span> Файлды тиркеңиз</h3><b className="selectedCategory">{category}</b>
-      {selected==='Другие документы'&&<input aria-label="Документтин аталышы" placeholder="Өзүңүздүн документтин аталышы" value={custom} onChange={e=>setCustom(e.target.value)}/>}
-      <input ref={picker} type="file" hidden onChange={e=>attach(e.target.files?.[0])}/>
-      <button type="button" className="dropZone" disabled={busy||saving} onClick={()=>picker.current?.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(!saving)attach(e.dataTransfer.files?.[0]);}}><Upload size={32}/><b>{busy?'Файл жүктөлүүдө…':'Файлды тандаңыз'}</b><span>PDF · Word · Excel · сүрөт · башка форматтар</span><strong className="browsePill">Файл тандоо</strong><small>{drafts[category]?'Бул түрдөгү мурдагы файл алмаштырылат':'Бир түргө бир файл тиркелет'}</small></button>
-      {error&&<p className="authError" role="alert">{error}</p>}
-    </section><section className="attachedPanel">
-      <label className="librarySearch"><Search size={16}/><input aria-label="Тиркелген файлдарды издөө" placeholder="Тиркелген файлдарды издөө…" value={term} onChange={e=>setTerm(e.target.value)}/></label>
-      <h3 className="attachedHeading"><span>Тиркелген документтер</span> <span className="attachedCount">{Object.keys(drafts).length}</span></h3><div className="docList">{entries.length===0?<div className="docsEmpty"><FolderOpen/><b>{term?'Файл табылган жок':'Документ тиркеле элек'}</b></div>:entries.map(([name,file])=><div className="docItem ready" key={name}><div className="docState"><FileText/></div><div className="docName"><b>{name}</b><small>{file.name} · {fileSize(file.size)}</small></div><button className="filesBtn" disabled={!file.url} onClick={()=>setPreview(file)}>Ачуу</button><button className="downloadBtn" onClick={()=>downloadCloudFile(file.url,file.name)} aria-label="Жүктөп алуу"><Download size={16}/></button><button className="miniDel" disabled={busy||saving} aria-label="Документти өчүрүү" onClick={()=>removeDoc(name)}><Trash2 size={16}/></button></div>)}</div>
-    </section></div><div className="docsFooter docsFooterAuto"><span>{Object.keys(drafts).length} документ тиркелген</span><span className="autoSaveState">{busy?'Файл жүктөлүүдө…':saving?'Сакталууда…':'✓ Автоматтык сактоо'}</span></div>
-    {deleteDocTarget&&(
-      <div className="deleteConfirmShade documentDeleteShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!saving)setDeleteDocTarget(null)}}>
-        <div className="deleteConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="deleteDocumentTitle">
-          <button type="button" className="deleteConfirmClose" disabled={saving} onClick={()=>setDeleteDocTarget(null)} aria-label="Жабуу"><X size={17}/></button>
-          <div className="deleteConfirmIcon"><Trash2 size={23}/></div>
-          <small>ФАЙЛДЫ ӨЧҮРҮҮ</small>
-          <h2 id="deleteDocumentTitle">Файлды өчүрөсүзбү?</h2>
-          <p><strong>{deleteDocTarget}</strong> документи өчүрүлөт. Бул аракетти артка кайтаруу мүмкүн эмес.</p>
-          <div className="deleteConfirmActions">
-            <button type="button" className="deleteCancelBtn" disabled={saving} onClick={()=>setDeleteDocTarget(null)}>Жок, калтыр</button>
-            <button type="button" className="deleteApproveBtn" disabled={saving} onClick={confirmRemoveDoc}>
-              <Trash2 size={16}/>{saving?'Өчүрүлүүдө...':'Ооба, өчүрүү'}
-            </button>
-          </div>
-        </div>
+
+  const previewFile=preview?.file;
+  const extension=(previewFile?.name||'').split('.').pop().toLowerCase();
+  const isImage=previewFile?.type?.startsWith('image/')||['jpg','jpeg','png','webp','gif','bmp','svg'].includes(extension);
+  const isPdf=extension==='pdf'||previewFile?.type==='application/pdf';
+  const office=['doc','docx','xls','xlsx','ppt','pptx'].includes(extension);
+  return <div className="drawerShade docsDrawerShade"><div className="docsModal tfDocsV2" role="dialog" aria-modal="true" aria-label="Документтер">
+    <div className="tfDocsHead">
+      <div><small>ТЕНДЕР № {t.id}</small><h2>Документтер</h2><p>{t.name} · {t.executor||'Аткаруучу көрсөтүлгөн эмес'}</p></div>
+      <button className="tfDocsClose" type="button" onClick={close} disabled={busy} aria-label="Жабуу"><X size={20}/></button>
+    </div>
+    <form className="tfDocsForm" onSubmit={saveFiles}>
+      <div className="tfDocsField tfDocsTitlePicker" ref={suggestionsRef}>
+        <label htmlFor="tfDocsNameInput">Название документа</label>
+        <input id="tfDocsNameInput" autoComplete="off" value={docTitle}
+          onFocus={()=>setShowSuggestions(true)}
+          onChange={e=>{setDocTitle(e.target.value);setShowSuggestions(true)}}
+          onKeyDown={e=>{if(e.key==='Escape')setShowSuggestions(false)}}
+          placeholder="Папканын атын жазыңыз же тандаңыз" disabled={busy} required/>
+        {showSuggestions&&folderSuggestions.length>0&&<div className="tfDocsSuggestions" role="listbox" aria-label="Бар папкалар">
+          {folderSuggestions.map(name=><button type="button" role="option" aria-selected={docTitle===name} key={name}
+            onClick={()=>{setDocTitle(name);setShowSuggestions(false)}}><FolderOpen size={15}/><span>{name}</span></button>)}
+        </div>}
       </div>
-    )}
-    {preview&&<FilePreview file={preview} close={()=>setPreview(null)}/>}
+      <label className="tfDocsFileField"><span>Файлдарды тандоо</span><input ref={picker} type="file" multiple onChange={e=>setSelectedFiles(Array.from(e.target.files||[]))} disabled={busy}/></label>
+      <button type="submit" className="primary tfDocsSave" disabled={busy||!docTitle.trim()||!selectedFiles.length}><Save size={17}/>{busy?'Сакталууда…':'Сохранить'}</button>
+      {selectedFiles.length>0&&<small className="tfDocsSelected">{selectedFiles.length} файл тандалды: {selectedFiles.map(f=>f.name).join(', ')}</small>}
+    </form>
+    {error&&<p className="authError" role="alert">{error}</p>}
+    <div className="tfDocsBody">
+      <section className="tfDocsFolders">
+        <div className="tfDocsSectionTitle"><b>Документтердин папкалары</b><span>{folders.length}</span></div>
+        <label className="tfDocsSearch"><Search size={16}/><input placeholder="Документ издөө…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
+        <div className="tfDocsFolderScroll">
+          {!folders.length&&<div className="tfDocsEmpty"><FolderOpen size={32}/>Азырынча документ жок</div>}
+          {folders.map(folder=><div className="tfDocsFolder" key={folder.name}>
+            <button type="button" className={'tfDocsFolderButton '+(expanded===folder.name?'opened':'')} onClick={()=>setExpanded(expanded===folder.name?null:folder.name)}>
+              <FolderOpen size={19}/><span>{folder.name}</span><small>{folder.files.length}</small>{expanded===folder.name?<ChevronDown size={17}/>:<ChevronRight size={17}/>}
+            </button>
+            {expanded===folder.name&&<div className="tfDocsFolderFiles">{folder.files.map(({key,file})=><div className={'tfDocsFileRow '+(preview?.key===key?'active':'')} key={key}>
+              <button type="button" className="tfDocsFileOpen" onClick={()=>setPreview({key,file})} title={file.name}><FileText size={16}/><span>{file.name}</span></button>
+              <button type="button" className="tfDocsFileDelete" disabled={busy} title="Өчүрүү" onClick={()=>setDeleteTarget({key,file})}><Trash2 size={15}/></button>
+            </div>)}</div>}
+          </div>)}
+        </div>
+      </section>
+      <section className="tfDocsPreview">
+        <div className="tfDocsPreviewHead"><b>{previewFile?.name||'Документти көрүү'}</b>{preview&&<button type="button" aria-label="Жабуу" onClick={()=>setPreview(null)}><X size={19}/></button>}</div>
+        {!preview?<div className="tfDocsPreviewEmpty"><FileText size={43}/><b>Документти тандаңыз</b><span>Сол жактагы папканы ачып, файлды басыңыз</span></div>:
+          <div className="tfDocsPreviewContent">
+            {isImage?<img src={previewFile.url} alt={previewFile.name}/>:
+             isPdf?<TenderPdfViewer key={previewFile.url} url={previewFile.url} name={previewFile.name}/>:
+             office?<iframe title={previewFile.name} src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFile.url)}`}/>:
+             <div className="tfDocsPreviewEmpty"><FileText size={35}/><b>Бул формат браузерде түз ачылбашы мүмкүн</b><span>Файлды жүктөп алып ачыңыз</span></div>}
+          </div>}
+        {preview&&<div className="tfDocsPreviewActions"><button type="button" className="downloadBtn" onClick={()=>downloadCloudFile(previewFile.url,previewFile.name)}><Download size={16}/> Скачать</button><button type="button" className="filesBtn" onClick={()=>window.open(previewFile.url,'_blank','noopener,noreferrer')}>Жаңы беттен ачуу</button></div>}
+      </section>
+    </div>
+    {deleteTarget&&<div className="deleteConfirmShade documentDeleteShade"><div className="deleteConfirmDialog" role="dialog" aria-modal="true">
+      <h2>Файлды өчүрөсүзбү?</h2><p>{deleteTarget.file.name}</p>
+      <div className="deleteConfirmActions"><button type="button" disabled={busy} onClick={()=>setDeleteTarget(null)}>Жок, калтыр</button><button type="button" className="deleteApproveBtn" disabled={busy} onClick={removeFile}><Trash2 size={16}/>{busy?'Өчүрүлүүдө…':'Ооба, өчүрүү'}</button></div>
+    </div></div>}
   </div></div>;
 }
 
@@ -2081,7 +2215,7 @@ window.addEventListener('load',function(){
   },[file.url,file.type,ext]);
   useEffect(()=>{const fn=e=>{if(e.key==='Escape'){e.stopPropagation();close();}};document.addEventListener('keydown',fn);return()=>document.removeEventListener('keydown',fn);},[close]);
   return <div className="previewShade" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}><section className="filePreview" role="dialog" aria-modal="true" aria-label={file.name}><div className="previewHead"><FileText/><div><b>{file.name}</b><small>{ext.toUpperCase()} · {fileSize(file.size)}</small></div><button className="previewPrintBtn" type="button" disabled={!view||!!error} onClick={printPreview}><Printer size={16}/>Печать</button><button className="downloadBtn" onClick={()=>downloadCloudFile(file.url,file.name)}><Download size={16}/>Жүктөп алуу</button><button aria-label="Көрүүнү жабуу" onClick={close}><X/></button></div><div className="previewBody">
-    {error?<div className="docsEmpty" role="alert"><b>Файлды көрсөтүү мүмкүн болгон жок</b><p>{error}</p><small>Файлдын жеткиликтүүлүгүн жана Cloudinary CORS жөндөөсүн текшериңиз.</small></div>:!view?<div className="docsEmpty" role="status">Файл ачылууда…</div>:view.kind==='pdf'?<iframe title={file.name} src={view.url+'#toolbar=1&navpanes=0'}/>:view.kind==='image'?<img alt={file.name} src={view.url}/>:view.kind==='word'?<iframe title={file.name} sandbox="" srcDoc={`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{font:16px/1.7 system-ui;background:white;padding:35px;max-width:850px;margin:auto;color:#27324a}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}img{max-width:100%}</style> </head><body>${view.html}</body></html>`}/>:view.kind==='text'?<pre>{view.text}</pre>:view.kind==='sheets'?<><div className="sheetTabs">{view.sheets.map((s,i)=><button key={s.name} className={sheet===i?'selected':''} onClick={()=>setSheet(i)}>{s.name}</button>)}</div><div className="sheetScroll"><table><tbody>{view.sheets[sheet]?.rows.map((row,i)=><tr key={i}><th>{i+1}</th>{row.map((cell,j)=><td key={j}>{String(cell)}</td>)}</tr>)}</tbody></table></div></>:view.kind==='audio'?<audio controls src={view.url}/>:view.kind==='video'?<video controls src={view.url}/>:<div className="docsEmpty"><FileText/><b>Бул форматтын браузерде алдын ала көрүнүшү жок</b><p>Файлды жүктөп алып, тиешелүү программада ачыңыз. Эски .doc үчүн .docx форматын колдонуңуз.</p></div>}
+    {error?<div className="docsEmpty" role="alert"><b>Файлды көрсөтүү мүмкүн болгон жок</b><p>{error}</p><small>Файлдын жеткиликтүүлүгүн жана Cloudinary CORS жөндөөсүн текшериңиз.</small></div>:!view?<div className="docsEmpty" role="status">Файл ачылууда…</div>:view.kind==='pdf'?<TenderPdfViewer key={view.url} url={view.url} name={file.name}/>:view.kind==='image'?<img alt={file.name} src={view.url}/>:view.kind==='word'?<iframe title={file.name} sandbox="" srcDoc={`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{font:16px/1.7 system-ui;background:white;padding:35px;max-width:850px;margin:auto;color:#27324a}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}img{max-width:100%}</style> </head><body>${view.html}</body></html>`}/>:view.kind==='text'?<pre>{view.text}</pre>:view.kind==='sheets'?<><div className="sheetTabs">{view.sheets.map((s,i)=><button key={s.name} className={sheet===i?'selected':''} onClick={()=>setSheet(i)}>{s.name}</button>)}</div><div className="sheetScroll"><table><tbody>{view.sheets[sheet]?.rows.map((row,i)=><tr key={i}><th>{i+1}</th>{row.map((cell,j)=><td key={j}>{String(cell)}</td>)}</tr>)}</tbody></table></div></>:view.kind==='audio'?<audio controls src={view.url}/>:view.kind==='video'?<video controls src={view.url}/>:<div className="docsEmpty"><FileText/><b>Бул форматтын браузерде алдын ала көрүнүшү жок</b><p>Файлды жүктөп алып, тиешелүү программада ачыңыз. Эски .doc үчүн .docx форматын колдонуңуз.</p></div>}
   </div></section></div>;
 }
 
