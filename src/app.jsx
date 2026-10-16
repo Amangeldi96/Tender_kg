@@ -697,7 +697,7 @@ export default function App(){
   if(!authReady){
     return(
       <div className="authScreen">
-        <div className="authLoading">TenderFlow жүктөлүүдө...</div>
+        <div className="authLoading">Тендер База жүктөлүүдө...</div>
       </div>
     );
   }
@@ -739,7 +739,7 @@ const tableGridStyle = {
       {notice&&<div className="tfToast" role="alert"><span>{notice}</span><button onClick={()=>setNotice('')} aria-label="Жабуу"><X size={16}/></button></div>}
 
       <div className="mobileTopbar">
-        <div className="mobileTopbarBrand"><span className="mobileTopbarLogo">TF</span><strong>TenderFlow</strong></div>
+        <div className="mobileTopbarBrand"><span className="mobileTopbarLogo">ТБ</span><strong>Тендер База</strong></div>
         <button type="button" className={"mobileMenuTrigger tfHamburger "+(mobileNavOpen?"isOpen":"")} aria-label={mobileNavOpen?"Менюну жабуу":"Менюну ачуу"} aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(v=>!v)}><i/><i/><i/></button>
       </div>
       {mobileNavOpen && <button type="button" className="mobileNavBackdrop" aria-label="Менюну жабуу" onClick={()=>setMobileNavOpen(false)}/>}
@@ -747,10 +747,10 @@ const tableGridStyle = {
 
         <div className="brand">
           
-          <div className="logo">TF</div>
+          <div className="logo">ТБ</div>
           <div>
-            <b>TenderFlow</b>
-            <small>WORKSPACE / V2</small>
+            <b>Тендер База</b>
+            <small>ТЕНДЕРЛЕР БАЗАСЫ</small>
           </div>
         </div>
 
@@ -1595,7 +1595,7 @@ function AuthFrame({children}){
     <div className="emeraldBackdrop" aria-hidden="true"/><div className="emeraldArchitecture" aria-hidden="true"/>
     <div className="emeraldLayout">
       <section className="emeraldIntro">
-        <div className="emeraldBrand"><div className="emeraldMonogram">TF</div><div><strong>Tender<span>Flow</span></strong><small>BUSINESS WORKSPACE</small></div></div>
+        <div className="emeraldBrand"><div className="emeraldMonogram">ТБ</div><div><strong>Тендер<span> База</span></strong><small>ТЕНДЕРЛЕРДИ БАШКАРУУ</small></div></div>
         <div className="emeraldMessage"><h1>Бардык<br/>тендерлер<br/><em>бир жерде</em></h1><p>Документтер, аткаруучулар, төлөмдөр жана бардык тендерлерди ыңгайлуу башкарыңыз.</p>
         <div className="emeraldFeatures">
           <div><span><FileText size={23}/></span><div><b>Документтер</b><small>Жүктөө, сактоо, түзөтүү</small></div></div>
