@@ -49,6 +49,15 @@ const DOC_GROUPS={
   'Башка': ['Другие документы']
 };
 const DOCS=Object.values(DOC_GROUPS).flat();
+
+// Таблица цен документин эски жана жаңы сактоо форматтарынан аныктоо.
+const hasPriceTable = docs => Object.entries(docs || {}).some(([key, file]) => {
+  if (!file) return false;
+  const labels = [key.split('__')[0], file.docName, file.name]
+    .filter(Boolean)
+    .map(value => String(value).trim().toLocaleLowerCase('ru-RU').replace(/[_-]+/g, ' ').replace(/\s+/g, ' '));
+  return labels.some(value => /(?:таблица\s*цен|ценовая\s*таблица|таблица\s*баа)/i.test(value));
+});
 const tenderKey=t=>t.recordId||t.id;
 // «Срок вскрытия»: жаңы күн биринчи, эски күн акырында.
 // ISO YYYY-MM-DD даталары түз сап катары да туура салыштырылат.
@@ -441,6 +450,8 @@ export default function App(){
 
   const[editingId,setEditingId]=useState(null);
   const[editDraft,setEditDraft]=useState(null);
+  const[mobileEditOpen,setMobileEditOpen]=useState(false);
+  const[mobilePaymentTender,setMobilePaymentTender]=useState(null);
 
   const executorsGroup=useMemo(()=>{
     const map={};
@@ -582,6 +593,7 @@ export default function App(){
 
     const ok=await update(tenderKey(t),{paid:value});
     if(ok){setPaymentEditId(null);setPaymentValue('');}
+    return ok;
   };
 
   const startEdit=t=>{
@@ -640,7 +652,7 @@ export default function App(){
     setBusy(true);
     try{
       await saveRemote(oldId,newTender);
-      setEditingId(null);setEditDraft(null);setNotice('Өзгөртүүлөр сакталды');
+      setEditingId(null);setEditDraft(null);setMobileEditOpen(false);setNotice('Өзгөртүүлөр сакталды');
     }catch(err){reportError(err)}finally{setBusy(false)}
   };
 
@@ -728,13 +740,13 @@ const tableGridStyle = {
 
       <div className="mobileTopbar">
         <div className="mobileTopbarBrand"><span className="mobileTopbarLogo">TF</span><strong>TenderFlow</strong></div>
-        <button type="button" className="mobileMenuTrigger" aria-label="Менюну ачуу" aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(true)}><span>Меню</span><LayoutDashboard size={19}/></button>
+        <button type="button" className={"mobileMenuTrigger tfHamburger "+(mobileNavOpen?"isOpen":"")} aria-label={mobileNavOpen?"Менюну жабуу":"Менюну ачуу"} aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(v=>!v)}><i/><i/><i/></button>
       </div>
       {mobileNavOpen && <button type="button" className="mobileNavBackdrop" aria-label="Менюну жабуу" onClick={()=>setMobileNavOpen(false)}/>}
       <aside className={mobileNavOpen ? "mobileNavOpen" : ""}>
 
         <div className="brand">
-          <button type="button" className="mobileNavToggle" aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(v=>!v)}><X size={19}/><span>Жабуу</span></button>
+          
           <div className="logo">TF</div>
           <div>
             <b>TenderFlow</b>
@@ -1114,6 +1126,31 @@ const tableGridStyle = {
                 </div>
               </div>
 
+              <div className="tfMobileTenderList">
+                {filtered.map(t=>{
+                  const key=tenderKey(t);
+                  const paid=Number(t.paid||0);
+                  const status=(kind)=>{
+                    const val=t[kind];
+                    const state=t[kind+'Status'];
+                    return state==='returned'?'Кайтарылды':state==='waiting'?'Күтүлүүдө':state==='unpaid'?'Төлөнө элек':state==='paid'||(!state&&t[kind+'Paid'])?'Төлөндү':Number(String(val||'').replace(/\s/g,''))>0?'Төлөнө элек':'Жок';
+                  };
+                  return <article className="tfMobileTenderCard" key={key}>
+                    <div className="tfCardHead">
+                      <div className="tfCardNumber"><FileText size={15}/> <span>Тендер №: {t.id}</span></div>
+                      <span className="tfCardDate">{t.date||'—'}</span>
+                      <button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>
+                    </div>
+                    <div className="tfCardInfo org"><small>МЕКЕМЕ:</small><strong>{t.org}</strong></div>
+                    <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small><strong>{t.name}</strong></div>
+                    <div className="tfCardAmounts"><div><small>Бюджет (Суммасы):</small><strong>{money(t.sum)}</strong></div><div role="button" tabIndex={0} onClick={()=>{startPayment(t);setMobilePaymentTender(t)}} onKeyDown={e=>{if(e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: ✎</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong></div></div>
+                    <div className="tfCardGuarantees">{['gopp','goik'].map(kind=><div key={kind}><small>{kind.toUpperCase()}:</small><button type="button" className={'tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red')} onClick={()=>setPayStatusModal({t,type:kind})}>{status(kind)}{t[kind]?' · '+t[kind]+' сом':''}</button></div>)}</div>
+                    <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
+                    <button type="button" className="tfCardFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
+                  </article>;
+                })}
+              </div>
+
               {/* ТАБЛИЦА */}
             {/* ТАБЛИЦА БӨЛҮГҮ */}
 <div className="bigTable">
@@ -1301,12 +1338,12 @@ const tableGridStyle = {
         <span>
           <b
             className={
-              (t.docs||{})['Таблица цен']
+              hasPriceTable(t.docs)
                 ?'pill green'
                 :'pill gray'
             }
           >
-            {(t.docs||{})['Таблица цен']?'✓ Тиркелген':'Жок'}
+            {hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}
           </b>
         </span>
 
@@ -1475,9 +1512,32 @@ const tableGridStyle = {
         />, document.body
       )}
 
+      {mobileEditOpen && editDraft && (
+        <Modal close={()=>{if(!busy){setMobileEditOpen(false);setEditingId(null);setEditDraft(null)}}}>
+          <div className="tfMobileEditDialog">
+            <small>ТЕНДЕРДИ ОҢДОО</small><h2>Тендер маалыматтары</h2>
+            <form onSubmit={e=>{e.preventDefault();saveEdit(editingId)}}>
+              <div className="tfMobileEditFields">
+                {[['id','Тендер номери'],['org','Мекеме'],['name','Лот аталышы'],['executor','Аткаруучу'],['sum','Суммасы'],['paid','Төлөнгөн сумма'],['gopp','ГОПП'],['goik','ГОИК'],['date','Срок вскрытия']].map(([field,label])=><label key={field}>{label}<input required={['id','org','name','executor'].includes(field)} type={field==='date'?'date':['sum','paid'].includes(field)?'number':'text'} min={['sum','paid'].includes(field)?'0':undefined} value={editDraft[field]??''} onChange={e=>changeEdit(field,e.target.value)}/></label>)}
+              </div>
+              <div className="tfMobileEditActions"><button type="button" onClick={()=>{setMobileEditOpen(false);setEditingId(null);setEditDraft(null)}}>Жок</button><button type="submit" className="primary" disabled={busy}><Save size={16}/> {busy?'Сакталууда...':'Сактоо'}</button></div>
+            </form>
+          </div>
+        </Modal>
+      )}
+      {mobilePaymentTender && (
+        <Modal close={()=>setMobilePaymentTender(null)}>
+          <div className="tfMobileEditDialog"><small>ТӨЛӨМДҮ ОҢДОО</small><h2>Төлөнгөн сумма</h2>
+            <form onSubmit={async e=>{e.preventDefault();const t=tenders.find(x=>tenderKey(x)===tenderKey(mobilePaymentTender))||mobilePaymentTender;const ok=await savePayment(t);if(ok)setMobilePaymentTender(null)}}>
+              <label>Сумма (сом)<input autoFocus type="number" min="0" max={mobilePaymentTender.sum} value={paymentValue} onChange={e=>setPaymentValue(e.target.value)}/></label>
+              <div className="tfMobileEditActions"><button type="button" onClick={()=>setMobilePaymentTender(null)}>Жок</button><button type="submit" className="primary"><Save size={16}/> Сактоо</button></div>
+            </form>
+          </div>
+        </Modal>
+      )}
       {payStatusModal&&(
         <PaymentStatusModal
-          t={payStatusModal.t}
+          t={tenders.find(item=>tenderKey(item)===tenderKey(payStatusModal.t))||payStatusModal.t}
           type={payStatusModal.type}
           update={update}
           close={()=>setPayStatusModal(null)}
@@ -1627,9 +1687,7 @@ function PayPill({t,type,openStatus}){
   const val=t[type];
 
   if(!val){
-    return(
-      <span className="pill gray noGuarantee" title="Сумма көрсөтүлгөн эмес">Жок</span>
-    );
+    return <button type="button" className="pill gray clickable noGuarantee" onClick={openStatus} title="Статусту өзгөртүү">Жок</button>;
   }
 
   const status=
@@ -1661,12 +1719,17 @@ function PaymentStatusModal({t,type,update,close}){
     t[type+'Status'] ||
     (t[type+'Paid']?'paid':'unpaid');
 
-  const choose=status=>{
-    update(tenderKey(t),{
-      [type+'Status']:status,
-      [type+'Paid']:status==='paid'||status==='returned'
-    });
-    close();
+  const [saving,setSaving]=useState(false);
+  const choose=async status=>{
+    if(saving)return;
+    setSaving(true);
+    try{
+      const saved=await update(tenderKey(t),{
+        [type+'Status']:status,
+        [type+'Paid']:status==='paid'||status==='returned'
+      });
+      if(saved)close();
+    }finally{setSaving(false);}
   };
 
   return(
@@ -1698,6 +1761,7 @@ function PaymentStatusModal({t,type,update,close}){
               key={option.key}
               type="button"
               className={'statusChoice '+option.color+(current===option.key?' selected':'')}
+              disabled={saving}
               onClick={()=>choose(option.key)}
             >
               <span className="statusDot"/>
