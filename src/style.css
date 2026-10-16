@@ -2353,3 +2353,116 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .tfDocsPreviewContent:has(.tfPdfViewer){display:flex!important;min-height:0!important;padding:0!important;overflow:hidden!important}
 .tfPdfScroll{width:100%;min-height:0;flex:1 1 auto;overflow:auto;padding:20px 12px}
 @media(max-width:600px){.tfPdfScroll{padding:10px 4px}}
+
+/* TenderFlow mobile cards and animated hamburger */
+.tfMobileTenderList{display:none}
+@media(max-width:900px){
+ .mobileTopbar{display:flex!important;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1200;background:#fff;border-bottom:1px solid #e5ebf0;padding:11px 16px;min-height:64px}
+ .tfHamburger{width:43px;height:43px;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:9px!important;background:#edf4f2!important;border:1px solid #dce9e5!important;border-radius:12px!important;z-index:1302}
+ .tfHamburger i{display:block;width:22px;height:2.5px;background:#245f57;border-radius:5px;transition:transform .25s,opacity .2s}
+ .tfHamburger.isOpen i:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
+ .tfHamburger.isOpen i:nth-child(2){opacity:0}
+ .tfHamburger.isOpen i:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
+ .shell>aside{position:fixed!important;top:0!important;left:0!important;bottom:0!important;width:min(310px,85vw)!important;height:100dvh!important;z-index:1250!important;transform:translateX(-105%);transition:transform .28s ease!important;overflow-y:auto!important;padding:24px 17px!important;display:flex!important;flex-direction:column!important;box-shadow:18px 0 50px #0b1d2a25}
+ .shell>aside.mobileNavOpen{transform:translateX(0)}
+ .shell>aside nav{display:flex!important;flex-direction:column!important;gap:7px!important}
+ .shell>aside nav a{justify-content:flex-start!important}
+ .mobileNavBackdrop{position:fixed!important;inset:0!important;background:#091b2b99!important;z-index:1201!important;backdrop-filter:blur(3px)}
+ .tfNavClose{align-self:flex-end;width:36px;height:36px;padding:7px!important;border:0!important;background:#344a59!important;color:white!important}
+ .tfMobileTenderList{display:grid;gap:13px;padding:12px}
+ .bigTable{display:none!important}
+ .tfMobileTenderCard{border:1px solid #dce5ed;border-radius:15px;background:#fff;padding:13px;box-shadow:0 3px 13px #1d33400b;color:#243749;min-width:0}
+ .tfCardHead{display:flex;align-items:center;gap:7px;padding-bottom:11px;border-bottom:1px solid #e8edf2}
+ .tfCardNumber{display:flex;align-items:center;gap:5px;flex:1;min-width:0;color:#2362cf;font-weight:800;font-size:12px}.tfCardNumber span{overflow-wrap:anywhere}
+ .tfCardDate{font-size:10px;color:#718398;white-space:nowrap}.tfCardEdit{background:#4285f4!important;color:#fff!important;border:0!important;padding:7px!important;border-radius:8px!important}
+ .tfCardInfo{margin-top:9px;padding:10px 12px;border-left:4px solid #3265da;border-radius:5px;background:#eef4fb;display:grid;gap:3px}
+ .tfCardInfo.lot{background:#f5f7f9;border-left-color:#738396}.tfCardInfo small{font-size:10px;color:#54677d;font-weight:800}.tfCardInfo strong{font-size:13px;overflow-wrap:anywhere}
+ .tfCardAmounts,.tfCardGuarantees{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}
+ .tfCardAmounts>div{background:#f0f4f8;border-radius:9px;padding:10px 8px;display:grid;gap:5px;min-width:0}
+ .tfCardAmounts small,.tfCardGuarantees small{font-size:10px;color:#7a8b9c}.tfCardAmounts strong{font-size:13px;overflow-wrap:anywhere}.tfCardAmounts strong.negative,.tfCardAmounts strong.positive{display:block;padding:6px 3px;border-radius:6px;text-align:center;color:white;background:#dc2626}.tfCardAmounts strong.positive{background:#169b62}
+ .tfCardGuarantees>div{display:grid;gap:5px;min-width:0}.tfCardGuarantee{width:100%;min-height:30px;padding:5px!important;color:white!important;background:#dc2626!important;border:0!important;font-size:11px!important;font-weight:750}.tfCardGuarantee.yellow{background:#e9b900!important}.tfCardGuarantee.green{background:#149d66!important}.tfCardGuarantee.gray{background:#9aa6b2!important}
+ .tfCardPrice{margin-top:10px;background:#f5f7f9;padding:9px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#60758b}.tfCardPrice b{padding:6px 10px;border-radius:6px;background:#a5afb9;color:white}.tfCardPrice b.attached{background:#0d9c60}
+ .tfCardFiles{margin-top:10px;width:100%;display:flex;align-items:center;gap:6px;border:0!important;border-top:1px solid #e6edf2!important;border-radius:0!important;background:transparent!important;color:#3262d4!important;text-align:left;padding:11px 3px 1px!important;font-weight:700;font-size:12px}.tfCardFiles span{margin-left:auto;display:flex;gap:4px;align-items:center;color:#6d8197;font-weight:500}
+}
+@media(max-width:420px){.tfMobileTenderList{padding:8px 4px}.tfMobileTenderCard{padding:11px}.tfCardDate{font-size:9px}.tfCardNumber{font-size:11px}}
+
+/* Mobile navigation final override: compact, sharp, single close control */
+@media (max-width:900px){
+ .mobileTopbar{position:fixed!important;inset:0 0 auto 0!important;height:62px!important;min-height:62px!important;z-index:3003!important;padding:0 14px!important;box-shadow:0 2px 14px rgba(18,38,52,.08)!important}
+ .shell{padding-top:62px!important}
+ .mobileMenuTrigger.tfHamburger{position:relative!important;z-index:3004!important;flex:0 0 44px!important;width:44px!important;height:44px!important;min-height:44px!important;filter:none!important;backdrop-filter:none!important}
+ .mobileNavBackdrop{position:fixed!important;inset:62px 0 0!important;z-index:3000!important;background:rgba(12,25,37,.36)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;filter:none!important}
+ .shell>aside,.shell>aside.mobileNavOpen{position:fixed!important;top:62px!important;bottom:0!important;left:0!important;width:min(292px,82vw)!important;height:calc(100dvh - 62px)!important;max-height:calc(100dvh - 62px)!important;z-index:3001!important;border-radius:0 16px 16px 0!important;padding:18px 14px!important;box-shadow:8px 0 26px rgba(12,25,37,.15)!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow-y:auto!important;overflow-x:hidden!important;visibility:hidden!important;transform:translate3d(-105%,0,0)!important;transition:transform .23s ease,visibility .23s!important}
+ .shell>aside.mobileNavOpen{visibility:visible!important;transform:translate3d(0,0,0)!important}
+ .shell>aside .brand{padding:0 6px 16px!important;margin-bottom:8px!important;border-bottom:1px solid #3a4a58!important}
+ .shell>aside .mobileNavToggle{display:none!important}
+ .shell>aside nav{display:flex!important;flex-direction:column!important;gap:6px!important;overflow:visible!important;flex:0 0 auto!important}
+ .shell>aside nav a{min-height:43px!important;justify-content:flex-start!important;padding:11px 12px!important}
+ .shell>aside .navAccordionSection{max-height:none!important;overflow:visible!important;order:initial!important;margin:8px 0!important;padding:12px 4px!important}
+ .shell>aside .executorScrollable{max-height:29dvh!important;overflow-y:auto!important}
+ .shell>aside .navbottom{margin-top:auto!important;flex:0 0 auto!important}
+ .tfMobileTenderList{padding:10px 8px 18px!important}
+ .tfMobileTenderCard{width:100%!important}
+}
+@media(max-width:380px){.shell>aside,.shell>aside.mobileNavOpen{width:min(278px,84vw)!important}}
+
+/* Match mobile colors to the existing desktop TenderFlow palette */
+@media(max-width:900px){
+ .mobileTopbar{background:#fff!important;border-bottom:1px solid #e3e9ee!important;color:#1f2c3c!important}
+ .mobileTopbarBrand,.mobileTopbarBrand strong{color:#1f2c3c!important}
+ .mobileTopbarLogo{background:#d9e9e2!important;color:#20564f!important}
+ .tfHamburger{background:#eaf3f0!important;border-color:#d2e4dc!important}
+ .tfHamburger i{background:#28675f!important}
+ .shell>aside,.shell>aside.mobileNavOpen{background:#1e2936!important;color:#f3f6f8!important}
+ .shell>aside nav a{color:#b8c7d4!important}
+ .shell>aside nav a.on{background:#354a55!important;color:#fff!important}
+ .shell>aside nav a:hover{background:#2a3949!important;color:#fff!important}
+ .tfMobileTenderCard{border-color:#e2e9ef!important;background:#fff!important;color:#223245!important}
+ .tfCardAmounts>div{background:#edf1f8!important}
+ .tfCardPrice{background:#edf3f1!important;color:#35685c!important}
+ .tfCardPrice b.attached{background:#28675f!important;color:#fff!important}
+ .tfCardFiles{color:#28675f!important;border-top-color:#e5eaf0!important}
+ .tfCardAmounts strong.positive,.tfCardGuarantee.green{background:#438358!important}
+ .tfCardGuarantee.yellow{background:#c79644!important}
+}
+
+/* Mobile redesign: desktop palette, functional dialogs, no duplicated close control */
+@media(max-width:900px){
+.tfMobileTenderList{padding:12px 0 20px!important;gap:12px!important}
+.tfMobileTenderCard{border:1px solid #e2e9ef!important;border-radius:14px!important;padding:16px!important;box-shadow:0 3px 12px rgba(31,48,63,.05)!important}
+.tfCardNumber{color:#28675f!important}.tfCardEdit{background:#eaf3f0!important;color:#28675f!important;border:1px solid #d8e8e1!important}
+.tfCardInfo.org{background:#edf4f2!important;border-left-color:#28675f!important}.tfCardInfo.lot{background:#f3f6f8!important;border-left-color:#8194a4!important}
+.tfCardAmounts>div{background:#f4f7f9!important}.tfCardAmounts>div[role=button]{cursor:pointer}.tfCardAmounts strong.negative{background:#fbecee!important;color:#ad3941!important}.tfCardAmounts strong.positive{background:#e4f3e9!important;color:#287448!important}
+.tfCardGuarantee.green{background:#e4f3e9!important;color:#287448!important}.tfCardGuarantee.yellow{background:#fff2cc!important;color:#916a00!important}.tfCardGuarantee.red{background:#fbecee!important;color:#ad3941!important}.tfCardGuarantee.gray{background:#edf1f4!important;color:#667789!important}
+.tfCardPrice b.attached{background:#e4f3e9!important;color:#287448!important}.tfCardPrice b.missing{background:#edf1f4!important;color:#667789!important}.tfCardFiles{color:#28675f!important}
+.tfMobileEditDialog h2{font-size:22px;margin:8px 0 20px;color:#223245}.tfMobileEditDialog>small{font-size:10px;color:#28675f;font-weight:800}
+.tfMobileEditFields{display:grid;grid-template-columns:1fr 1fr;gap:13px}.tfMobileEditDialog label{display:flex;flex-direction:column;gap:6px;color:#526476;font-size:12px;font-weight:650;margin-bottom:12px}.tfMobileEditDialog input{width:100%;padding:11px;min-height:42px;color:#223245}.tfMobileEditFields label:nth-child(-n+4){grid-column:1/-1}.tfMobileEditActions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.tfMobileEditActions button{min-width:110px}
+.shell>aside .mobileNavToggle{display:none!important}
+}
+@media(max-width:390px){.tfMobileEditFields{grid-template-columns:1fr}}
+
+/* Guarantee status colors: paid = blue, returned = green */
+@media(max-width:900px){
+.tfCardGuarantee.blue{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}
+.tfCardGuarantee.green{background:#16a34a!important;color:#fff!important;border-color:#16a34a!important}
+}
+
+/* Compact guarantee badges: same visual scale as desktop reference */
+@media(max-width:900px){
+.tfCardGuarantees>div{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:6px!important}
+.tfCardGuarantee{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;max-width:100%!important;min-height:29px!important;padding:6px 10px!important;border-radius:7px!important;font-size:10px!important;font-weight:700!important;line-height:1.25!important;white-space:normal!important;box-shadow:none!important}
+.tfCardGuarantee.blue{background:#eaf3ff!important;color:#0754c9!important;border:1px solid #bfdbfe!important}
+.tfCardGuarantee.green{background:#eaf8ee!important;color:#16803b!important;border:1px solid #bbebca!important}
+.tfCardGuarantee.red{background:#fff0f0!important;color:#b54747!important;border:1px solid #f4cece!important}
+.tfCardGuarantee.gray{background:#f2f4f6!important;color:#667789!important;border:1px solid #e0e5ea!important}
+.tfCardGuarantee.yellow{background:#fff7e6!important;color:#916a00!important;border:1px solid #f5e4b3!important}
+}
+.pill.blue{background:#eaf3ff!important;color:#0754c9!important;border:1px solid #bfdbfe!important}
+.pill.green{background:#eaf8ee!important;color:#16803b!important;border:1px solid #bbebca!important}
+
+/* ГОПП / ГОИК: компакт статустар, ПК жана мобилдик */
+.pill.blue,.tfCardGuarantee.blue{background:#eaf3ff!important;color:#0754c9!important;border:1px solid #bfdbfe!important}
+.pill.green,.tfCardGuarantee.green{background:#eaf8ee!important;color:#16803b!important;border:1px solid #bbebca!important}
+.pill.yellow,.tfCardGuarantee.yellow{background:#fff7e6!important;color:#916a00!important;border:1px solid #f5e4b3!important}
+.pill.red,.tfCardGuarantee.red{background:#fceced!important;color:#ad4650!important;border:1px solid #f4cece!important}
+.tfCardGuarantee{display:inline-flex!important;width:auto!important;max-width:100%!important;min-height:29px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11px!important;font-weight:700!important;white-space:normal!important;text-align:center!important;align-items:center!important;justify-content:center!important;box-shadow:none!important}
