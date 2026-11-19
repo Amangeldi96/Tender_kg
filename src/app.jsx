@@ -422,8 +422,7 @@ export default function App(){
     const current=String(f.get('currentPassword')||'');
     const next=String(f.get('newPassword')||'');
     const repeat=String(f.get('repeatNewPassword')||'');
-    const legacy=currentCompany?.authType!=='password';
-    if(legacy && !/^\d{8}$/.test(current)){setNotice('Азыркы PIN так 8 цифра болушу керек');return;}
+    const legacy=currentCompany?.authType==='pin';
     if(!current){setNotice('Азыркы парольду жазыңыз');return;}
     if(next.length<6){setNotice('Жаңы пароль кеминде 6 символ болушу керек');return;}
     if(next!==repeat){setNotice('Жаңы паролдор дал келген жок');return;}
@@ -440,7 +439,9 @@ export default function App(){
       const list=[...companies.filter(c=>(c.uid||c.docId)!==user.uid && c.email!==user.email),updated];
       setCompanies(list);saveCompanyCache(list);e.currentTarget.reset();setNotice('Пароль ийгиликтүү өзгөртүлдү');
     }catch(err){
-      if(err?.code==='auth/invalid-credential'||err?.code==='auth/wrong-password')setNotice(legacy?'Азыркы PIN туура эмес':'Азыркы пароль туура эмес');
+      if(['auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials'].includes(err?.code))setNotice('Firebase азыркы парольду кабыл алган жок. Кирүүдө колдонгон парольду кайра текшериңиз же төмөнкү email аркылуу калыбына келтирүүнү колдонуңуз.');
+      else if(err?.code==='auth/too-many-requests')setNotice('Көп аракет жасалды. Бир аздан кийин кайталаңыз же email аркылуу калыбына келтириңиз.');
+      else if(err?.code==='auth/requires-recent-login')setNotice('Коопсуздук үчүн аккаунтка кайра кирип, парольду өзгөртүңүз.');
       else reportError(err);
     }finally{setBusy(false)}
   };
@@ -2028,7 +2029,7 @@ function PaymentStatusModal({t,type,update,close}){
 }
 
 function SettingsPage({user,company,busy,updateCompanyName,changeAccountPassword,sendReset,logout}){
-  const legacy=company?.authType!=='password';
+  const legacy=company?.authType==='pin';
   return <div className="settingsPage">
     <header className="settingsHeader">
       <div><small>АККАУНТ</small><h1>Настройки</h1><p>Компания жана аккаунт маалыматын ушул жерден башкарасыз.</p></div>
