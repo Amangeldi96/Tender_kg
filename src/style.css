@@ -2466,3 +2466,75 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .pill.yellow,.tfCardGuarantee.yellow{background:#fff7e6!important;color:#916a00!important;border:1px solid #f5e4b3!important}
 .pill.red,.tfCardGuarantee.red{background:#fceced!important;color:#ad4650!important;border:1px solid #f4cece!important}
 .tfCardGuarantee{display:inline-flex!important;width:auto!important;max-width:100%!important;min-height:29px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11px!important;font-weight:700!important;white-space:normal!important;text-align:center!important;align-items:center!important;justify-content:center!important;box-shadow:none!important}
+
+/* NOVA AUTH — only the login/registration pages; dashboard styling untouched */
+.novaAuth{--nova:#132b36;--novaAccent:#d5ed8a;min-height:100vh;display:grid;grid-template-columns:minmax(330px,43%) minmax(0,1fr);background:#f9faf7;color:#162b35;font-family:Inter,system-ui,sans-serif}
+.novaAuth *{box-sizing:border-box}.novaSide{background:#132b36;color:#fff;min-height:100vh;padding:45px clamp(28px,4vw,75px);display:flex;flex-direction:column;position:relative;overflow:hidden}.novaSide:before{content:"";position:absolute;width:480px;height:480px;border:1px solid #ffffff16;border-radius:50%;right:-240px;bottom:10%;box-shadow:0 0 0 80px #ffffff05,0 0 0 170px #ffffff04}.novaBrand{display:flex;align-items:center;gap:13px;position:relative}.novaBrandMark{width:47px;height:47px;border-radius:13px;background:#d5ed8a;color:#172f37;display:grid;place-items:center;font-weight:900}.novaBrand strong,.novaBrand small{display:block}.novaBrand strong{font-size:17px}.novaBrand small{font-size:9px;letter-spacing:2.4px;color:#a5b8bd;margin-top:5px}.novaSideBody{margin:auto 0;position:relative;max-width:500px}.novaKicker,.novaStep{font-size:11px;letter-spacing:2px;font-weight:800}.novaKicker{color:#d5ed8a}.novaSideBody h1{font-size:clamp(39px,4.5vw,70px);line-height:1.1;letter-spacing:-2.5px;margin:27px 0}.novaSideBody h1 em{font-style:normal;color:#d5ed8a}.novaSideBody p{font-size:15px;line-height:1.9;color:#b9c9cc;max-width:380px}.novaDecor{display:grid;gap:17px;margin-top:65px;max-width:350px}.novaDecor span{padding-bottom:14px;border-bottom:1px solid #ffffff2b;color:#b7c7c8;font-size:10px;letter-spacing:2px}.novaSideFoot{display:flex;justify-content:space-between;color:#7e9a9f;font-size:10px;letter-spacing:2px;position:relative}.novaMain{padding:36px clamp(25px,6vw,110px) 25px;display:flex;flex-direction:column;min-width:0;min-height:100vh}.novaMainTop{display:flex;align-items:center;gap:9px;color:#657e7b;font-size:10px;letter-spacing:1.6px;font-weight:800}.novaOnline{height:8px;width:8px;border-radius:50%;background:#5ba789}.novaTopRule{height:1px;background:#e1e7e1;flex:1;margin-left:18px}.novaContent{width:100%;max-width:590px;margin:auto}.novaTitle{margin-bottom:30px}.novaStep{color:#6b9180}.novaTitle h2{font-size:clamp(32px,3.5vw,51px);letter-spacing:-1.7px;line-height:1.15;margin:15px 0;color:#132b36;overflow-wrap:anywhere}.novaTitle p{color:#72818a;font-size:14px;line-height:1.8;margin:10px 0}.novaSearch{height:59px;display:flex;align-items:center;gap:12px;padding:0 18px;background:white;border:1px solid #dce4df;border-radius:15px;color:#7e928e;margin-bottom:18px}.novaSearch input{border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;width:100%;font-size:13px}.novaList{display:grid;gap:11px;max-height:320px;overflow-y:auto;padding:2px}.novaAccount{width:100%;background:white;border:1px solid #e1e8e2;border-radius:17px;display:flex;align-items:center;gap:15px;text-align:left;padding:17px;min-width:0;transition:transform .2s,border-color .2s}.novaAccount:hover{border-color:#8da99b;transform:translateX(4px);filter:none!important}.novaAccountIcon,.novaIdentityIcon{display:grid;place-items:center;flex-shrink:0;background:#e7efe8;color:#2c6156;border-radius:13px;width:52px;height:52px;font-size:21px;font-weight:800}.novaAccountInfo{flex:1;min-width:0}.novaAccountInfo strong,.novaAccountInfo small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.novaAccountInfo strong{font-size:15px;color:#20333c}.novaAccountInfo small{font-size:12px;color:#7b8c91;margin-top:5px}.novaAccountArrow{display:grid;place-items:center;color:#54796a}.novaCreateLink{margin-top:18px;width:100%;display:flex;align-items:center;gap:14px;padding:18px;border:1px dashed #aebfb4;border-radius:16px;background:#eef3ec;color:#264c41;text-align:left}.novaCreateLink>span{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#d9e8d8}.novaCreateLink strong{flex:1}.novaBack{border:0;background:transparent;padding:8px 0;color:#58766a;margin-bottom:37px;font-weight:700;font-size:13px}.novaLoginIdentity{display:flex;gap:18px;align-items:center;margin:20px 0}.novaLoginIdentity h2{font-size:clamp(25px,3vw,36px);margin:0}.novaLoginIdentity p{margin:5px 0}.novaIdentityIcon{width:65px;height:65px;font-size:26px}.novaForm{display:grid;gap:19px}.novaForm>label{display:grid;gap:9px;color:#344b52;font-size:13px;font-weight:700}.novaForm>label>input,.novaPassword input{width:100%;height:58px;border:1px solid #dce4df;border-radius:13px;background:white;padding:0 17px;font-size:14px;color:#152c35;outline:0;box-shadow:none}.novaForm input:focus,.novaPassword:focus-within{border-color:#6c9a86;box-shadow:0 0 0 3px #8eb8a51c}.novaPassword{display:flex;align-items:center;border:1px solid #dce4df;border-radius:13px;background:white}.novaPassword input{border:0;flex:1;min-width:0}.novaPassword button{border:0;background:transparent;color:#447a67;font-size:12px;font-weight:800;padding:12px}.novaForgot{border:0;background:transparent;color:#407864;justify-self:end;font-size:12px;font-weight:700;padding:0}.novaSubmit{height:60px;border:0;border-radius:14px;background:#132b36;color:white;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:space-between;padding:0 22px;margin-top:5px}.novaSubmit:hover{background:#244752;filter:none!important}.novaError{padding:14px;background:#fff0ef;color:#a34342;border-radius:12px;font-size:12px}.novaEmpty{padding:30px;text-align:center;color:#78898d;font-size:13px}.novaMainFoot{font-size:11px;color:#9aaba9;margin-top:30px}.novaMainFoot span{margin:0 9px}
+@media(max-width:850px){.novaAuth{grid-template-columns:1fr}.novaSide{min-height:auto;padding:20px 24px}.novaSideBody,.novaSideFoot{display:none}.novaMain{min-height:calc(100vh - 87px);padding:25px 24px}.novaContent{padding:38px 0}.novaMainFoot{margin-top:auto}}@media(max-width:480px){.novaMain{padding:20px 17px}.novaContent{padding:25px 0}.novaAccount{padding:12px}.novaAccountIcon{width:45px;height:45px}.novaTitle h2{font-size:33px}.novaBack{margin-bottom:25px}}
+
+/* Кирүү жана катталуу үчүн гана үн башкаргычы */
+.novaSoundToggle{flex-shrink:0;border:1px solid #d6e2e7;border-radius:999px;background:#fff;color:#344a60;font-size:12px;font-weight:700;padding:9px 13px;white-space:nowrap;cursor:pointer}.novaSoundToggle:hover{background:#edf5f8}.novaSoundToggle[aria-pressed="false"]{opacity:.65}@media(max-width:520px){.novaSoundToggle{font-size:10px;padding:7px 9px}}
+
+/* Сол жактагы интерактивдүү суюк шар: курсорду ээрчийт */
+.novaSide{isolation:isolate}
+.novaSide::before{display:none!important}
+.novaLiquidCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:1}
+.novaSide>.novaBrand,.novaSide>.novaSideBody,.novaSide>.novaSideFoot{z-index:2;position:relative;pointer-events:none}
+.novaSide>.novaBrand *,.novaSide>.novaSideBody *{pointer-events:none}
+.novaLiquidCaption{position:absolute;left:clamp(28px,4vw,75px);bottom:75px;z-index:2;font-size:10px;letter-spacing:1.4px;color:#c2e6d9;display:flex;flex-wrap:wrap;gap:12px;pointer-events:none}
+.novaLiquidCaption span{color:#a2e7bd}
+.novaSideBody{margin-top:100px!important;margin-bottom:auto!important}
+.novaSideBody h1,.novaSideBody p,.novaDecor{position:relative;text-shadow:0 2px 15px #092431bd}
+@media(max-width:850px){.novaLiquidCanvas,.novaLiquidCaption{display:none}.novaSideBody{margin:0!important}}
+
+/* Майда көбүкчөлөр көрүнүп турушу үчүн canvas бүт сол панелди ээлейт. */
+.novaLiquidCanvas{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:1!important;pointer-events:none!important}
+.novaSide::before,.novaSide::after{display:none!important}
+.novaLiquidCaption{position:relative;z-index:2;pointer-events:none}
+
+/* v9: Тендер таблицасынын статустары — каныккан фон, ак текст. */
+.tablePanel .pill.red,.tablePanel .paidAmount.red,.bigTable .pill.red,.bigTable .paidAmount.red{background:#d52f47!important;color:#fff!important;border-color:#d52f47!important}
+.tablePanel .pill.yellow,.tablePanel .paidAmount.yellow,.bigTable .pill.yellow,.bigTable .paidAmount.yellow{background:#d99813!important;color:#fff!important;border-color:#d99813!important}
+.tablePanel .pill.green,.tablePanel .paidAmount.green,.bigTable .pill.green,.bigTable .paidAmount.green{background:#218653!important;color:#fff!important;border-color:#218653!important}
+.tablePanel .pill.blue,.tablePanel .paidAmount.blue,.bigTable .pill.blue,.bigTable .paidAmount.blue{background:#2879c8!important;color:#fff!important;border-color:#2879c8!important}
+.tablePanel .pill.gray,.tablePanel .pill.noGuarantee,.bigTable .pill.gray,.bigTable .pill.noGuarantee{background:#758295!important;color:#fff!important;border-color:#758295!important}
+.tablePanel .filesBtn,.bigTable .filesBtn{background:#237b69!important;color:#fff!important;border-color:#237b69!important}
+.tablePanel .editBtn,.bigTable .editBtn{background:#506b86!important;color:#fff!important;border-color:#506b86!important}
+.tablePanel .filesBtn svg,.tablePanel .editBtn svg,.bigTable .filesBtn svg,.bigTable .editBtn svg{color:#fff!important;stroke:#fff!important}
+/* v10: кара панелдеги тынымсыз жумшак суу бетинин эффекти */
+.novaSide{isolation:isolate;overflow:hidden}
+.novaLiquidCanvas{mix-blend-mode:screen;opacity:.88}
+@media(prefers-reduced-motion:reduce){.novaLiquidCanvas{opacity:.4}}
+
+/* v11: кара суунун жаркылдоосун алып салуу */
+.novaLiquidCanvas{mix-blend-mode:normal!important;opacity:1!important}
+
+/* Бир номерге тиешелүү лотторду алмаштыруучу меню */
+.tfLotPicker{position:relative;width:100%;min-width:0;overflow:visible!important}
+.bigTable .row:has(.tfLotDropdown){position:relative;z-index:15;overflow:visible}
+.bigTable .row .lotCell{overflow:visible!important}
+.tfLotTrigger{display:flex;align-items:center;gap:7px;width:100%;min-width:0;padding:9px 10px;border:1px solid #d5e3e0;background:#f0f7f5;border-radius:9px;color:#245d54;font-size:11px;font-weight:700;text-align:left}
+.tfLotTrigger>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.tfLotCount{background:#d6e9e2;border-radius:6px;padding:3px 6px;font-size:10px}
+.tfLotDropdown{position:absolute;top:calc(100% + 5px);left:0;width:max(260px,100%);max-width:min(410px,85vw);max-height:280px;overflow-y:auto;z-index:100;background:white;border:1px solid #d9e5e2;border-radius:12px;box-shadow:0 14px 40px #142f2a35;padding:6px}
+.tfLotOption{display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;text-align:left;background:white;border:0;padding:11px;border-radius:8px;font-size:12px;color:#263b39;white-space:normal}
+.tfLotOption:hover,.tfLotOption.selected{background:#eaf5f1}
+.tfLotOption small{font-size:10px;color:#607a72}
+.tfLotMobileSelect{width:100%;padding:11px;border-radius:9px;border:1px solid #cbded7;background:#f0f7f5;color:#23584e;font-weight:700}
+
+/* Лот тандоо: жөнөкөй көрүнүш, кошумча түстөр жок. Меню таблицанын сыртында ачылат. */
+.tfLotTrigger{background:transparent!important;border:0!important;border-radius:0!important;color:inherit!important;padding:5px 0!important;font-weight:inherit!important;box-shadow:none!important}
+.tfLotTrigger:hover{background:transparent!important;text-decoration:underline}
+.tfLotCount{background:#f1f3f5!important;color:#596575!important;border-radius:4px!important}
+.tfLotDropdown{z-index:99999!important;background:#fff!important;border:1px solid #dce2e7!important;box-shadow:0 10px 28px #17233320!important;border-radius:8px!important}
+.tfLotOption{color:#29384b!important;background:white!important}
+.tfLotOption:hover,.tfLotOption.selected{background:#f3f5f7!important}
+
+/* v14: neutral lot selector, overlay above surrounding tender rows */
+.tfLotCount{background:transparent!important;border:0!important;box-shadow:none!important;padding:0 2px!important;color:inherit!important;font-weight:600!important}
+.tfLotTrigger:hover,.tfLotTrigger:focus,.tfLotTrigger:active{text-decoration:none!important;background:transparent!important;box-shadow:none!important}
+.tfLotTrigger>span:first-child{text-decoration:none!important}
+.tfLotDropdown{position:fixed!important;z-index:2147483000!important;overflow-y:auto!important;overscroll-behavior:contain;background:#fff!important;border:1px solid #e1e5ea!important;border-radius:10px!important;box-shadow:0 12px 32px rgba(22,35,50,.18)!important;padding:5px!important}
+.tfLotOption{border-radius:6px!important;transition:background .15s ease!important}
+.tfLotOption:hover{background:#f5f6f8!important;text-decoration:none!important}
+.tfLotOption.selected{background:#f2f4f6!important}

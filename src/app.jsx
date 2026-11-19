@@ -477,6 +477,55 @@ export default function App(){
     }));
   },[tenders,q,selectedExecutor]);
 
+  // Жалпы тизмеде бирдей номердеги лоттор бир сапта; кызматкер бөлүмүндө өзүнчө.
+  const [activeLotByTender,setActiveLotByTender]=useState({});
+  const [openLotTender,setOpenLotTender]=useState(null);
+  const [lotMenuPosition,setLotMenuPosition]=useState(null);
+  const toggleLotMenu=(event,key)=>{
+    if(openLotTender===key){setOpenLotTender(null);return;}
+    const r=event.currentTarget.getBoundingClientRect();
+    const menuHeight=Math.min(300,Math.max(90,window.innerHeight-24));
+    const availableBelow=window.innerHeight-r.bottom-12;
+    const availableAbove=r.top-12;
+    const above=availableBelow<Math.min(230,menuHeight) && availableAbove>availableBelow;
+    const maxHeight=Math.max(85,Math.min(menuHeight,above?availableAbove:availableBelow));
+    const width=Math.min(360,Math.max(260,r.width),window.innerWidth-16);
+    setLotMenuPosition({top:above?Math.max(8,r.top-5-maxHeight):r.bottom+5,left:Math.max(8,Math.min(r.left,window.innerWidth-width-8)),width,maxHeight});
+    setOpenLotTender(key);
+  };
+  useEffect(()=>{
+    if(!openLotTender)return;
+    const close=e=>{if(!e.target.closest('.tfLotTrigger, .tfLotDropdown'))setOpenLotTender(null)};
+    const scroll=()=>setOpenLotTender(null);
+    document.addEventListener('pointerdown',close);
+    window.addEventListener('resize',scroll);
+    window.addEventListener('scroll',scroll,true);
+    return ()=>{document.removeEventListener('pointerdown',close);window.removeEventListener('resize',scroll);window.removeEventListener('scroll',scroll,true)};
+  },[openLotTender]);
+  const groupedLots=useMemo(()=>{
+    const groups=new Map();
+    filtered.forEach(t=>{
+      const number=String(t.id||'').trim();
+      const key=number || `single:${tenderKey(t)}`;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(t);
+    });
+    return groups;
+  },[filtered]);
+  const displayGroups=useMemo(()=>{
+    if(selectedExecutor)return filtered.map(t=>({t,lots:[t],groupKey:`single:${tenderKey(t)}`}));
+    return Array.from(groupedLots.entries()).map(([groupKey,lots])=>({
+      groupKey,lots,t:lots.find(x=>tenderKey(x)===activeLotByTender[groupKey])||lots[0]
+    }));
+  },[filtered,groupedLots,selectedExecutor,activeLotByTender]);
+  const displayFiltered=useMemo(()=>displayGroups.map(x=>x.t),[displayGroups]);
+  const selectLot=(groupKey,recordId)=>{
+    setActiveLotByTender(prev=>({...prev,[groupKey]:recordId}));
+    setOpenLotTender(null);
+    setEditingId(null);
+    setEditDraft(null);
+    setPaymentEditId(null);
+  };
   const selectedTenders=useMemo(()=>{
     return tenders.filter(t=>selectedIds.includes(tenderKey(t)));
   },[tenders,selectedIds]);
@@ -508,7 +557,7 @@ export default function App(){
   };
 
   const toggleSelectAll=()=>{
-    const visible=filtered.map(t=>tenderKey(t));
+    const visible=displayFiltered.map(t=>tenderKey(t));
     setSelectedIds(prev=>visible.length && visible.every(id=>prev.includes(id))
       ?prev.filter(id=>!visible.includes(id))
       :Array.from(new Set([...prev,...visible])));
@@ -1122,12 +1171,12 @@ const tableGridStyle = {
                       <Trash2 size={15}/> Өчүрүү ({selectedIds.length})
                     </button>
                   )}
-                  <span className="count">{filtered.length}</span>
+                  <span className="count">{displayFiltered.length}</span>
                 </div>
               </div>
 
               <div className="tfMobileTenderList">
-                {filtered.map(t=>{
+                {displayGroups.map(({t,lots,groupKey})=>{
                   const key=tenderKey(t);
                   const paid=Number(t.paid||0);
                   const status=(kind)=>{
@@ -1142,7 +1191,7 @@ const tableGridStyle = {
                       <button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>
                     </div>
                     <div className="tfCardInfo org"><small>МЕКЕМЕ:</small><strong>{t.org}</strong></div>
-                    <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small><strong>{t.name}</strong></div>
+                    <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small>{lots.length>1?<select className="tfLotMobileSelect" value={key} onChange={e=>selectLot(groupKey,e.target.value)}>{lots.map(item=><option key={tenderKey(item)} value={tenderKey(item)}>{item.name}</option>)}</select>:<strong>{t.name}</strong>}</div>
                     <div className="tfCardAmounts"><div><small>Бюджет (Суммасы):</small><strong>{money(t.sum)}</strong></div><div role="button" tabIndex={0} onClick={()=>{startPayment(t);setMobilePaymentTender(t)}} onKeyDown={e=>{if(e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: ✎</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong></div></div>
                     <div className="tfCardGuarantees">{['gopp','goik'].map(kind=><div key={kind}><small>{kind.toUpperCase()}:</small><button type="button" className={'tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red')} onClick={()=>setPayStatusModal({t,type:kind})}>{status(kind)}{t[kind]?' · '+t[kind]+' сом':''}</button></div>)}</div>
                     <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
@@ -1159,7 +1208,7 @@ const tableGridStyle = {
     <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
       <input
         type="checkbox"
-        checked={filtered.length>0 && filtered.every(t=>selectedIds.includes(tenderKey(t)))}
+        checked={displayFiltered.length>0 && displayFiltered.every(t=>selectedIds.includes(tenderKey(t)))}
         onChange={toggleSelectAll}
         title="Тандоону тазалоо"
         style={{cursor:'pointer',width:'14px',height:'14px'}}
@@ -1180,7 +1229,7 @@ const tableGridStyle = {
   </div>
 
   {/* СТРОКАЛАРЫ */}
-  {filtered.map((t,i)=>{
+  {displayGroups.map(({t,lots,groupKey},i)=>{
     const editing=editingId===tenderKey(t);
     const paymentEditing=paymentEditId===tenderKey(t);
     const isChecked=selectedIds.includes(tenderKey(t));
@@ -1237,9 +1286,18 @@ const tableGridStyle = {
               value={editDraft.name}
               onChange={e=>changeEdit('name',e.target.value)}
             />
-          ):(
-            t.name
-          )}
+          ):(lots.length>1 && !selectedExecutor ? (
+            <div className="tfLotPicker">
+              <button type="button" className="tfLotTrigger" aria-expanded={openLotTender===groupKey} onClick={e=>toggleLotMenu(e,groupKey)} title="Ушул тендердин лотторун тандоо">
+                <span>{t.name}</span><span className="tfLotCount">{lots.length}</span><ChevronDown size={15}/>
+              </button>
+              {openLotTender===groupKey && lotMenuPosition && createPortal(<div className="tfLotDropdown" style={{position:"fixed",top:lotMenuPosition.top,left:lotMenuPosition.left,width:lotMenuPosition.width,maxHeight:`${lotMenuPosition.maxHeight}px`}}>
+                {lots.map(item=><button type="button" key={tenderKey(item)} className={'tfLotOption '+(tenderKey(item)===tenderKey(t)?'selected':'')} onClick={()=>selectLot(groupKey,tenderKey(item))}>
+                  <span>{item.name}</span><small>{money(item.sum)}</small>
+                </button>)}
+              </div>,document.body)}
+            </div>
+          ) : t.name)}
         </span>
 
         {/* ЖАЛПЫ СУММА */}
@@ -1620,39 +1678,234 @@ function ResetPinPage({verified,email,error,busy,save}){
   </AuthFrame>;
 }
 function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,createAccount,login,resetPassword}){
+  // Үн эффекттери катталуу/кирүү экранына гана тиешелүү.
+  // Браузер үн ойнотууга биринчи басуудан кийин гана уруксат бериши мүмкүн.
+  // Үн дайыма күйүк: браузер уруксат берген биринчи аракеттен кийин ойнойт.
+  // Кыймыл/басуу үнү сол кара панелдин ичинде гана иштейт.
+  const waterRef=useRef(null);
+  const popsRef=useRef([]);
+  const lastMoveRef=useRef(0);
+  const audioActivity=useRef({last:0,energy:0,unlocked:false,raf:0,previous:0});
+  useEffect(()=>{
+    const water=new Audio('/water.mp3');
+    water.loop=true;water.preload='auto';water.volume=0;
+    const pops=Array.from({length:4},()=>{const a=new Audio('/bubble-click.mp3');a.preload='auto';a.volume=.09;return a;});
+    waterRef.current=water;popsRef.current=pops;
+    const activity=audioActivity.current;
+    let active=true;
+    const tick=now=>{
+      if(!active)return;
+      const dt=Math.min(.08,(now-(activity.previous||now))/1000);activity.previous=now;
+      if(now-activity.last>85)activity.energy*=Math.exp(-dt*7);
+      const target=activity.unlocked?Math.min(.3,activity.energy*.3):0;
+      water.volume=Math.max(0,Math.min(.3,water.volume+(target-water.volume)*(1-Math.exp(-dt*(target>water.volume?9:5)))));
+      if(water.volume<.002&&now-activity.last>400&&!water.paused)water.pause();
+      activity.raf=requestAnimationFrame(tick);
+    };
+    activity.raf=requestAnimationFrame(tick);
+    return ()=>{active=false;cancelAnimationFrame(activity.raf);water.pause();water.src='';pops.forEach(a=>{a.pause();a.src='';});waterRef.current=null;popsRef.current=[];};
+  },[]);
+  const stopWater=()=>{audioActivity.current.last=0;};
+  const authPointerMove=(e,distance=0)=>{
+    if(e.pointerType!=='mouse' && e.pointerType!=='pen')return;
+    const activity=audioActivity.current;
+    const now=performance.now();
+    const elapsed=Math.max(12,now-(activity.last||now-16));
+    const speed=Math.min(1,Math.max(.1,distance/elapsed/1.2));
+    activity.energy=Math.max(activity.energy,speed);
+    activity.last=now;
+    const water=waterRef.current;
+    if(activity.unlocked&&water?.paused)water.play().catch(()=>{});
+  };
+  const authPointerDown=()=>{
+    const activity=audioActivity.current;
+    activity.unlocked=true;
+    const sounds=popsRef.current;if(!sounds.length)return;
+    const a=sounds.shift();sounds.push(a);
+    a.pause();a.currentTime=0;a.volume=.09;a.play().catch(()=>{});
+    const water=waterRef.current;
+    if(water?.paused)water.play().catch(()=>{});
+  };
+  // Курсорду ээрчиген майда көбүкчөлөр — чоң шар жок.
+  const visualCanvas=useRef(null);
+  const bubbleMotion=useRef({x:0,y:0,tx:0,ty:0,inside:false,hasPosition:false,velocity:0,emission:0});
+  useEffect(()=>{
+    const canvas=visualCanvas.current;if(!canvas)return;
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    let w=0,h=0,dpr=1,raf=0,last=0;
+    const particles=[];
+    const ripples=[];
+    let movementAt=0;
+    // Күңүрт суу: жалтылдаган пикселдик катмар жок. Өтө жумшак,
+    // үзгүлтүксүз жылган суунун майда сызыктары гана тартылат.
+    const waterDisturbances=[];
+    const resizeWater=()=>{};
+    const drawWater=t=>{
+      const time=t*.00022;
+      ctx.save();
+      ctx.lineWidth=.8;
+      for(let line=0;line<18;line++){
+        const baseY=(line+.5)*h/18;
+        ctx.beginPath();
+        for(let x=0;x<=w+8;x+=8){
+          let influence=0;
+          for(const d of waterDisturbances){
+            const age=(t-d.start)/1000;
+            const dist=Math.hypot(x-d.x,baseY-d.y);
+            influence+=Math.sin(dist*.052-age*8)*Math.exp(-dist/135)*Math.max(0,1-age/2)*d.strength*2.2;
+          }
+          const y=baseY+Math.sin(x*.012+time*2+line*.63)*2.4
+            +Math.sin(x*.023-time*1.35+line*.81)*1.2+influence;
+          if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        }
+        ctx.strokeStyle=`rgba(95,151,164,${.028+(line%4)*.004})`;
+        ctx.stroke();
+      }
+      ctx.restore();
+    };
+
+    const random=(a,b)=>a+Math.random()*(b-a);
+    const resize=()=>{const r=canvas.getBoundingClientRect();w=r.width;h=r.height;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);resizeWater()};
+    const observer=new ResizeObserver(resize);observer.observe(canvas);resize();
+    const spawn=(x,y,n=3,burst=false)=>{
+      for(let i=0;i<n;i++){
+        if(particles.length>260)particles.shift();
+        const angle=random(0,Math.PI*2),speed=burst?random(.9,3.8):random(.15,1.1);
+        particles.push({x:x+random(-5,5),y:y+random(-5,5),vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-(burst?.15:.35),r:random(1.2,4.7),life:1,decay:random(.006,.016),shine:Math.random(),phase:random(0,7)});
+      }
+    };
+    const move=e=>{
+      const rect=canvas.getBoundingClientRect();
+      const x=e.clientX-rect.left,y=e.clientY-rect.top;
+      if(x<0||y<0||x>w||y>h)return;
+      const m=bubbleMotion.current;
+      const distance=m.hasPosition?Math.hypot(x-m.tx,y-m.ty):0;
+      if(!m.hasPosition){m.x=x;m.y=y;m.hasPosition=true;}
+      m.tx=x;m.ty=y;m.inside=true;
+      m.velocity=Math.max(m.velocity,Math.min(15,distance*.48));
+      movementAt=performance.now();
+      if(distance>3 && waterDisturbances.length<14)waterDisturbances.push({x,y,start:movementAt,strength:Math.min(1,distance/35)});
+      authPointerMove(e,distance);
+    };
+    const leave=()=>{bubbleMotion.current.inside=false;bubbleMotion.current.velocity=0;stopWater();};
+    const click=e=>{
+      const rect=canvas.getBoundingClientRect();
+      const x=e.clientX-rect.left,y=e.clientY-rect.top;
+      const m=bubbleMotion.current;m.tx=x;m.ty=y;if(!m.hasPosition){m.x=x;m.y=y;m.hasPosition=true;}
+      spawn(x,y,24,true);
+      ripples.push({x,y,r:2,life:1,seed:Math.random()*1000});
+      waterDisturbances.push({x,y,start:performance.now(),strength:2.5});
+      authPointerDown(e);
+    };
+    const side=canvas.parentElement;
+    side.addEventListener('pointermove',move);
+    side.addEventListener('pointerleave',leave);
+    side.addEventListener('pointerdown',click);
+    const draw=t=>{
+      const dt=Math.min(2,(t-last)/16.67||1);last=t;
+      ctx.clearRect(0,0,w,h);
+      for(let i=waterDisturbances.length-1;i>=0;i--){if(t-waterDisturbances[i].start>1900)waterDisturbances.splice(i,1);}
+      drawWater(t);
+      // Курсордун изи дароо секирбейт: инерция менен жетип, токтогондо жай басаңдайт.
+      const m=bubbleMotion.current;
+      if(m.inside&&m.hasPosition){
+        if(t-movementAt>90)m.velocity*=Math.exp(-.15*dt);
+        const dx=m.tx-m.x,dy=m.ty-m.y;
+        const follow=1-Math.exp(-.115*dt);
+        m.x+=dx*follow;m.y+=dy*follow;
+        const remaining=Math.hypot(dx,dy);
+        const motion=Math.max(m.velocity,remaining*.10);
+        m.emission+=Math.min(2.4,motion*.14)*dt;
+        while(m.emission>=1){spawn(m.x,m.y,3);m.emission-=1;}
+        m.velocity*=Math.exp(-.19*dt);
+        if(m.velocity<.07)m.velocity=0;
+      }
+      // Майда көбүкчөлөр, чоң шар жок.
+      for(let i=particles.length-1;i>=0;i--){
+        const p=particles[i];p.x+=(p.vx+Math.sin(t*.0018+p.phase)*.12)*dt;p.y+=p.vy*dt;p.vx*=Math.pow(.987,dt);p.vy-=.009*dt;p.life-=p.decay*dt;
+        if(p.life<=0){particles.splice(i,1);continue;}
+        const alpha=Math.min(1,p.life*1.35),r=p.r*(.5+.5*p.life);
+        ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(152,211,220,${alpha*.35})`;ctx.fill();
+        ctx.lineWidth=.8;ctx.strokeStyle=`rgba(188,229,235,${alpha*.48})`;ctx.stroke();
+        ctx.beginPath();ctx.arc(p.x-r*.25,p.y-r*.3,Math.max(.55,r*.24),0,Math.PI*2);
+        ctx.fillStyle=`rgba(220,241,244,${alpha*.45})`;ctx.fill();
+      }
+      // Сууга тамчы түшкөндөй: жарык жана көлөкө менен жумшак кеңейген шакекчелер.
+      for(let i=ripples.length-1;i>=0;i--){
+        const wave=ripples[i];wave.r+=2.9*dt;wave.life-=.0095*dt;
+        if(wave.life<=0){ripples.splice(i,1);continue;}
+        const fade=Math.sin(Math.PI*Math.min(1,(1-wave.life)*5)) * Math.pow(wave.life,1.4);
+        const outer=wave.r+20;
+        const glow=ctx.createRadialGradient(wave.x,wave.y,Math.max(0,wave.r-23),wave.x,wave.y,outer);
+        glow.addColorStop(0,'rgba(135,225,245,0)');
+        glow.addColorStop(.47,`rgba(100,200,235,${fade*.035})`);
+        glow.addColorStop(.78,`rgba(205,245,255,${fade*.055})`);
+        glow.addColorStop(1,'rgba(100,210,240,0)');
+        ctx.fillStyle=glow;ctx.beginPath();ctx.arc(wave.x,wave.y,outer,0,Math.PI*2);ctx.fill();
+        for(let ring=0;ring<3;ring++){
+          const radius=wave.r-ring*19;
+          if(radius<=1)continue;
+          for(let pass=0;pass<2;pass++){
+            ctx.beginPath();
+            for(let j=0;j<=120;j++){
+              const angle=j*Math.PI*2/120;
+              const irregular=(Math.sin(angle*4+wave.seed+wave.r*.012)*1.1+Math.sin(angle*7-wave.r*.015)*.65)*fade;
+              const rr=radius+irregular+(pass?2:0);
+              const px=wave.x+Math.cos(angle)*rr,py=wave.y+Math.sin(angle)*rr*.96;
+              if(j===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+            }
+            ctx.closePath();
+            ctx.lineWidth=pass?3.3:1.65;
+            ctx.strokeStyle=pass?`rgba(30,110,155,${fade*(.18-ring*.035)})`:`rgba(200,246,255,${fade*(.35-ring*.075)})`;
+            ctx.stroke();
+          }
+        }
+      }
+      raf=requestAnimationFrame(draw);
+    };
+    raf=requestAnimationFrame(draw);
+    return()=>{cancelAnimationFrame(raf);observer.disconnect();side.removeEventListener('pointermove',move);side.removeEventListener('pointerleave',leave);side.removeEventListener('pointerdown',click)};
+  },[]);
   const [search,setSearch]=useState('');
-  const [remember,setRemember]=useState(false);
-  const [visiblePassword,setVisiblePassword]=useState(false);
+  const [showPassword,setShowPassword]=useState(false);
   const isRegister=mode==='create';
-  const panelOpen=Boolean(selected)||isRegister;
-  const filtered=companies.filter(c=>`${c.name||''} ${c.email||''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
-  const closePanel=()=>{setSelected(null);setMode('companies');setVisiblePassword(false)};
-  const openRegister=()=>{setSelected(null);setMode('create');setVisiblePassword(false)};
-  const openLogin=c=>{setMode('companies');setSelected(c);setVisiblePassword(false)};
-  return <AuthFrame>
-    <div className={`tfSlideRoot ${isRegister ? "tfSlideRegisterOpen" : selected ? "tfSlideLoginOpen" : ""}`}>
-      <div className="tfSlideHeader"><span className="tfSlideEyebrow">TENDERFLOW WORKSPACE</span><h2>Компаниялар</h2><p>Компанияңызды тандап, кабинетиңизге кириңиз.</p></div>
-      <div className="tfSlideSearch"><Search size={19}/><input aria-label="Компанияны издөө" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Компанияны издөө..."/></div>
-      <div className="tfSlideList">{filtered.map(c=><button type="button" className="tfSlideCompany" key={c.uid||c.docId||c.email} onClick={()=>openLogin(c)}><span className="tfSlideAvatar">{(c.name||'К').slice(0,1).toUpperCase()}</span><span className="tfSlideCompanyText"><strong>{c.name}</strong><small>{c.email}</small></span><ChevronRight size={20}/></button>)}{!filtered.length&&<p className="tfSlideEmpty">{companies.length?'Компания табылган жок':'Азырынча компания каттала элек'}</p>}</div>
-      <button className="tfSlideAdd" type="button" onClick={openRegister}><Plus size={20}/> Жаңы компания каттоо</button>
-      <div className={'tfSlideOverlay '+(panelOpen?'isOpen':'')} aria-hidden={!panelOpen} inert={!panelOpen}>
-        <div className="tfSlideOverlayHead"><button type="button" className="tfSlideBack" onClick={closePanel}><ArrowRight size={18}/> Артка</button><span>{isRegister?'КАТТАЛУУ':'КИРҮҮ'}</span></div>
-        {isRegister?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound"><Plus size={24}/></span><h2>Жаңы компания</h2><p>Катталуу үчүн маалыматтарды толтуруңуз.</p></div><form className="tfSlideForm" onSubmit={createAccount}>
-          <label>Компаниянын аты<input name="company" required placeholder="Компаниянын аталышы" autoComplete="organization"/></label>
-          <label>Email<input name="email" type="email" required placeholder="company@example.com" autoComplete="email"/></label>
+  const filtered=companies.filter(c=>`${c.name||''} ${c.email||''}`.toLowerCase().includes(search.toLowerCase()));
+  const back=()=>{setSelected(null);setMode('companies');setShowPassword(false)};
+  return <div className="novaAuth">
+    <aside className="novaSide">
+      <canvas ref={visualCanvas} className="novaLiquidCanvas" aria-hidden="true"/>
+      <div className="novaLiquidCaption">ЖАНДУУ ИНТЕРАКТИВДҮҮ ФОН <span>● Мышканы кыймылдатыңыз</span></div>
+      <div className="novaBrand"><span className="novaBrandMark">ТБ</span><span><strong>Тендер База</strong><small>WORKSPACE / 2026</small></span></div>
+      <div className="novaSideBody"><span className="novaKicker">БИРДИКТҮҮ БАШКАРУУ</span><h1>Бардык тендерлер.<br/><em>Бир жерде.</em></h1><p>Документтерди, келишимдерди жана аткаруучуларды ыңгайлуу башкарыңыз.</p><div className="novaDecor"><span>01 / АККАУНТТАР</span><span>02 / ТЕНДЕРЛЕР</span><span>03 / ДОКУМЕНТТЕР</span></div></div>
+      <div className="novaSideFoot">TENDER BAZA <span>© 2026</span></div>
+    </aside>
+    <main className="novaMain"><div className="novaMainTop"><span className="novaOnline"/> КООПСУЗ КИРҮҮ <span className="novaTopRule"/></div>
+      <div className="novaContent">
+      {!selected&&!isRegister?<>
+        <div className="novaTitle"><span className="novaStep">01 — АККАУНТ ТАНДОО</span><h2>Кош келиңиз!</h2><p>Катталган аккаунтуңузду тандаңыз. Андан кийин пароль киргизесиз.</p></div>
+        <div className="novaSearch"><Search size={20}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Аккаунтту аты же email боюнча издөө" aria-label="Аккаунт издөө"/></div>
+        <div className="novaList">{filtered.map((c,i)=><button className="novaAccount" type="button" key={c.uid||c.docId||c.email} onClick={()=>{setSelected(c);setShowPassword(false)}}><span className="novaAccountIcon">{(c.name||'А').slice(0,1).toUpperCase()}</span><span className="novaAccountInfo"><strong>{c.name||'Аккаунт'}</strong><small>{c.email}</small></span><span className="novaAccountArrow"><ArrowRight size={19}/></span></button>)}{!filtered.length&&<div className="novaEmpty">{companies.length?'Издөө боюнча аккаунт табылган жок':'Катталган аккаунт азырынча жок'}</div>}</div>
+        <button className="novaCreateLink" type="button" onClick={()=>{setSelected(null);setMode('create')}}><span><Plus size={20}/></span><strong>Жаңы аккаунт каттоо</strong><ArrowRight size={19}/></button>
+      </>:<>
+        <button className="novaBack" type="button" onClick={back}>← Аккаунттарга кайтуу</button>
+        {isRegister?<><div className="novaTitle"><span className="novaStep">02 — ЖАҢЫ АККАУНТ</span><h2>Катталуу</h2><p>Жаңы аккаунт түзүү үчүн маалыматтарды толтуруңуз.</p></div><form className="novaForm" onSubmit={createAccount}>
+          <label>Компаниянын аты<input name="company" autoComplete="organization" placeholder="Компаниянын аталышы" required/></label>
+          <label>Email дареги<input name="email" type="email" autoComplete="email" placeholder="example@mail.com" required/></label>
           <label>Пароль<SecretField name="password" placeholder="Кеминде 6 символ"/></label>
-          <label>Парольду кайталоо<SecretField name="repeatPassword" placeholder="Парольду кайталаңыз"/></label>
-          {error&&<p className="tfSlideError" role="alert">{error}</p>}
-          <button className="tfSlideSubmit" disabled={busy}>{busy?'Катталууда...':'Катталуу'}<ArrowRight size={19}/></button>
-        </form></div>:selected?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound">{(selected.name||'К').slice(0,1).toUpperCase()}</span><h2>{selected.name}</h2><p>{selected.email}</p></div><form className="tfSlideForm" onSubmit={e=>{localStorage.setItem('tf-remember-company',remember?'yes':'no');login(e)}}>
-          <label>Пароль<div className="tfSlidePassword"><input name="password" type={visiblePassword?'text':'password'} autoComplete="current-password" required placeholder="Паролуңузду жазыңыз"/><button type="button" onClick={()=>setVisiblePassword(v=>!v)} aria-label={visiblePassword?'Парольду жашыруу':'Парольду көрсөтүү'}>{visiblePassword?'Жашыруу':'Көрсөтүү'}</button></div></label>
-          <div className="tfSlideOptions"><label><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/> Эсимде сактоо</label><button type="button" disabled={busy} onClick={resetPassword}>Парольду унуттуңузбу?</button></div>
-          {error&&<p className="tfSlideError" role="alert">{error}</p>}
-          <button className="tfSlideSubmit" disabled={busy}>{busy?'Кирүүдө...':'Кирүү'}<ArrowRight size={19}/></button>
-        </form></div>:null}
-      </div>
-    </div>
-  </AuthFrame>;
+          <label>Парольду кайталоо<SecretField name="repeatPassword" placeholder="Парольду кайра жазыңыз"/></label>
+          {error&&<div className="novaError" role="alert">{error}</div>}
+          <button className="novaSubmit" disabled={busy}>{busy?'Катталууда...':'Аккаунт түзүү'}<ArrowRight size={19}/></button>
+        </form></>:<><div className="novaTitle"><span className="novaStep">02 — ПАРОЛЬ МЕНЕН КИРҮҮ</span><div className="novaLoginIdentity"><span className="novaIdentityIcon">{(selected.name||'А').slice(0,1).toUpperCase()}</span><span><h2>{selected.name||'Аккаунт'}</h2><p>{selected.email}</p></span></div><p>Улантуу үчүн аккаунттун паролун киргизиңиз.</p></div><form className="novaForm" onSubmit={login}>
+          <label>Пароль<div className="novaPassword"><input name="password" type={showPassword?'text':'password'} autoComplete="current-password" placeholder="Паролуңузду жазыңыз" required autoFocus/><button type="button" onClick={()=>setShowPassword(v=>!v)}>{showPassword?'Жашыруу':'Көрсөтүү'}</button></div></label>
+          <button type="button" className="novaForgot" onClick={resetPassword} disabled={busy}>Парольду унуттуңузбу?</button>
+          {error&&<div className="novaError" role="alert">{error}</div>}
+          <button className="novaSubmit" disabled={busy}>{busy?'Кирүүдө...':'Аккаунтка кирүү'}<ArrowRight size={19}/></button>
+        </form></>}
+      </>}
+      </div><div className="novaMainFoot">Тендер База <span>•</span> Аккаунттарды башкаруу</div>
+    </main>
+  </div>;
 }
 function PaidAmount({t,onClick}){
   const paid=Number(t.paid||0);
