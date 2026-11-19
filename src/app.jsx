@@ -226,7 +226,9 @@ export default function App(){
 
   const[user,setUser]=useState(null);
   const[authReady,setAuthReady]=useState(false);
-  const[companies,setCompanies]=useState(readCompanyCache);
+  const[companies,setCompanies]=useState([]);
+  const[companiesLoading,setCompaniesLoading]=useState(true);
+  const[companiesError,setCompaniesError]=useState('');
   const[authMode,setAuthMode]=useState('companies');
   const[selectedCompany,setSelectedCompany]=useState(null);
   const[authError,setAuthError]=useState('');
@@ -266,49 +268,27 @@ export default function App(){
     return unsub;
   },[]);
 
+  // Кирүү каталогунун жалгыз булагы — Firestore /companies.
+  // publicCompanies жана localStorage колдонулбайт: өчүрүлгөн жазуулар кайтып келбейт.
   React.useEffect(()=>{
     if(!authReady || user)return;
-
-    const cached=readCompanyCache();
-    setCompanies(cached);
-
-    // Эски localStorage тизмесин Firestore'догу компаниялар менен БИРИКТИРЕБИЗ.
-    // Мурда remoteCompanies setCompanies(...) менен cache'ти толук алмаштырып,
-    // Firestore'до жок эски аккаунттарды экрандан жоготуп жаткан.
-    Promise.all([
-      getDocs(collection(db,'publicCompanies')).catch(err=>{console.warn('publicCompanies load:',err);return null;}),
-      getDocs(collection(db,'companies')).catch(err=>{console.warn('companies load:',err);return null;})
-    ])
-      .then(snap=>{
-        const remote=[...(snap[0]?.docs||[]),...(snap[1]?.docs||[])]
-          .map(d=>({docId:d.id,...d.data()}))
-          .filter(company=>company?.email);
-
-        // Биринчи cache, анан Firestore: бир эле аккаунт болсо Firestore'догу жаңы маалымат үстүнөн жазат.
-        const mergedMap=new Map();
-        [...cached,...remote].forEach(company=>{
-          if(!company?.email)return;
-          const key=company.uid||company.docId||company.email.toLowerCase();
-          const previous=mergedMap.get(key)||{};
-          mergedMap.set(key,{...previous,...company});
-        });
-
-        // UID/docId өзгөрүп калган эски жазуулар email боюнча да кайталанбасын.
-        const byEmail=new Map();
-        Array.from(mergedMap.values()).forEach(company=>{
-          const key=String(company.email).trim().toLowerCase();
-          const previous=byEmail.get(key)||{};
-          byEmail.set(key,{...previous,...company});
-        });
-
-        const allCompanies=Array.from(byEmail.values());
-        setCompanies(allCompanies);
-        saveCompanyCache(allCompanies);
-      })
-      .catch(err=>{
-        console.error('Companies load error:',err);
-        setCompanies(cached);
-      });
+    setCompaniesLoading(true);
+    setCompaniesError('');
+    setCompanies([]);
+    const unsub=onSnapshot(collection(db,'companies'),snap=>{
+      const next=snap.docs.map(d=>({docId:d.id,...d.data()}))
+        .filter(c=>typeof c.email==='string' && c.email.trim());
+      setCompanies(next);
+      setSelectedCompany(prev=>prev && !next.some(c=>(c.uid||c.docId)===(prev.uid||prev.docId))?null:prev);
+      setCompaniesLoading(false);
+      setCompaniesError('');
+    },err=>{
+      console.error('Firestore /companies:',err);
+      setCompanies([]);
+      setCompaniesLoading(false);
+      setCompaniesError(`Компанияларды окуу катасы: ${err.code||err.message}. Firebase долбоорун жана Firestore Rules текшериңиз.`);
+    });
+    return ()=>unsub();
   },[authReady,user]);
 
   React.useEffect(()=>{
@@ -344,14 +324,15 @@ export default function App(){
     if(!name || !email){setAuthError('Компаниянын аты жана email керек');return;}
     if(password.length<6){setAuthError('Пароль кеминде 6 символ болушу керек');return;}
     if(password!==repeatPassword){setAuthError('Паролдор дал келиши керек');return;}
+    if(companiesLoading || companiesError){setAuthError('Компаниялардын тизмеси жүктөлгөн жок. Кайра аракет кылыңыз.');return;}
+    if(companies.length>=3){setAuthError('3 компания катталган. Жаңы каттоо жабылды.');setAuthMode('companies');return;}
     setAuthBusy(true);
     try{
+      const fresh=await getDocs(collection(db,'companies'));
+      if(fresh.size>=3)throw new Error('3 компания катталган. Жаңы каттоо жабылды.');
       const credential=await createUserWithEmailAndPassword(auth,email,password);
       const company={uid:credential.user.uid,email,name,authType:'password'};
-      await Promise.all([
-        setDoc(doc(db,'publicCompanies',credential.user.uid),company),
-        setDoc(doc(db,'companies',credential.user.uid),company).catch(()=>null)
-      ]);
+      await setDoc(doc(db,'companies',credential.user.uid),company);
       const next=[...companies.filter(c=>(c.uid||c.docId)!==credential.user.uid),company];
       setCompanies(next);saveCompanyCache(next);setAuthMode('companies');
     }catch(err){
@@ -407,10 +388,7 @@ export default function App(){
     try{
       const uid=user.uid;
       const updated={...(currentCompany||{}),uid,email:user.email,name,authType:currentCompany?.authType||'password'};
-      await Promise.all([
-        setDoc(doc(db,'publicCompanies',uid),updated,{merge:true}),
-        setDoc(doc(db,'companies',uid),updated,{merge:true}).catch(()=>null)
-      ]);
+      await setDoc(doc(db,'companies',uid),updated,{merge:true});
       const next=[...companies.filter(c=>(c.uid||c.docId)!==uid && c.email!==user.email),updated];
       setCompanies(next);saveCompanyCache(next);setNotice('Компаниянын аты өзгөртүлдү');
     }catch(err){reportError(err)}finally{setBusy(false)}
@@ -433,10 +411,7 @@ export default function App(){
       await reauthenticateWithCredential(user,credential);
       await updatePassword(user,next);
       const updated={...(currentCompany||{}),uid:user.uid,email:user.email,name:currentCompany?.name||'Компания',authType:'password'};
-      await Promise.all([
-        setDoc(doc(db,'publicCompanies',user.uid),updated,{merge:true}),
-        setDoc(doc(db,'companies',user.uid),updated,{merge:true}).catch(()=>null)
-      ]);
+      await setDoc(doc(db,'companies',user.uid),updated,{merge:true});
       const list=[...companies.filter(c=>(c.uid||c.docId)!==user.uid && c.email!==user.email),updated];
       setCompanies(list);saveCompanyCache(list);e.currentTarget.reset();setNotice('Пароль ийгиликтүү өзгөртүлдү');
     }catch(err){
@@ -456,7 +431,7 @@ export default function App(){
   const executorsGroup=useMemo(()=>{
     const map={};
     tenders.forEach(t=>{
-      const ex=t.executor||'Аткаруучу көрсөтүлгөн эмес';
+      const ex=t.executor||'Компания көрсөтүлгөн эмес';
       if(!map[ex]) map[ex]=[];
       map[ex].push(t);
     });
@@ -471,7 +446,7 @@ export default function App(){
         .includes(q.toLowerCase());
 
       if(selectedExecutor){
-        return matchesQuery && (t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor;
+        return matchesQuery && (t.executor||'Компания көрсөтүлгөн эмес')===selectedExecutor;
       }
       return matchesQuery;
     }));
@@ -483,7 +458,7 @@ export default function App(){
 
   const selectedExecutorsSet=useMemo(()=>{
     const set=new Set();
-    selectedTenders.forEach(t=>set.add(t.executor||'Аткаруучу көрсөтүлгөн эмес'));
+    selectedTenders.forEach(t=>set.add(t.executor||'Компания көрсөтүлгөн эмес'));
     return Array.from(set);
   },[selectedTenders]);
 
@@ -547,7 +522,7 @@ export default function App(){
       id:String(f.get('id')).trim(),
       org:String(f.get('org')).trim(),
       name:String(f.get('name')).trim(),
-      executor:String(f.get('executor')||'Аткаруучу').trim(),
+      executor:String(f.get('executor')||'Компания').trim(),
       sum:+f.get('sum'),
       paid:0,
       gopp:String(f.get('gopp')||'').trim(),
@@ -708,6 +683,8 @@ export default function App(){
     return(
       <CompanyAuth
         companies={companies}
+        loading={companiesLoading}
+        directoryError={companiesError}
         mode={authMode}
         setMode={setAuthMode}
         selected={selectedCompany}
@@ -770,11 +747,11 @@ const tableGridStyle = {
 
           <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
             <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
-              АТКАРУУЧУЛАР
+              КОМПАНИЯЛАР
             </div>
-            <label className="executorSearch"><Search size={15}/><input aria-label="Аткаруучуларды издөө" placeholder="Аткаруучуну издөө…" value={executorQuery} onChange={e=>setExecutorQuery(e.target.value)}/></label>
-            <div className="executorScrollable" aria-label="Аткаруучулардын тизмеси">
-            {!Object.keys(executorsGroup).some(name=>matches(name,executorQuery))&&<p className="searchEmpty">Аткаруучу табылган жок</p>}
+            <label className="executorSearch"><Search size={15}/><input aria-label="Компанияларды издөө" placeholder="Компания издөө…" value={executorQuery} onChange={e=>setExecutorQuery(e.target.value)}/></label>
+            <div className="executorScrollable" aria-label="Компаниялар тизмеси">
+            {!Object.keys(executorsGroup).some(name=>matches(name,executorQuery))&&<p className="searchEmpty">Компания табылган жок</p>}
             {Object.entries(executorsGroup).filter(([name])=>matches(name,executorQuery)).map(([execName, execTenders])=>{
               const isOpen=!!openExecutorsNav[execName];
               const isSelected=selectedExecutor===execName;
@@ -1058,7 +1035,7 @@ const tableGridStyle = {
               {selectedExecutorsSet.length===1 && (
                 <div className="selectedExecutorSingle">
                   <User size={16}/>
-                  <span>Аткаруучу: <strong>{selectedExecutorsSet[0]}</strong></span>
+                  <span>Компания: <strong>{selectedExecutorsSet[0]}</strong></span>
                   <span className="selectedExecutorCount">{selectedTenders.length} тендер</span>
                 </div>
               )}
@@ -1067,17 +1044,17 @@ const tableGridStyle = {
                   <button type="button" className="selectedExecutorsToggle"
                     aria-expanded={executorsExpanded}
                     onClick={()=>setExecutorsExpanded(v=>!v)}>
-                    <span><User size={16}/> Аткаруучулар <b>{selectedExecutorsSet.length}</b></span>
+                    <span><User size={16}/> Компаниялар <b>{selectedExecutorsSet.length}</b></span>
                     {executorsExpanded?<ChevronDown size={17}/>:<ChevronRight size={17}/>}
                   </button>
-                  {executorsExpanded && <div className="selectedExecutorsList" role="region" aria-label="Тандалган аткаруучулар">
+                  {executorsExpanded && <div className="selectedExecutorsList" role="region" aria-label="Тандалган компаниялар">
                     <div className="executorMenuTop">
-                      <span>Тандалган аткаруучулар</span>
+                      <span>Тандалган компаниялар</span>
                       <span className="executorMenuCount">{selectedExecutorsSet.length}</span>
                     </div>
                     <div className="executorMenuBody">
                       {selectedExecutorsSet.map(execName=>{
-                        const items=selectedTenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===execName);
+                        const items=selectedTenders.filter(t=>(t.executor||'Компания көрсөтүлгөн эмес')===execName);
                         const isOpen=!!openAccordionMap[execName];
                         return <div className={'selectedExecutorGroup'+(isOpen?' isOpen':'')} key={execName}>
                           <button type="button" className="executorGroupButton" aria-expanded={isOpen} onClick={()=>setOpenAccordionMap(prev=>({...prev,[execName]:!prev[execName]}))}>
@@ -1339,8 +1316,8 @@ const tableGridStyle = {
           <b
             className={
               hasPriceTable(t.docs)
-                ?'pill green'
-                :'pill gray'
+                ?'pill green priceStatusBadge'
+                :'pill gray priceStatusBadge'
             }
           >
             {hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}
@@ -1444,8 +1421,9 @@ const tableGridStyle = {
               </label>
 
               <label>
-                Ким аткарды (Аткаруучу) *
-                <input name="executor" required placeholder="Мисалы: Аскаров Б."/>
+                Кайсы компания аткарды *
+                <input name="executor" list="tender-company-options" required placeholder="Мисалы: ЭтноСервис" autoComplete="off"/>
+                <datalist id="tender-company-options">{[...new Set(tenders.map(t=>String(t.executor||'').trim()).filter(Boolean))].sort().map(company=><option key={company} value={company}/>)}</datalist>
               </label>
 
               <label className="full">
@@ -1518,7 +1496,7 @@ const tableGridStyle = {
             <small>ТЕНДЕРДИ ОҢДОО</small><h2>Тендер маалыматтары</h2>
             <form onSubmit={e=>{e.preventDefault();saveEdit(editingId)}}>
               <div className="tfMobileEditFields">
-                {[['id','Тендер номери'],['org','Мекеме'],['name','Лот аталышы'],['executor','Аткаруучу'],['sum','Суммасы'],['paid','Төлөнгөн сумма'],['gopp','ГОПП'],['goik','ГОИК'],['date','Срок вскрытия']].map(([field,label])=><label key={field}>{label}<input required={['id','org','name','executor'].includes(field)} type={field==='date'?'date':['sum','paid'].includes(field)?'number':'text'} min={['sum','paid'].includes(field)?'0':undefined} value={editDraft[field]??''} onChange={e=>changeEdit(field,e.target.value)}/></label>)}
+                {[['id','Тендер номери'],['org','Мекеме'],['name','Лот аталышы'],['executor','Компания'],['sum','Суммасы'],['paid','Төлөнгөн сумма'],['gopp','ГОПП'],['goik','ГОИК'],['date','Срок вскрытия']].map(([field,label])=><label key={field}>{label}<input required={['id','org','name','executor'].includes(field)} type={field==='date'?'date':['sum','paid'].includes(field)?'number':'text'} min={['sum','paid'].includes(field)?'0':undefined} value={editDraft[field]??''} onChange={e=>changeEdit(field,e.target.value)}/></label>)}
               </div>
               <div className="tfMobileEditActions"><button type="button" onClick={()=>{setMobileEditOpen(false);setEditingId(null);setEditDraft(null)}}>Жок</button><button type="submit" className="primary" disabled={busy}><Save size={16}/> {busy?'Сакталууда...':'Сактоо'}</button></div>
             </form>
@@ -1596,10 +1574,10 @@ function AuthFrame({children}){
     <div className="emeraldLayout">
       <section className="emeraldIntro">
         <div className="emeraldBrand"><div className="emeraldMonogram">ТБ</div><div><strong>Тендер<span> База</span></strong><small>ТЕНДЕРЛЕРДИ БАШКАРУУ</small></div></div>
-        <div className="emeraldMessage"><h1>Бардык<br/>тендерлер<br/><em>бир жерде</em></h1><p>Документтер, аткаруучулар, төлөмдөр жана бардык тендерлерди ыңгайлуу башкарыңыз.</p>
+        <div className="emeraldMessage"><h1>Бардык<br/>тендерлер<br/><em>бир жерде</em></h1><p>Документтер, компаниялар, төлөмдөр жана бардык тендерлерди ыңгайлуу башкарыңыз.</p>
         <div className="emeraldFeatures">
           <div><span><FileText size={23}/></span><div><b>Документтер</b><small>Жүктөө, сактоо, түзөтүү</small></div></div>
-          <div><span><User size={23}/></span><div><b>Аткаруучулар</b><small>Тизме жана байланыш</small></div></div>
+          <div><span><User size={23}/></span><div><b>Компаниялар</b><small>Тендерлер боюнча тизме</small></div></div>
           <div><span><Wallet size={23}/></span><div><b>Төлөмдөр</b><small>Ыңгайлуу эсепке алуу</small></div></div>
           <div><span><CheckCircle2 size={23}/></span><div><b>Коопсуздук</b><small>Firebase менен коргоо</small></div></div>
         </div></div>
@@ -1619,40 +1597,64 @@ function ResetPinPage({verified,email,error,busy,save}){
     </form>}{!verified&&error&&<p className="emeraldError">{error}</p>}
   </AuthFrame>;
 }
-function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,createAccount,login,resetPassword}){
-  const [search,setSearch]=useState('');
-  const [remember,setRemember]=useState(false);
-  const [visiblePassword,setVisiblePassword]=useState(false);
-  const isRegister=mode==='create';
-  const panelOpen=Boolean(selected)||isRegister;
-  const filtered=companies.filter(c=>`${c.name||''} ${c.email||''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
-  const closePanel=()=>{setSelected(null);setMode('companies');setVisiblePassword(false)};
-  const openRegister=()=>{setSelected(null);setMode('create');setVisiblePassword(false)};
-  const openLogin=c=>{setMode('companies');setSelected(c);setVisiblePassword(false)};
-  return <AuthFrame>
-    <div className={`tfSlideRoot ${isRegister ? "tfSlideRegisterOpen" : selected ? "tfSlideLoginOpen" : ""}`}>
-      <div className="tfSlideHeader"><span className="tfSlideEyebrow">TENDERFLOW WORKSPACE</span><h2>Компаниялар</h2><p>Компанияңызды тандап, кабинетиңизге кириңиз.</p></div>
-      <div className="tfSlideSearch"><Search size={19}/><input aria-label="Компанияны издөө" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Компанияны издөө..."/></div>
-      <div className="tfSlideList">{filtered.map(c=><button type="button" className="tfSlideCompany" key={c.uid||c.docId||c.email} onClick={()=>openLogin(c)}><span className="tfSlideAvatar">{(c.name||'К').slice(0,1).toUpperCase()}</span><span className="tfSlideCompanyText"><strong>{c.name}</strong><small>{c.email}</small></span><ChevronRight size={20}/></button>)}{!filtered.length&&<p className="tfSlideEmpty">{companies.length?'Компания табылган жок':'Азырынча компания каттала элек'}</p>}</div>
-      <button className="tfSlideAdd" type="button" onClick={openRegister}><Plus size={20}/> Жаңы компания каттоо</button>
-      <div className={'tfSlideOverlay '+(panelOpen?'isOpen':'')} aria-hidden={!panelOpen} inert={!panelOpen}>
-        <div className="tfSlideOverlayHead"><button type="button" className="tfSlideBack" onClick={closePanel}><ArrowRight size={18}/> Артка</button><span>{isRegister?'КАТТАЛУУ':'КИРҮҮ'}</span></div>
-        {isRegister?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound"><Plus size={24}/></span><h2>Жаңы компания</h2><p>Катталуу үчүн маалыматтарды толтуруңуз.</p></div><form className="tfSlideForm" onSubmit={createAccount}>
-          <label>Компаниянын аты<input name="company" required placeholder="Компаниянын аталышы" autoComplete="organization"/></label>
-          <label>Email<input name="email" type="email" required placeholder="company@example.com" autoComplete="email"/></label>
-          <label>Пароль<SecretField name="password" placeholder="Кеминде 6 символ"/></label>
-          <label>Парольду кайталоо<SecretField name="repeatPassword" placeholder="Парольду кайталаңыз"/></label>
-          {error&&<p className="tfSlideError" role="alert">{error}</p>}
-          <button className="tfSlideSubmit" disabled={busy}>{busy?'Катталууда...':'Катталуу'}<ArrowRight size={19}/></button>
-        </form></div>:selected?<div className="tfSlideInner"><div className="tfSlideHeading"><span className="tfSlideRound">{(selected.name||'К').slice(0,1).toUpperCase()}</span><h2>{selected.name}</h2><p>{selected.email}</p></div><form className="tfSlideForm" onSubmit={e=>{localStorage.setItem('tf-remember-company',remember?'yes':'no');login(e)}}>
-          <label>Пароль<div className="tfSlidePassword"><input name="password" type={visiblePassword?'text':'password'} autoComplete="current-password" required placeholder="Паролуңузду жазыңыз"/><button type="button" onClick={()=>setVisiblePassword(v=>!v)} aria-label={visiblePassword?'Парольду жашыруу':'Парольду көрсөтүү'}>{visiblePassword?'Жашыруу':'Көрсөтүү'}</button></div></label>
-          <div className="tfSlideOptions"><label><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)}/> Эсимде сактоо</label><button type="button" disabled={busy} onClick={resetPassword}>Парольду унуттуңузбу?</button></div>
-          {error&&<p className="tfSlideError" role="alert">{error}</p>}
-          <button className="tfSlideSubmit" disabled={busy}>{busy?'Кирүүдө...':'Кирүү'}<ArrowRight size={19}/></button>
-        </form></div>:null}
+function CompanyAuth({companies,loading,directoryError,setMode,selected,setSelected,error,busy,login,resetPassword,mode,createAccount}){
+  const [visible,setVisible]=useState(false);
+  const choose=c=>{setSelected(c);setVisible(false)};
+  return <div className="novaLogin">
+    <div className="novaFrame">
+      <header className="novaHeader">
+        <div className="novaIdentity"><span className="novaSymbol"><Briefcase size={23}/></span><span><strong>Тендер База</strong><small>MANAGEMENT PLATFORM</small></span></div>
+        <span className="novaSecure"><CheckCircle2 size={16}/> Коопсуз кабинет</span>
+      </header>
+      <div className="novaWorkspace">
+        <section className="novaShowcase">
+          <span className="novaOverline"><span className="novaPulse"/> БИРДИКТҮҮ ИШ МЕЙКИНДИГИ</span>
+          <h1>Тендерлериңиз.<br/><em>Толук көзөмөлдө.</em></h1>
+          <p>Документтерди иреттеңиз, төлөмдөрдү көзөмөлдөңүз жана бардык тендерлерди бир жерден башкарыңыз.</p>
+          <div className="novaIllustration" aria-hidden="true">
+            <div className="novaMockTop"><span/><span/><span/><b>WORKSPACE OVERVIEW</b></div>
+            <div className="novaMockContent">
+              <div className="novaMockAside"><i/><i/><i/><i/></div>
+              <div className="novaMockMain">
+                <div className="novaMockBars"><i/><i/><i/></div>
+                <div className="novaMockChart"><span/><span/><span/><span/><span/><span/><span/></div>
+                <div className="novaMockRows"><i/><i/><i/></div>
+              </div>
+            </div>
+            <div className="novaFloating"><CheckCircle2 size={19}/><span><b>Документтер</b><small>Бир жерде сакталат</small></span></div>
+          </div>
+          <div className="novaFeatures"><span><FileText size={16}/> Файлдар</span><span><Wallet size={16}/> Төлөмдөр</span><span><LayoutDashboard size={16}/> Тендерлер</span></div>
+        </section>
+        <section className="novaAccess">
+          <div className="novaAccessTop"><span className="novaStep">01 / КИРҮҮ</span><span className="novaAccessDot"/></div>
+          <div className="novaAccessBody">
+            <div className="novaWelcome"><span className="novaWelcomeIcon">{selected?<Briefcase size={22}/>:<User size={22}/>}</span><h2>{selected?'Кош келиңиз!':'Кош келиңиз!'}</h2><p>{selected?'Кабинетке кирүү үчүн сырсөзүңүздү жазыңыз.':'Ишти улантуу үчүн компанияңызды тандаңыз.'}</p></div>
+            {mode==='register' ? <><button className="novaBack" type="button" onClick={()=>setMode('companies')}>← Компанияларды тандоо</button><h3>Жаңы компания каттоо</h3><p>3 компанияга чейин катталууга болот ({companies.length}/3)</p><form className="novaForm" onSubmit={createAccount}><label>Компаниянын аты</label><input name="company" required minLength={2} placeholder="Компаниянын аты"/><label>Email</label><input name="email" type="email" required placeholder="Email"/><label>Пароль</label><input name="password" type="password" required minLength={6} placeholder="Кеминде 6 символ"/><label>Парольду кайталоо</label><input name="repeatPassword" type="password" required minLength={6} placeholder="Парольду кайталаңыз"/>{error&&<div className="novaError">{error}</div>}<button className="novaSubmit" disabled={busy||loading||companies.length>=3}>{busy?'Катталууда...':'Компания каттоо'}<ArrowRight size={18}/></button></form></> : !selected?<>
+              <div className="novaListHeading"><strong>Сиздин компаниялар</strong><span>{loading?'…':companies.length}</span></div>
+              <div className="novaCompanies">
+                {loading?<div className="novaEmpty">Компаниялар жүктөлүүдө...</div>:directoryError?<div className="novaError" role="alert">{directoryError}</div>:companies.length?companies.map(c=><button type="button" className="novaCompany" key={c.uid||c.docId||c.email} onClick={()=>choose(c)}>
+                  <span className="novaAvatar">{(c.name||'К').slice(0,1).toUpperCase()}</span><span className="novaCompanyText"><strong>{c.name||'Компания'}</strong><small>{c.email}</small></span><span className="novaArrow"><ArrowRight size={18}/></span>
+                </button>):<div className="novaEmpty"><FolderOpen size={25}/><strong>Компаниялар жок</strong><small>Firestore /companies коллекциясындагы компаниялар көрсөтүлөт.</small></div>}
+              </div>
+              {!loading&&!directoryError&&companies.length<3&&<button type="button" className="novaRegister" onClick={()=>setMode('register')}><Plus size={17}/> Жаңы компания каттоо ({companies.length}/3)</button>}
+            </>:<>
+              <button className="novaBack" type="button" onClick={()=>{setSelected(null);setMode('companies')}}><ArrowRight size={15}/> Компанияларды тандоо</button>
+              <div className="novaSelected"><span className="novaAvatar">{(selected.name||'К').slice(0,1).toUpperCase()}</span><span><strong>{selected.name||'Компания'}</strong><small>{selected.email}</small></span><CheckCircle2 size={19}/></div>
+              <form className="novaForm" onSubmit={login}>
+                <label htmlFor="novaPassword">Сырсөз</label>
+                <div className="novaPassword"><input id="novaPassword" name="password" type={visible?'text':'password'} autoComplete="current-password" required placeholder="Сырсөзүңүздү киргизиңиз"/><button type="button" onClick={()=>setVisible(v=>!v)}>{visible?'Жашыруу':'Көрсөтүү'}</button></div>
+                {error&&<div className="novaError" role="alert">{error}</div>}
+                <button className="novaSubmit" type="submit" disabled={busy}>{busy?'Текшерилүүдө...':'Кабинетке кирүү'}<ArrowRight size={18}/></button>
+                <button className="novaForgot" type="button" disabled={busy} onClick={resetPassword}>Сырсөздү унуттуңузбу?</button>
+              </form>
+            </>}
+          </div>
+          <div className="novaAccessFoot"><CheckCircle2 size={15}/> Firebase аркылуу корголгон кирүү</div>
+        </section>
       </div>
+      <footer className="novaFooter"><span>© 2026 Тендер База</span><span>Иштериңиз бир системада</span></footer>
     </div>
-  </AuthFrame>;
+  </div>;
 }
 function PaidAmount({t,onClick}){
   const paid=Number(t.paid||0);
@@ -1687,7 +1689,7 @@ function PayPill({t,type,openStatus}){
   const val=t[type];
 
   if(!val){
-    return <button type="button" className="pill gray clickable noGuarantee" onClick={openStatus} title="Статусту өзгөртүү">Жок</button>;
+    return <button type="button" className="pill clickable moneyStatusBadge red guaranteeZero" onClick={openStatus} title="Статусту өзгөртүү">0 сом</button>;
   }
 
   const status=
@@ -1704,7 +1706,7 @@ function PayPill({t,type,openStatus}){
   return(
     <button
       type="button"
-      className={'pill clickable '+meta.cls}
+      className={'pill clickable moneyStatusBadge '+meta.cls}
       onClick={openStatus}
       title="Статусту өзгөртүү"
     >
@@ -1833,7 +1835,7 @@ function FilesPage({tenders,openDocs}){
           <small>ДОКУМЕНТТЕР БАЗАСЫ</small>
           <h1>Файлдар</h1>
         </div>
-        <label className="librarySearch filesTopSearch"><Search size={17}/><input aria-label="Файлдарды издөө" placeholder="Файл, тендер же аткаруучу…" value={fileQuery} onChange={e=>setFileQuery(e.target.value)}/></label>
+        <label className="librarySearch filesTopSearch"><Search size={17}/><input aria-label="Файлдарды издөө" placeholder="Файл, тендер же компания…" value={fileQuery} onChange={e=>setFileQuery(e.target.value)}/></label>
         <div className="filesMiniStats">
           <div className="filesMiniStat"><FileText size={17}/><span>Файлдар</span><b>{totalFilesCount}</b></div>
           <div className="filesMiniStat"><Briefcase size={17}/><span>Документи бар</span><b>{tenders.filter(t=>Object.keys(t.docs||{}).length>0).length}</b></div>
@@ -1870,7 +1872,7 @@ function FilesPage({tenders,openDocs}){
                   >
                     <div className="tenderAccordionTitleText">
                       <span>{tender.name}</span>
-                      <small>({tender.org} — {money(tender.sum)} | Аткаруучу: {tender.executor||'Жок'})</small>
+                      <small>({tender.org} — {money(tender.sum)} | Компания: {tender.executor||'Жок'})</small>
                     </div>
                     <div className="tenderAccordionMeta">
                       <span className="fileCountPill">
@@ -2015,7 +2017,6 @@ function Documents({t,update,close}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [deleteTarget,setDeleteTarget]=useState(null);
-  const [search,setSearch]=useState('');
   const [showSuggestions,setShowSuggestions]=useState(false);
   const picker=useRef(null);
   const suggestionsRef=useRef(null);
@@ -2105,7 +2106,7 @@ function Documents({t,update,close}){
   const office=['doc','docx','xls','xlsx','ppt','pptx'].includes(extension);
   return <div className="drawerShade docsDrawerShade"><div className="docsModal tfDocsV2" role="dialog" aria-modal="true" aria-label="Документтер">
     <div className="tfDocsHead">
-      <div><small>ТЕНДЕР № {t.id}</small><h2>Документтер</h2><p>{t.name} · {t.executor||'Аткаруучу көрсөтүлгөн эмес'}</p></div>
+      <div><small>ТЕНДЕР № {t.id}</small><h2>Документтер</h2><p>{t.name} · {t.executor||'Компания көрсөтүлгөн эмес'}</p></div>
       <button className="tfDocsClose" type="button" onClick={close} disabled={busy} aria-label="Жабуу"><X size={20}/></button>
     </div>
     <form className="tfDocsForm" onSubmit={saveFiles}>
