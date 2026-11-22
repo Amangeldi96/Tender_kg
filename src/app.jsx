@@ -669,9 +669,9 @@ export default function App(){
 
   const update=async(id,patch)=>{
     const old=tenders.find(t=>tenderKey(t)===id);if(!old)return;
-    const allowed=new Set(['goppStatus','goppPaid','goikStatus','goikPaid']);
+    const allowed=new Set(['goppStatus','goppPaid','goikStatus','goikPaid','docs']);
     if(isNotHeld(old)&&Object.keys(patch).some(key=>!allowed.has(key))){
-      setNotice('Бул тендер токтотулган: ГОПП жана ГОИК гана өзгөртүлөт');return false;
+      setNotice('Бул тендер токтотулган: ГОПП, ГОИК жана файлдар гана өзгөртүлөт');return false;
     }
     try{await saveRemote(id,{...old,...patch});setActive(x=>x&&tenderKey(x)===id?{...x,...patch}:x);return true;}
     catch(err){reportError(err);return false;}
@@ -1175,7 +1175,7 @@ const tableGridStyle = {
                     <div className="tfCardAmounts"><div><small>Бюджет (Суммасы):</small><strong>{money(t.sum)}</strong></div><div role={failed?undefined:'button'} tabIndex={failed?-1:0} className={failed?'tfFailedInactive':''} onClick={()=>{if(!failed){startPayment(t);setMobilePaymentTender(t)}}} onKeyDown={e=>{if(!failed&&e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: {failed?'':'✎'}</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong></div></div>
                     <div className="tfCardGuarantees">{['gopp','goik'].map(kind=><div key={kind}><small>{guaranteeLabel(kind)}:</small><button type="button" className={'tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red')} onClick={()=>setPayStatusModal({t,type:kind})}>{status(kind)}{t[kind]?' · '+t[kind]+' сом':''}</button></div>)}</div>
                     <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
-                    <button type="button" className="tfCardFiles" disabled={failed} onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
+                    <button type="button" className="tfCardFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
                   </article>;
                 })}
               </div>
@@ -1412,7 +1412,6 @@ const tableGridStyle = {
         <span>
           <button
             className="filesBtn"
-            disabled={failed}
             onClick={()=>{
               setActive(t);
               setDocsOpen(true);
@@ -2135,7 +2134,7 @@ function FilesPage({tenders,openDocs}){
 
                   {isTenderOpen&&(
                     <div className="tenderAccordionDocsList">
-                      <button className="primary archiveAttach" disabled={isNotHeld(tender)} title={isNotHeld(tender)?'Бул тендер токтотулган':''} onClick={()=>openDocs(tender)}><Paperclip size={16}/> Документ тиркөө / башкаруу</button>
+                      <button className="primary archiveAttach" onClick={()=>openDocs(tender)}><Paperclip size={16}/> Документ тиркөө / башкаруу</button>
                       {docEntries.length===0 ? (
                         <div className="noDocsInline">Бул тендерге документ тиркеле элек</div>
                       ) : (
