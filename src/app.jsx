@@ -623,7 +623,7 @@ export default function App(){
         return tender&&!isNotHeld(tender)?saveRemote(id,{...tender,status:'not_held'}):Promise.resolve();
       }));
       setSelectedIds([]);setDeleteConfirmOpen(false);
-      setNotice('Тендерлер «Не состоялся» деп белгиленди');
+      setNotice('Тендерлер «Не состоялся»');
     }catch(err){reportError(err)}finally{setBusy(false)}
   };
   const restoreTenders=async()=>{
