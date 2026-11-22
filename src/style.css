@@ -2867,3 +2867,58 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .shell>aside .executorNavCount{background:#d8f5e9!important}
 .shell>aside .navbottom .sidebarLogoutOnly{min-height:48px!important;border-radius:12px!important;background:#fff!important}
 @media(max-width:600px){.tableHeaderSearch.expanded{width:min(270px,48vw)!important}.tfToast.tfToastCopied{right:12px!important;bottom:12px!important}}
+
+/* Бир номер = бир сап: лоттор катардын ичинде аккордеон болуп ачылат. */
+.tablePanel .bigTable .row > span.lotCell {
+  display:flex!important;
+  align-items:center;
+  min-height:52px;
+  padding-top:8px;
+  padding-bottom:8px;
+  line-height:1.35!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+.tfLotPicker{width:100%;min-width:0;position:relative;line-height:1.35}
+.tfLotPicker .tfLotTrigger{
+  width:100%;min-height:35px;display:flex;align-items:center;gap:5px;
+  text-align:left;cursor:pointer;color:#164267!important;padding:7px 6px!important;
+  background:#f0f5fb!important;border:1px solid #e3ebf5!important;
+  border-radius:7px!important;text-decoration:none!important;font-weight:700!important;
+}
+.tfLotPicker .tfLotTrigger:hover,.tfLotPicker .tfLotTrigger:focus-visible{
+  background:#e9f4f0!important;border-color:#c7e4d8!important;
+}
+.tfLotPicker .tfLotTrigger > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.tfLotPicker .tfLotCount{font-size:10px!important;color:#23745f!important;padding:2px 4px!important;white-space:nowrap}
+.tfLotPicker .tfLotChevron{flex-shrink:0;color:#087d61;transition:transform .2s ease}
+.tfLotPickerOpen .tfLotChevron{transform:rotate(180deg)}
+.tfLotPicker > .tfLotDropdown{
+  display:grid;gap:4px;position:static!important;inset:auto!important;
+  top:auto!important;left:auto!important;width:100%!important;max-width:100%!important;
+  max-height:none!important;overflow:visible!important;margin-top:6px;padding:5px!important;
+  background:#f8fbfd!important;border:1px solid #e4ebf0!important;
+  border-radius:9px!important;box-shadow:none!important;z-index:auto!important;
+}
+.tfLotPicker .tfLotOption{
+  display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;
+  min-width:0;width:100%;gap:8px!important;padding:8px 7px!important;
+  border:1px solid transparent!important;text-align:left!important;line-height:1.3!important;
+  background:transparent!important;cursor:pointer;white-space:normal!important;
+}
+.tfLotPicker .tfLotOption.selected{background:#e3f4eb!important;border-color:#cceadd!important}
+.tfLotPicker .tfLotOption:hover{background:#eaf1f6!important}
+.tfLotOptionName{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.tfLotPicker .tfLotOptionName small{font-size:9px;color:#6c8494;line-height:1.2}
+.tfLotOptionName strong{font-weight:700;font-size:11px;color:#213d55;overflow-wrap:anywhere;white-space:normal}
+.tfLotPicker .tfLotOptionAmount{font-size:10px;color:#14684e;font-weight:750;text-align:right;white-space:nowrap;flex-shrink:0}
+.tfGroupAmount{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1.3}
+.tfGroupAmount strong{font-weight:850;color:#183b5c}
+.tfGroupAmount small{font-size:9px;font-weight:600;color:#788a9f;white-space:normal}
+@media(max-width:900px){
+  .tfCardInfo.lot .tfLotTrigger{min-height:40px!important}
+  .tfCardInfo.lot .tfLotPicker > .tfLotDropdown{background:#fff!important}
+  .tfCardInfo.lot .tfLotOptionName strong{font-size:12px}
+  .tfCardInfo.lot .tfLotOptionAmount{font-size:10px}
+}

@@ -2,7 +2,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import{collection,deleteDoc,doc,getDocs,setDoc,query,where,onSnapshot}from'firebase/firestore';
+import{collection,deleteDoc,doc,getDoc,setDoc,query,where,onSnapshot}from'firebase/firestore';
 import { db, auth } from "./firebase";
 import{
   createUserWithEmailAndPassword,
@@ -85,24 +85,6 @@ const sortTendersByDate = list => [...list].sort((a, b) => {
 const matches=(value,term)=>String(value||'').toLocaleLowerCase().includes(term.trim().toLocaleLowerCase());
 const fileSize=n=>n ? (n<1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`) : '—';
 
-const COMPANY_CACHE_KEY='tf-companies';
-const REMEMBERED_EMAIL_KEY='tf-remembered-email';
-
-// Бул түзмөктө email гана сакталат. Пароль сакталбайт жана ар жаңы ачууда суралат.
-const getRememberedEmail=()=>{
-  try{
-    const remembered=String(localStorage.getItem(REMEMBERED_EMAIL_KEY)||'').trim().toLowerCase();
-    if(remembered)return remembered;
-    // Мурунку версиядан бир эле аккаунт болсо, кайра каттатпай ошол email'ди колдонобуз.
-    const cached=JSON.parse(localStorage.getItem(COMPANY_CACHE_KEY)||'[]');
-    return Array.isArray(cached)&&cached.length===1?String(cached[0]?.email||'').trim().toLowerCase():'';
-  }
-  catch{return '';}
-};
-const rememberEmail=email=>{
-  try{localStorage.setItem(REMEMBERED_EMAIL_KEY,String(email||'').trim().toLowerCase());}
-  catch{/* Жеке режимде localStorage жеткиликсиз болушу мүмкүн. */}
-};
 const isNotHeld=t=>t?.status==='not_held';
 const hasGuarantee=(t,kind)=>String(t?.[kind]??'').trim()!=='';
 const isGuaranteePaid=(t,kind)=>{
@@ -116,53 +98,8 @@ const matchesGuaranteeFilter=(t,filter)=>{
   return isGuaranteePaid(t,filter.kind)===(filter.status==='paid');
 };
 
-const readCompanyCache=()=>{
-  try{
-    return JSON.parse(localStorage.getItem(COMPANY_CACHE_KEY))||[];
-  }catch{
-    return [];
-  }
-};
-
-const saveCompanyCache=list=>{
-  localStorage.setItem(COMPANY_CACHE_KEY,JSON.stringify(list));
-};
-
-
-
-const seed=[{
-  id:'26091627861269',
-  org:'ГСИН',
-  name:'Кафель',
-  executor:'Аскаров Б.',
-  sum:778300,
-  paid:0,
-  gopp:'15600',
-  goik:'',
-  goppPaid:true,
-  goikPaid:false,
-  date:'2026-09-23',
-  docs:{
-    'Таблица цен':{
-      name:'Таблица цен.xlsx',
-      size:24560
-    }
-  }
-}];
-
 const money=n=>
   new Intl.NumberFormat('ru-RU').format(Number(n)||0)+' сом';
-
-const read=()=>{
-  try{
-    return JSON.parse(localStorage.getItem('tf-v3'))||[]
-  }catch{
-    return []
-  }
-};
-
-const persist=v=>
-  localStorage.setItem('tf-v3',JSON.stringify(v));
 
 const niceDate=v=>v||'—';
 
@@ -259,12 +196,9 @@ export default function App(){
 
   const[user,setUser]=useState(null);
   const[authReady,setAuthReady]=useState(false);
-  const[companies,setCompanies]=useState(readCompanyCache);
-  const[authMode,setAuthMode]=useState(()=>getRememberedEmail()?'login':'create');
-  const[selectedCompany,setSelectedCompany]=useState(()=>{
-    const email=getRememberedEmail();
-    return email?{email,name:email.split('@')[0]}:null;
-  });
+  const[companies,setCompanies]=useState([]);
+  const[authMode,setAuthMode]=useState('login');
+  const[selectedCompany,setSelectedCompany]=useState(null);
   const[authError,setAuthError]=useState('');
   const[authBusy,setAuthBusy]=useState(false);
   const[resetCode,setResetCode]=useState(
@@ -313,49 +247,21 @@ export default function App(){
   },[]);
 
   React.useEffect(()=>{
-    if(!authReady || user)return;
-
-    const cached=readCompanyCache();
-    setCompanies(cached);
-
-    // Эски localStorage тизмесин Firestore'догу компаниялар менен БИРИКТИРЕБИЗ.
-    // Мурда remoteCompanies setCompanies(...) менен cache'ти толук алмаштырып,
-    // Firestore'до жок эски аккаунттарды экрандан жоготуп жаткан.
+    if(!authReady || !user?.uid){setCompanies([]);return;}
+    let current=true;
+    // Профиль гана окулат; башка аккаунттардын маалыматтары да, localStorage да колдонулбайт.
     Promise.all([
-      getDocs(collection(db,'publicCompanies')).catch(err=>{console.warn('publicCompanies load:',err);return null;}),
-      getDocs(collection(db,'companies')).catch(err=>{console.warn('companies load:',err);return null;})
-    ])
-      .then(snap=>{
-        const remote=[...(snap[0]?.docs||[]),...(snap[1]?.docs||[])]
-          .map(d=>({docId:d.id,...d.data()}))
-          .filter(company=>company?.email);
-
-        // Биринчи cache, анан Firestore: бир эле аккаунт болсо Firestore'догу жаңы маалымат үстүнөн жазат.
-        const mergedMap=new Map();
-        [...cached,...remote].forEach(company=>{
-          if(!company?.email)return;
-          const key=company.uid||company.docId||company.email.toLowerCase();
-          const previous=mergedMap.get(key)||{};
-          mergedMap.set(key,{...previous,...company});
-        });
-
-        // UID/docId өзгөрүп калган эски жазуулар email боюнча да кайталанбасын.
-        const byEmail=new Map();
-        Array.from(mergedMap.values()).forEach(company=>{
-          const key=String(company.email).trim().toLowerCase();
-          const previous=byEmail.get(key)||{};
-          byEmail.set(key,{...previous,...company});
-        });
-
-        const allCompanies=Array.from(byEmail.values());
-        setCompanies(allCompanies);
-        saveCompanyCache(allCompanies);
-      })
-      .catch(err=>{
-        console.error('Companies load error:',err);
-        setCompanies(cached);
-      });
-  },[authReady,user]);
+      getDoc(doc(db,'publicCompanies',user.uid)).catch(err=>{console.warn('Profile load:',err);return null;}),
+      getDoc(doc(db,'companies',user.uid)).catch(err=>{console.warn('Legacy profile load:',err);return null;})
+    ]).then(([primary,legacy])=>{
+      if(!current)return;
+      const record=primary?.exists()?primary:legacy?.exists()?legacy:null;
+      const company={uid:user.uid,email:user.email,name:user.email?.split('@')[0]||'Компания',...(record?.data()||{})};
+      setCompanies([company]);
+      setSelectedCompany({email:company.email,name:company.name});
+    }).catch(err=>{console.error('Company load:',err);});
+    return()=>{current=false;};
+  },[authReady,user?.uid,user?.email]);
 
   React.useEffect(()=>{
     if(!user){setTenders([]);return;}
@@ -419,14 +325,13 @@ export default function App(){
       const credential=await createUserWithEmailAndPassword(auth,email,password);
       const name=email.split('@')[0];
       const company={uid:credential.user.uid,email,name,authType:'password'};
-      rememberEmail(email);
       setSelectedCompany(company);
       await Promise.all([
         setDoc(doc(db,'publicCompanies',credential.user.uid),company),
         setDoc(doc(db,'companies',credential.user.uid),company).catch(()=>null)
       ]);
       const next=[...companies.filter(c=>(c.uid||c.docId)!==credential.user.uid),company];
-      setCompanies(next);saveCompanyCache(next);setAuthMode('login');
+      setCompanies(next);setAuthMode('login');
     }catch(err){
       const code=err?.code||'';
       if(code==='auth/email-already-in-use')setAuthError('Бул email менен аккаунт мурунтан катталган');
@@ -444,14 +349,13 @@ export default function App(){
     setAuthBusy(true);
     try{
       await signInWithEmailAndPassword(auth,email,secret);
-      rememberEmail(email);
       setSelectedCompany({email,name:email.split('@')[0]});
     }catch(err){
       setAuthError('Email же пароль туура эмес');
     }finally{setAuthBusy(false)}
   };
   const resetPassword=async(emailOverride='')=>{
-    const email=String(emailOverride||selectedCompany?.email||getRememberedEmail()).trim().toLowerCase();
+    const email=String(emailOverride||selectedCompany?.email||user?.email||'').trim().toLowerCase();
     if(!email)return;
     setAuthBusy(true);setAuthError('');
     try{
@@ -490,7 +394,7 @@ export default function App(){
         setDoc(doc(db,'companies',uid),updated,{merge:true}).catch(()=>null)
       ]);
       const next=[...companies.filter(c=>(c.uid||c.docId)!==uid && c.email!==user.email),updated];
-      setCompanies(next);saveCompanyCache(next);setNotice('Компаниянын аты өзгөртүлдү');
+      setCompanies(next);setNotice('Компаниянын аты өзгөртүлдү');
     }catch(err){reportError(err)}finally{setBusy(false)}
   };
 
@@ -515,7 +419,7 @@ export default function App(){
         setDoc(doc(db,'companies',user.uid),updated,{merge:true}).catch(()=>null)
       ]);
       const list=[...companies.filter(c=>(c.uid||c.docId)!==user.uid && c.email!==user.email),updated];
-      setCompanies(list);saveCompanyCache(list);e.currentTarget.reset();setNotice('Пароль ийгиликтүү өзгөртүлдү');
+      setCompanies(list);e.currentTarget.reset();setNotice('Пароль ийгиликтүү өзгөртүлдү');
     }catch(err){
       if(['auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials'].includes(err?.code))setNotice('Firebase азыркы парольду кабыл алган жок. Кирүүдө колдонгон парольду кайра текшериңиз же төмөнкү email аркылуу калыбына келтирүүнү колдонуңуз.');
       else if(err?.code==='auth/too-many-requests')setNotice('Көп аракет жасалды. Бир аздан кийин кайталаңыз же email аркылуу калыбына келтириңиз.');
@@ -572,44 +476,43 @@ export default function App(){
   // Жалпы тизмеде бирдей номердеги лоттор бир сапта; кызматкер бөлүмүндө өзүнчө.
   const [activeLotByTender,setActiveLotByTender]=useState({});
   const [openLotTender,setOpenLotTender]=useState(null);
-  const [lotMenuPosition,setLotMenuPosition]=useState(null);
-  const toggleLotMenu=(event,key)=>{
-    if(openLotTender===key){setOpenLotTender(null);return;}
-    const r=event.currentTarget.getBoundingClientRect();
-    const menuHeight=Math.min(300,Math.max(90,window.innerHeight-24));
-    const availableBelow=window.innerHeight-r.bottom-12;
-    const availableAbove=r.top-12;
-    const above=availableBelow<Math.min(230,menuHeight) && availableAbove>availableBelow;
-    const maxHeight=Math.max(85,Math.min(menuHeight,above?availableAbove:availableBelow));
-    const width=Math.min(360,Math.max(260,r.width),window.innerWidth-16);
-    setLotMenuPosition({top:above?Math.max(8,r.top-5-maxHeight):r.bottom+5,left:Math.max(8,Math.min(r.left,window.innerWidth-width-8)),width,maxHeight});
-    setOpenLotTender(key);
-  };
+  const toggleLotMenu=key=>setOpenLotTender(previous=>previous===key?null:key);
   useEffect(()=>{
     if(!openLotTender)return;
-    const close=e=>{if(!e.target.closest('.tfLotTrigger, .tfLotDropdown'))setOpenLotTender(null)};
-    const scroll=()=>setOpenLotTender(null);
+    const close=e=>{if(!e.target.closest('.tfLotPicker'))setOpenLotTender(null)};
     document.addEventListener('pointerdown',close);
-    window.addEventListener('resize',scroll);
-    window.addEventListener('scroll',scroll,true);
-    return ()=>{document.removeEventListener('pointerdown',close);window.removeEventListener('resize',scroll);window.removeEventListener('scroll',scroll,true)};
+    return ()=>document.removeEventListener('pointerdown',close);
   },[openLotTender]);
   const groupedLots=useMemo(()=>{
     const groups=new Map();
-    filtered.forEach(t=>{
+    sortTendersByDate(tenders.filter(t=>isNotHeld(t)===isFailedPage)).forEach(t=>{
       const number=String(t.id||'').trim();
       const key=number || `single:${tenderKey(t)}`;
       if(!groups.has(key))groups.set(key,[]);
       groups.get(key).push(t);
     });
-    return groups;
-  },[filtered]);
+    // Издөө бир лотко дал келсе да, ошол номердин БАРДЫК лоттору жана жалпы суммасы көрүнөт.
+    return new Map(Array.from(groups.entries()).filter(([,lots])=>lots.some(t=>
+      [t.id,t.org,t.name,t.executor,t.partnerCompany].join(' ').toLocaleLowerCase().includes(q.trim().toLocaleLowerCase())
+      && matchesGuaranteeFilter(t,guaranteeFilter)
+    )));
+  },[tenders,isFailedPage,q,guaranteeFilter]);
   const displayGroups=useMemo(()=>{
-    if(selectedExecutor)return filtered.map(t=>({t,lots:[t],groupKey:`single:${tenderKey(t)}`}));
-    return Array.from(groupedLots.entries()).map(([groupKey,lots])=>({
-      groupKey,lots,t:lots.find(x=>tenderKey(x)===activeLotByTender[groupKey])||lots[0]
-    }));
-  },[filtered,groupedLots,selectedExecutor,activeLotByTender]);
+    const entries=selectedExecutor
+      ?filtered.map(t=>[`single:${tenderKey(t)}`,[t]])
+      :Array.from(groupedLots.entries());
+    return entries.map(([groupKey,lots])=>{
+      const matchesCurrent=x=>[x.id,x.org,x.name,x.executor,x.partnerCompany].join(' ')
+        .toLocaleLowerCase().includes(q.trim().toLocaleLowerCase())&&matchesGuaranteeFilter(x,guaranteeFilter);
+      const selected=lots.find(x=>tenderKey(x)===activeLotByTender[groupKey]);
+      return {
+        groupKey,lots,
+        t:selected||lots.find(matchesCurrent)||lots[0],
+        totalSum:lots.reduce((sum,item)=>sum+(Number(item.sum)||0),0),
+        totalPaid:lots.reduce((sum,item)=>sum+(Number(item.paid)||0),0)
+      };
+    });
+  },[filtered,groupedLots,selectedExecutor,activeLotByTender,q,guaranteeFilter]);
   const displayFiltered=useMemo(()=>displayGroups.map(x=>x.t),[displayGroups]);
   const selectLot=(groupKey,recordId)=>{
     setActiveLotByTender(prev=>({...prev,[groupKey]:recordId}));
@@ -638,6 +541,7 @@ export default function App(){
   const scopeTenders=useMemo(()=>selectedExecutor
     ?tenders.filter(t=>isNotHeld(t)===isFailedPage&&(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)
     :tenders.filter(t=>isNotHeld(t)===isFailedPage),[tenders,selectedExecutor,isFailedPage]);
+  const scopeTenderCount=useMemo(()=>new Set(scopeTenders.map(t=>String(t.id||tenderKey(t)).trim())).size,[scopeTenders]);
   const total=useMemo(()=>scopeTenders.reduce((sum,t)=>sum+(Number(t.sum)||0),0),[scopeTenders]);
   const displayedTotal=selectedIds.length>0
     ?selectedTenders.reduce((sum,t)=>sum+(Number(t.sum)||0),0)
@@ -652,13 +556,16 @@ export default function App(){
     setPaymentEditId(null);
   };
 
-  const toggleSelect=id=>{
-    setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const toggleGroupSelect=lots=>{
+    const ids=lots.map(tenderKey);
+    setSelectedIds(prev=>ids.every(id=>prev.includes(id))
+      ?prev.filter(id=>!ids.includes(id))
+      :Array.from(new Set([...prev,...ids])));
     setExecutorsExpanded(false);
   };
 
   const toggleSelectAll=()=>{
-    const visible=displayFiltered.map(t=>tenderKey(t));
+    const visible=displayGroups.flatMap(group=>group.lots.map(tenderKey));
     setSelectedIds(prev=>visible.length && visible.every(id=>prev.includes(id))
       ?prev.filter(id=>!visible.includes(id))
       :Array.from(new Set([...prev,...visible])));
@@ -719,8 +626,8 @@ export default function App(){
 
   async function add(e){
     e.preventDefault();
-
-    let f=new FormData(e.currentTarget);
+    if(busy)return;
+    const f=new FormData(e.currentTarget);
 
     let t={
       id:String(f.get('id')).trim(),
@@ -728,25 +635,28 @@ export default function App(){
       name:String(f.get('name')).trim(),
       executor:String(f.get('executor')||'Аткаруучу').trim(),
       partnerCompany:String(f.get('partnerCompany')||'').trim(),
-      sum:+f.get('sum'),
+      sum:Number(f.get('sum')),
       paid:0,
       gopp:String(f.get('gopp')||'').trim(),
       goik:String(f.get('goik')||'').trim(),
       goppPaid:false,
       goikPaid:false,
-      date:f.get('date'),
+      date:String(f.get('date')||''),
       docs:{}
     };
 
-    if(tenders.some(x=>x.id===t.id && x.name.trim().toLocaleLowerCase()===t.name.trim().toLocaleLowerCase())){setNotice('Бул тендерде мындай лот мурунтан бар! Башка лот аталышын киргизиңиз.');return;}
+    // Бир эле номер (жадагалса окшош лот аталышы) кайра кошула берет: ар лот өзүнчө Firestore документи.
     if(!t.id||!t.name||!t.org||!t.executor||!t.partnerCompany){setNotice('Милдеттүү талааларды толтуруңуз');return;}
+    if(!Number.isFinite(t.sum)||t.sum<0){setNotice('Сумманы туура жазыңыз');return;}
     setBusy(true);
     setAddFileError('');
     try{
       if(!user?.uid)throw new Error('Firebase аккаунтуна кириңиз');
-      const recordId=crypto.randomUUID();
-      // Адегенде тендердин өзүн Firestore'го сактайбыз.
+      // Firestore өзү берген уникалдуу ID: crypto.randomUUID'ка көз каранды эмес.
+      const recordId=doc(collection(db,'tenders')).id;
+      // Биринчи сактоо сервер тарабынан тастыкталмайынча модал жабылбайт.
       await saveRemote(recordId,{...t,recordId,docs:{}});
+      setActiveLotByTender(previous=>({...previous,[t.id]:recordId}));
       const uploadedDocs={};
       const failedFiles=[];
       for(const [index,file] of addFiles.entries()){
@@ -766,9 +676,17 @@ export default function App(){
         setNotice("Тендер Firebase'ге сакталды, бирок айрым файлдар жүктөлгөн жок");
         window.alert("Тендер Firebase Firestore'го сакталды. Жүктөлбөгөн файлдар: "+failedFiles.join(', '));
       }else{
-        setNotice("Тендер жана файлдар Firebase'ге ийгиликтүү сакталды");
+        setNotice("Тендер Firebase'ге сакталды"+(addFiles.length?' (файлдары менен)':''));
       }
-    }catch(err){setAddFileError('Сактоо ишке ашкан жок: '+(err?.message||String(err)));reportError(err)}
+    }catch(err){
+      const hint=err?.code==='permission-denied'
+        ?'Firestore эрежелери бул аккаунтка жазууга уруксат берген жок.'
+        :err?.code==='unavailable'
+          ?'Firebase жеткиликсиз. Интернетти текшерип кайра аракет кылыңыз.'
+          :err?.message||String(err);
+      setAddFileError('Тендер Firebase\'ге сакталган жок: '+hint);
+      reportError(err);
+    }
     finally{setBusy(false)}
   }
 
@@ -846,7 +764,6 @@ export default function App(){
     if(!newTender.goik)newTender.goikPaid=false;
 
     if(!newId||!newTender.name||!newTender.org||!newTender.executor){setNotice('Милдеттүү талааларды толтуруңуз');return;}
-    if(tenders.some(t=>tenderKey(t)!==oldId && t.id===newId && t.name.trim().toLocaleLowerCase()===newTender.name.toLocaleLowerCase())){setNotice('Бул тендерде мындай лот мурунтан бар');return;}
     setBusy(true);
     try{
       await saveRemote(oldId,newTender);
@@ -857,8 +774,7 @@ export default function App(){
   const logout=async()=>{
     await signOut(auth);
     setAuthMode('login');
-    const email=getRememberedEmail();
-    setSelectedCompany(email?{email,name:email.split('@')[0]}:null);
+    setSelectedCompany(null);
     setAuthError('');
   };
 
@@ -1093,7 +1009,7 @@ const tableGridStyle = {
               <Stat
                 icon={<Briefcase/>}
                 label={selectedExecutor?'Аткаруучунун тендерлери':'Тендерлер'}
-                value={scopeTenders.length}
+                value={scopeTenderCount}
               />
               <Stat
                 icon={<Wallet/>}
@@ -1209,18 +1125,18 @@ const tableGridStyle = {
               </div>
 
               <div className="tfMobileTenderList">
-                {displayGroups.map(({t,lots,groupKey})=>{
+                {displayGroups.map(({t,lots,groupKey,totalSum,totalPaid})=>{
                   const key=tenderKey(t);
-                  const paid=Number(t.paid||0);
+                  const paid=totalPaid;
                   const status=(kind)=>{
                     const val=t[kind];
                     const state=t[kind+'Status'];
                     return state==='returned'?'Кайтарылды':state==='waiting'?'Күтүлүүдө':state==='unpaid'?'Төлөнө элек':state==='paid'||(!state&&t[kind+'Paid'])?'Төлөндү':Number(String(val||'').replace(/\s/g,''))>0?'Төлөнө элек':'Жок';
                   };
                   const failed=isNotHeld(t);
-                  return <article className={'tfMobileTenderCard'+(failed?' tfTenderFailed':'')} key={key}>
+                  return <article className={'tfMobileTenderCard'+(failed?' tfTenderFailed':'')} key={groupKey}>
                     <div className="tfCardHead">
-                      <input type="checkbox" className="tfCardSelect" aria-label={`Тендер ${t.id} тандоо`} checked={selectedIds.includes(key)} onChange={()=>toggleSelect(key)}/>
+                      <input type="checkbox" className="tfCardSelect" aria-label={`Тендер ${t.id} тандоо`} checked={lots.every(item=>selectedIds.includes(tenderKey(item)))} onChange={()=>toggleGroupSelect(lots)}/>
                       <button type="button" className="tfCardNumber tfTenderCopy" aria-label={`Скопировать тендер № ${t.id}`} onMouseEnter={showCopyTip} onMouseLeave={()=>setCopyTip(null)} onFocus={showCopyTip} onBlur={()=>setCopyTip(null)} onClick={()=>{setCopyTip(null);copyTenderNumber(t.id)}}><FileText size={15}/> <span>Тендер №: {t.id}</span></button>
                       <span className="tfCardDate">{t.date||'—'}</span>
                       <button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" disabled={failed} onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>
@@ -1228,8 +1144,8 @@ const tableGridStyle = {
                     {failed&&<span className="tfFailedBadge">Тендер не состоялся</span>}
                     <div className="tfCardInfo org"><small>КОМПАНИЯ:</small><strong>{t.partnerCompany||'—'}</strong></div>
                     <div className="tfCardInfo org"><small>МЕКЕМЕ:</small><strong>{t.org}</strong></div>
-                    <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small>{lots.length>1?<select className="tfLotMobileSelect" value={key} onChange={e=>selectLot(groupKey,e.target.value)}>{lots.map(item=><option key={tenderKey(item)} value={tenderKey(item)}>{item.name}</option>)}</select>:<strong>{t.name}</strong>}</div>
-                    <div className="tfCardAmounts"><div><small>Бюджет (Суммасы):</small><strong>{money(t.sum)}</strong></div><div role={failed?undefined:'button'} tabIndex={failed?-1:0} className={failed?'tfFailedInactive':''} onClick={()=>{if(!failed){startPayment(t);setMobilePaymentTender(t)}}} onKeyDown={e=>{if(!failed&&e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: {failed?'':'✎'}</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong></div></div>
+                    <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small>{lots.length>1?<LotAccordion lots={lots} activeLot={t} open={openLotTender===groupKey} onToggle={()=>toggleLotMenu(groupKey)} onSelect={recordId=>selectLot(groupKey,recordId)}/>:<strong>{t.name}</strong>}</div>
+                    <div className="tfCardAmounts"><div><small>Бюджет (жалпы сумма):</small><strong>{money(totalSum)}</strong>{lots.length>1&&<small>{lots.length} лоттун суммасы</small>}</div><div role={failed?undefined:'button'} tabIndex={failed?-1:0} className={failed?'tfFailedInactive':''} onClick={()=>{if(!failed){startPayment(t);setMobilePaymentTender(t)}}} onKeyDown={e=>{if(!failed&&e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: {failed?'':'✎'}</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong>{lots.length>1&&<small>Оңдоо: тандалган лот</small>}</div></div>
                     <div className="tfCardGuarantees">{['gopp','goik'].map(kind=><div key={kind}><small>{guaranteeLabel(kind)}:</small><button type="button" className={'tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red')} onClick={()=>setPayStatusModal({t,type:kind})}>{status(kind)}{t[kind]?' · '+t[kind]+' сом':''}</button></div>)}</div>
                     <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
                     <button type="button" className="tfCardFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
@@ -1245,7 +1161,7 @@ const tableGridStyle = {
     <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
       <input
         type="checkbox"
-        checked={displayFiltered.length>0 && displayFiltered.every(t=>selectedIds.includes(tenderKey(t)))}
+        checked={displayGroups.length>0 && displayGroups.every(group=>group.lots.every(t=>selectedIds.includes(tenderKey(t))))}
         onChange={toggleSelectAll}
         title="Тандоону тазалоо"
         style={{cursor:'pointer',width:'14px',height:'14px'}}
@@ -1266,16 +1182,16 @@ const tableGridStyle = {
   </div>
 
   {/* СТРОКАЛАРЫ */}
-  {displayGroups.map(({t,lots,groupKey},i)=>{
+  {displayGroups.map(({t,lots,groupKey,totalSum,totalPaid},i)=>{
     const editing=editingId===tenderKey(t);
     const paymentEditing=paymentEditId===tenderKey(t);
-    const isChecked=selectedIds.includes(tenderKey(t));
+    const isChecked=lots.every(item=>selectedIds.includes(tenderKey(item)));
     const failed=isNotHeld(t);
 
     return(
       <div
         className={'row '+(editing?'editingRow':'')+(failed?' tfTenderFailed':'')}
-        key={tenderKey(t)}
+        key={groupKey}
         style={tableGridStyle}
       >
         {/* ЧЕКБОКС */}
@@ -1283,7 +1199,7 @@ const tableGridStyle = {
           <input
             type="checkbox"
             checked={isChecked}
-            onChange={()=>toggleSelect(tenderKey(t))}
+            onChange={()=>toggleGroupSelect(lots)}
             style={{cursor:'pointer',width:'14px',height:'14px'}}
           />
         </span>
@@ -1326,32 +1242,17 @@ const tableGridStyle = {
               value={editDraft.name}
               onChange={e=>changeEdit('name',e.target.value)}
             />
-          ):(lots.length>1 && !selectedExecutor ? (
-            <div className="tfLotPicker">
-              <button type="button" className="tfLotTrigger" aria-expanded={openLotTender===groupKey} onClick={e=>toggleLotMenu(e,groupKey)} title="Ушул тендердин лотторун тандоо">
-                <span>{t.name}</span><span className="tfLotCount">{lots.length}</span><ChevronDown size={15}/>
-              </button>
-              {openLotTender===groupKey && lotMenuPosition && createPortal(<div className="tfLotDropdown" style={{position:"fixed",top:lotMenuPosition.top,left:lotMenuPosition.left,width:lotMenuPosition.width,maxHeight:`${lotMenuPosition.maxHeight}px`}}>
-                {lots.map(item=><button type="button" key={tenderKey(item)} className={'tfLotOption '+(tenderKey(item)===tenderKey(t)?'selected':'')} onClick={()=>selectLot(groupKey,tenderKey(item))}>
-                  <span>{item.name}</span><small>{money(item.sum)}</small>
-                </button>)}
-              </div>,document.body)}
-            </div>
+          ):(lots.length>1 ? (
+            <LotAccordion lots={lots} activeLot={t} open={openLotTender===groupKey} onToggle={()=>toggleLotMenu(groupKey)} onSelect={recordId=>selectLot(groupKey,recordId)}/>
           ) : t.name)}
         </span>
 
         {/* ЖАЛПЫ СУММА */}
         <span style={{fontWeight:'700'}}>
           {editing ? (
-            <input
-              className="tableInput"
-              type="number"
-              min="0"
-              value={editDraft.sum}
-              onChange={e=>changeEdit('sum',e.target.value)}
-            />
+            <div className="tfGroupAmount"><input className="tableInput" type="number" min="0" value={editDraft.sum} onChange={e=>changeEdit('sum',e.target.value)}/>{lots.length>1&&<small>Тандалган лотту оңдоо</small>}</div>
           ):(
-            money(t.sum)
+            <div className="tfGroupAmount"><strong>{money(totalSum)}</strong>{lots.length>1&&<small>{lots.length} лоттун жалпы суммасы</small>}</div>
           )}
         </span>
 
@@ -1392,7 +1293,7 @@ const tableGridStyle = {
             </div>
           ):(
             <PaidAmount
-              t={t}
+              t={lots.length>1?{...t,paid:totalPaid,sum:totalSum}:t}
               onClick={()=>startPayment(t)}
             />
           )}
@@ -1651,6 +1552,21 @@ const tableGridStyle = {
       )}
     </div>
   );
+}
+
+function LotAccordion({lots,activeLot,open,onToggle,onSelect}){
+  const menuId=React.useId();
+  return <div className={'tfLotPicker'+(open?' tfLotPickerOpen':'')}>
+    <button type="button" className="tfLotTrigger" aria-expanded={open} aria-controls={menuId} onClick={onToggle} title="Лоттордун аталыштарын ачуу">
+      <span>{activeLot.name}</span><span className="tfLotCount">{lots.length} лот</span><ChevronDown className="tfLotChevron" size={16}/>
+    </button>
+    {open&&<div id={menuId} className="tfLotDropdown" role="group" aria-label="Ушул номердеги лоттор">
+      {lots.map((item,index)=><button type="button" key={tenderKey(item)} className={'tfLotOption'+(tenderKey(item)===tenderKey(activeLot)?' selected':'')} aria-current={tenderKey(item)===tenderKey(activeLot)?'true':undefined} onClick={()=>onSelect(tenderKey(item))}>
+        <span className="tfLotOptionName"><small>Лот {index+1}</small><strong>{item.name}</strong></span>
+        <span className="tfLotOptionAmount">{money(item.sum)}</span>
+      </button>)}
+    </div>}
+  </div>;
 }
 
 function PinInput({name,autoFocus=false,length=8}){
@@ -2366,7 +2282,7 @@ function Documents({t,update,close}){
       for(const file of selectedFiles){
         if(file.size>20*1024*1024)throw new Error(`${file.name}: 20 МБдан чоң файл`);
         const uploaded=await uploadToCloudinary(file,tenderKey(t),name);
-        const key=`${name}__${crypto.randomUUID()}`;
+        const key=`${name}__${doc(collection(db,'tenders')).id}`;
         next={...next,[key]:{...uploaded,docName:name}};
         const ok=await update(tenderKey(t),{docs:next});
         if(!ok)throw new Error('Firebase сактоо катасы');
