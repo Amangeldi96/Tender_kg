@@ -2611,11 +2611,23 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 @media(max-width:900px){.tenderTopbar+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.tenderTopbar+.stats .stat:last-child{grid-column:1/-1}.guaranteeStat{flex-direction:column!important}.guaranteeStatChoices{width:100%}.guaranteeStatChoice{flex-basis:100%}}
 
-/* Таблицадагы ачылып-жабылуучу издөө жана архив */
-.tfTableHeaderControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
-.tfTableSearchToggle,.tfBackToActive{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #dce5e9;border-radius:9px;background:#f4f8f7;color:#2b655c;font-size:12px;font-weight:700}
-.tfTableSearchSlide{width:0;max-width:100%;opacity:0;overflow:hidden;transition:width .24s ease,opacity .2s ease}
-.tfTableSearchSlide.isOpen{width:260px;opacity:1}
-.tfTableSearchSlide input{width:100%;height:35px;padding:7px 11px;border:1px solid #dce5e9;border-radius:9px;font-size:12px}
-.tfArchiveCount{margin-left:auto;background:#394b59;color:#e9f4f0;border-radius:7px;padding:3px 8px;font-size:11px}
-@media(max-width:560px){.tfTableSearchSlide.isOpen{width:min(260px,100%)}.tfTableHeaderControls{width:100%}}
+/* Өзүнчө токтотулган тендерлер бөлүмү */
+.shell>aside nav a .failedNavCount{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:23px;padding:0 7px;margin-left:auto;border-radius:7px;background:#513641;color:#f4b9bd;font-size:11px;font-weight:800}
+.shell>aside nav a.failedNavActive{background:#613943!important;color:#fff!important}
+.shell>aside nav a.failedNavActive .failedNavCount{background:#934453;color:#fff}
+
+/* «Таблица» жанындагы тегерек лупа капсулага айланып оңго созулат. */
+.tableHeaderSearch{box-sizing:border-box;display:inline-flex;position:relative;align-items:center;flex:none;width:30px;height:32px;min-width:0;max-width:100%;overflow:hidden;border:0!important;border-radius:0;background:transparent!important;color:#216854;box-shadow:none!important;transition:width .5s cubic-bezier(.22,1,.36,1)}
+.tableHeaderSearch.expanded{width:min(270px,35vw)}
+.tableSearchToggle{position:absolute;z-index:2;right:0;top:0;display:grid;place-items:center;width:30px;height:32px;min-width:30px;padding:0;border:0!important;border-radius:0;background:transparent!important;color:#226e5b;box-shadow:none!important;cursor:pointer;transition:color .2s ease,transform .2s ease}
+.tableSearchToggle:hover{color:#18a079;transform:scale(1.09)}
+.tableSearchToggle:focus-visible{outline:2px solid #76b99e;outline-offset:-3px;border-radius:5px}
+.tableHeaderSearchField{box-sizing:border-box;position:absolute;top:0;left:0;right:30px;height:100%;opacity:0;pointer-events:none;transform:translateX(-6px);transition:opacity .16s ease .04s,transform .25s ease}
+.tableHeaderSearch.expanded .tableHeaderSearchField{opacity:1;pointer-events:auto;transform:translateX(0);transition-delay:.11s}
+.tableHeaderSearchField input{box-sizing:border-box;display:block;width:100%;height:100%;min-width:0;padding:0 6px 0 8px;border:0!important;border-bottom:1px solid #bdd9ce!important;border-radius:0;background:transparent;color:#244b44;font-size:12px;font-weight:550;outline:0!important;box-shadow:none!important;text-overflow:ellipsis}
+.tableHeaderSearchField input:focus{border-bottom-color:#319476!important}
+.tableHeaderSearchField input::placeholder{color:#7b9b8f;font-weight:400}
+@media(max-width:900px){.tableHeaderSearch.expanded{width:min(250px,49vw)}}
+@media(max-width:560px){.tableHeaderSearch.expanded{width:min(245px,72vw)}.tableTitleRow{row-gap:9px}}
+@media(max-width:380px){.tableHeaderSearch.expanded{width:min(215px,70vw)}}
+@media(prefers-reduced-motion:reduce){.tableHeaderSearch,.tableHeaderSearchField,.tableSearchToggle{transition:none}}
