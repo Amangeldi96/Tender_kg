@@ -219,7 +219,7 @@ async function downloadCloudFile(url,fileName){
 
 export default function App(){
 
-  const[tenders,setTenders]=useState(read);
+  const[tenders,setTenders]=useState([]);
   const[active,setActive]=useState(null);
   const[addOpen,setAddOpen]=useState(false);
   const[addFiles,setAddFiles]=useState([]);
@@ -703,16 +703,31 @@ export default function App(){
     setBusy(true);
     setAddFileError('');
     try{
+      if(!user?.uid)throw new Error('Firebase аккаунтуна кириңиз');
       const recordId=crypto.randomUUID();
+      // Адегенде тендердин өзүн Firestore'го сактайбыз.
+      await saveRemote(recordId,{...t,recordId,docs:{}});
       const uploadedDocs={};
+      const failedFiles=[];
       for(const [index,file] of addFiles.entries()){
         const docName=`Тиркелген файл ${index+1} — ${file.name}`;
-        uploadedDocs[docName]=await uploadToCloudinary(file,recordId,docName);
+        try{
+          const uploaded=await uploadToCloudinary(file,recordId,docName);
+          uploadedDocs[docName]=uploaded;
+          await saveRemote(recordId,{...t,recordId,docs:{...uploadedDocs}});
+        }catch(fileError){
+          console.error('Файл жүктөө катасы:',fileError);
+          failedFiles.push(file.name);
+        }
       }
-      await saveRemote(recordId,{...t,recordId,docs:uploadedDocs});
       setAddOpen(false);
       setAddFiles([]);
-      setNotice('Лот жана файлдар ийгиликтүү кошулду');
+      if(failedFiles.length){
+        setNotice("Тендер Firebase'ге сакталды, бирок айрым файлдар жүктөлгөн жок");
+        window.alert("Тендер Firebase Firestore'го сакталды. Жүктөлбөгөн файлдар: "+failedFiles.join(', '));
+      }else{
+        setNotice("Тендер жана файлдар Firebase'ге ийгиликтүү сакталды");
+      }
     }catch(err){setAddFileError('Сактоо ишке ашкан жок: '+(err?.message||String(err)));reportError(err)}
     finally{setBusy(false)}
   }
