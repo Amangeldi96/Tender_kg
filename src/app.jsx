@@ -9,7 +9,7 @@ import{
   signInWithEmailAndPassword,
   signOut,
   setPersistence,
-  inMemoryPersistence,
+  browserLocalPersistence,
   onAuthStateChanged,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
@@ -285,14 +285,12 @@ export default function App(){
     let unsubscribe=()=>{};
     (async()=>{
       try{
-        // Firebase'дин туруктуу сеансын өчүрөбүз: жаңы ачканда сөзсүз пароль керек.
-        await setPersistence(auth,inMemoryPersistence);
+        // Сеансты браузерде сактайбыз: F5 же браузерди кайра ачуу logout кылбайт.
+        await setPersistence(auth,browserLocalPersistence);
       }catch(err){console.error('Auth persistence:',err);}
-      try{
-        if(auth.authStateReady)await auth.authStateReady();
-        if(auth.currentUser)await signOut(auth);
-      }catch(err){console.error('Auth initialization:',err);}
-      if(mounted)unsubscribe=onAuthStateChanged(auth,u=>{
+      if(!mounted)return;
+      unsubscribe=onAuthStateChanged(auth,u=>{
+        if(!mounted)return;
         setUser(u);
         setAuthReady(true);
       });
