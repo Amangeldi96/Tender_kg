@@ -8,7 +8,13 @@ transition:background-color 0.18s ease,border-color 0.18s ease,box-shadow 0.18s 
 }
  button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #b9a5ff;outline-offset:3px}button{border:1px solid #e2deed;border-radius:9px;background:#fff;color:#403955;padding:10px 12px}button svg{width:17px;height:17px;flex-shrink:0}input,select{border:1px solid #e1dce9;background:#fff;border-radius:10px;padding:12px;color:#29243a;min-width:0}input:focus,select:focus{border-color:#967be8}input::placeholder{color:#9a93aa}small{line-height:1.5}svg{flex-shrink:0}button.primary,.submit,.authSubmit{background:#7356d8;color:white;border:0;border-radius:11px;padding:13px 18px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 6px 14px #7356d821}
  button.primary:hover,.authSubmit:hover{background:#5c40bc}.shell{display:flex;min-height:100vh}.shell>aside{width:270px;flex-shrink:0;background:#211a37;color:#eceafa;height:100vh;position:sticky;top:0;display:flex;flex-direction:column;padding:30px 17px 20px;overflow:auto}.brand{display:flex;align-items:center;gap:12px;padding:0 10px 30px}.logo{width:43px;height:43px;display:grid;place-items:center;border-radius:14px;background:#a088eb;color:#211a37;font-weight:900}.brand b{display:block;font-size:21px;letter-spacing:-.7px}.brand small{color:#b4a7d1;font-size:9px;letter-spacing:2px;display:block;margin-top:5px}nav{display:flex;flex-direction:column;gap:8px}nav a{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:11px;color:#b9afd1;text-decoration:none;font-size:13px;font-weight:650;cursor:pointer}
-nav a svg{width:19px;height:19px}nav a:hover{background:#332847;color:#fff}nav a.on{background:#7356d8;color:white;box-shadow:0 8px 25px #0002}.navAccordionSection{padding-top:20px;margin-top:10px!important;border-top:1px solid #473658}.executorSearch{display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #514261;border-radius:9px;margin:12px 0;color:#b9abd2}.executorSearch input{width:100%;background:transparent;border:0;color:white;font-size:12px;padding:11px 0}.executorSearch input::placeholder{color:#b5a8ca}.searchEmpty{font-size:12px;color:#b1a9c4}.navbottom{margin-top:auto;padding-top:22px;border-top:1px solid #443754}.user{display:flex;align-items:center;gap:10px}.avatar{width:38px;height:38px;border-radius:12px;background:#f0dfaf;color:#69451b;display:grid;place-items:center;font-size:12px;font-weight:800}
+nav a svg{width:19px;height:19px}nav a:hover{background:#332847;color:#fff}nav a.on{background:#7356d8;color:white;box-shadow:0 8px 25px #0002}
+.navAccordionSection{
+  padding-top:20px;
+  margin-top:10px!important;
+  border-top:1px solid #473658}
+  
+  .executorSearch{display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #514261;border-radius:9px;margin:12px 0;color:#b9abd2}.executorSearch input{width:100%;background:transparent;border:0;color:white;font-size:12px;padding:11px 0}.executorSearch input::placeholder{color:#b5a8ca}.searchEmpty{font-size:12px;color:#b1a9c4}.navbottom{margin-top:auto;padding-top:22px;border-top:1px solid #443754}.user{display:flex;align-items:center;gap:10px}.avatar{width:38px;height:38px;border-radius:12px;background:#f0dfaf;color:#69451b;display:grid;place-items:center;font-size:12px;font-weight:800}
 .loggedUserText{min-width:0;flex:1}.loggedUserText b,.loggedUserText small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.loggedUserText b{font-size:12px}.loggedUserText small{color:#a99ac3;font-size:10px}.logoutBtn{padding:8px;background:#382b49;color:#cfc2e2;border:0}.shell>main{flex:1;min-width:0;padding:0 34px 50px}.workspaceTop{display:flex;align-items:center;justify-content:space-between;padding:19px 0;border-bottom:1px solid #e5e0ed;margin-bottom:30px;gap:15px;font-size:10px;letter-spacing:1.3px;color:#82778e}.workspaceTop>span{display:flex;align-items:center;gap:8px}.liveDot{width:7px;height:7px;background:#a58bdc;border-radius:50%}.workspaceTop>b{background:#ede5ff;color:#7656be;border:1px solid #dfd1ff;border-radius:20px;padding:7px 11px;font-size:9px}
 .shell main>header{display:flex;align-items:center;justify-content:space-between;gap:25px;margin-bottom:30px;padding:5px 0 15px}header small{font-size:9px;letter-spacing:2px;font-weight:800;color:#9a81c8}header h1{font-size:clamp(27px,2.7vw,43px);line-height:1.13;letter-spacing:-1.8px;margin:12px 0 15px;color:#292039}header h1 em{font-style:normal;color:#8d73b9}header p{font-size:12px;color:#9a90a5;margin:0;line-height:1.7}.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.search,.librarySearch{display:flex;align-items:center;gap:9px;border:1px solid #e2dce9;background:white;border-radius:11px;padding:0 12px;color:#796b88}.search input,.librarySearch input{border:0;min-width:0;width:100%;background:transparent;font-size:12px}.search{width:270px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:28px}
  .stat{display:flex;align-items:center;gap:14px;background:white;border:1px solid #e6e0ee;border-radius:16px;padding:22px 18px;box-shadow:0 4px 12px #33245003}.statIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#f0eafb;color:#9470d0}.stat:nth-child(2) .statIcon{background:#fbefd9;color:#c79644}.stat:nth-child(3) .statIcon{background:#e4f4eb;color:#75a88d}.stat:nth-child(4) .statIcon{background:#e7ecfc;color:#7c93ce}.statIcon svg{width:21px;height:21px}.stat small{display:block;font-size:10px;color:#796b88}.stat b{display:block;font-size:22px;letter-spacing:-.7px;margin-top:6px;color:#332b43}.panel{background:white;border:1px solid #e5dfed;border-radius:17px;overflow:hidden;box-shadow:0 8px 26px #38274104;margin-bottom:25px}.panelhead{display:flex;justify-content:space-between;align-items:center;padding:23px 24px;border-bottom:1px solid #eee9f3;gap:15px}
@@ -2477,7 +2483,24 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .novaTextLink:hover{text-decoration:underline}
 
 /* Аткаруучулар: аккордеон ордуна түз тизме */
-.executorNavCount{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:23px;padding:0 6px;border-radius:7px;background:rgba(125,163,153,.17);font-size:11px;font-weight:750;color:var(--text-secondary)}
+.executorNavCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 7px;
+  margin-left: 10px;
+  border-radius: 7px;
+  background: #394b59;
+  color: #e9f4f0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: none;
+}
 
 /* Компаниянын өзүнчө тилкеси */
 .bigTable .row>.tfCompanyCell{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:#35655a}
@@ -2631,3 +2654,20 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 @media(max-width:560px){.tableHeaderSearch.expanded{width:min(245px,72vw)}.tableTitleRow{row-gap:9px}}
 @media(max-width:380px){.tableHeaderSearch.expanded{width:min(215px,70vw)}}
 @media(prefers-reduced-motion:reduce){.tableHeaderSearch,.tableHeaderSearchField,.tableSearchToggle{transition:none}}
+
+/* FIX: аткаруучунун сан бейджи узун болуп созулбасын */
+.shell > aside .executorScrollable button > span.executorNavCount,
+.shell > aside .executorScrollable .executorNavCount {
+  flex: 0 0 auto !important;
+  width: 25px !important;
+  min-width: 25px !important;
+  max-width: 25px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  margin-left: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  border-radius: 7px !important;
+}
