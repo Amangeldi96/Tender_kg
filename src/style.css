@@ -2922,3 +2922,7 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
   .tfCardInfo.lot .tfLotOptionName strong{font-size:12px}
   .tfCardInfo.lot .tfLotOptionAmount{font-size:10px}
 }
+
+/* Firestore окууга уруксат бербесе, ката 3 секунддан кийин жоголбой көрүнүп турат. */
+.firebaseSyncAlert{display:flex;align-items:center;gap:10px;padding:12px 15px;margin:0 0 13px;border:1px solid #f3b9bd;border-radius:10px;background:#fff0f0;color:#972938;font-size:12px;font-weight:650;line-height:1.5}
+.firebaseSyncAlert svg{flex-shrink:0}

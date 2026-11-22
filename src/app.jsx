@@ -2,7 +2,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import{collection,deleteDoc,doc,getDoc,setDoc,query,where,onSnapshot}from'firebase/firestore';
+import{collection,deleteDoc,doc,getDoc,setDoc,onSnapshot}from'firebase/firestore';
 import { db, auth } from "./firebase";
 import{
   createUserWithEmailAndPassword,
@@ -159,6 +159,7 @@ async function downloadCloudFile(url,fileName){
 export default function App(){
 
   const[tenders,setTenders]=useState([]);
+  const[syncError,setSyncError]=useState('');
   const[active,setActive]=useState(null);
   const[addOpen,setAddOpen]=useState(false);
   const[addFiles,setAddFiles]=useState([]);
@@ -264,12 +265,19 @@ export default function App(){
   },[authReady,user?.uid,user?.email]);
 
   React.useEffect(()=>{
-    if(!user){setTenders([]);return;}
-    const q=query(collection(db,'tenders'),where('ownerUid','==',user.uid));
-    const unsub=onSnapshot(q,snap=>{
+    if(!user){setTenders([]);setSyncError('');return;}
+    // Орток база: бардык аккаунттар бардык тендерлерди, анын ичинде «Не состоялся»
+    // статусундагыларды да, реалдуу убакытта көрөт. ownerUid окууну чектебейт.
+    const unsub=onSnapshot(collection(db,'tenders'),snap=>{
       const items=snap.docs.map(d=>({...d.data(),recordId:d.id,id:d.data().id||d.id}));
       setTenders(items);
-    },err=>{console.error('Firestore sync:',err);setNotice('Firebase окуу катасы: '+err.message);});
+      setSyncError('');
+    },err=>{
+      console.error('Firestore sync:',err);
+      setSyncError(err?.code==='permission-denied'
+        ?'Firestore Rules жалпы тендерлерди окууга уруксат бербейт. firebase.rules файлындагы tenders эрежесин жарыялаңыз.'
+        :'Firebase менен байланыш катасы: '+(err?.message||String(err)));
+    });
     return unsub;
   },[user]);
 
@@ -282,7 +290,9 @@ export default function App(){
   },[notice]);
   const[busy,setBusy]=useState(false);
   const saveRemote=async (recordId,record)=>{
-    await setDoc(doc(db,'tenders',recordId),{...record,recordId,ownerUid:user.uid});
+    if(!user?.uid)throw new Error('Firebase аккаунтуна кириңиз');
+    // Башка кызматкер өзгөртсө да, тендерди биринчи кошкон адамдын UID'си сакталат.
+    await setDoc(doc(db,'tenders',recordId),{...record,recordId,ownerUid:record.ownerUid||user.uid});
   };
   const reportError=(err)=>{console.error(err);setNotice('Firebase катасы: '+(err?.message||String(err)));};
 
@@ -992,6 +1002,7 @@ const tableGridStyle = {
         </div>
       </div>}
       <main>
+        {syncError&&<div className="firebaseSyncAlert" role="alert"><X size={17}/><span>{syncError}</span></div>}
         {(page==='tenders'||page==='not-held') ? (
           <>
             <header className="tenderTopbar">
