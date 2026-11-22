@@ -86,7 +86,7 @@ const fileSize=n=>n ? (n<1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).
 const COMPANY_CACHE_KEY='tf-companies';
 const REMEMBERED_EMAIL_KEY='tf-remembered-email';
 
-// Бул түзмөктө email гана сакталат. Пароль сакталбайт жана ар жаңы ачууда суралат.
+// Email гана сакталат; Firebase сеансы браузерде сакталат, пароль сакталбайт.
 const getRememberedEmail=()=>{
   try{
     const remembered=String(localStorage.getItem(REMEMBERED_EMAIL_KEY)||'').trim().toLowerCase();
@@ -102,6 +102,16 @@ const rememberEmail=email=>{
   catch{/* Жеке режимде localStorage жеткиликсиз болушу мүмкүн. */}
 };
 const isNotHeld=t=>t?.status==='not_held';
+const hasGuarantee=(t,kind)=>String(t?.[kind]??'').trim()!=='';
+const isGuaranteePaid=(t,kind)=>{
+  const status=t?.[kind+'Status'];
+  return status==='paid'||status==='returned'||(!status&&!!t?.[kind+'Paid']);
+};
+const matchesGuaranteeFilter=(t,filter)=>{
+  if(!filter)return true;
+  if(!hasGuarantee(t,filter.kind))return false;
+  return isGuaranteePaid(t,filter.kind)===(filter.status==='paid');
+};
 
 const readCompanyCache=()=>{
   try{
@@ -215,6 +225,9 @@ export default function App(){
   const[addFileError,setAddFileError]=useState('');
   const[docsOpen,setDocsOpen]=useState(false);
   const[q,setQ]=useState('');
+  const[tableSearchOpen,setTableSearchOpen]=useState(false);
+  const[showNotHeld,setShowNotHeld]=useState(false);
+  const[guaranteeFilter,setGuaranteeFilter]=useState(null);
   const[page,setPage]=useState('tenders');
   const[payStatusModal,setPayStatusModal]=useState(null);
 
@@ -506,12 +519,11 @@ export default function App(){
         .toLowerCase()
         .includes(q.toLowerCase());
 
-      if(selectedExecutor){
-        return matchesQuery && (t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor;
-      }
-      return matchesQuery;
+      if(isNotHeld(t)!==showNotHeld)return false;
+      if(!matchesQuery || !matchesGuaranteeFilter(t,guaranteeFilter))return false;
+      return !selectedExecutor || (t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor;
     }));
-  },[tenders,q,selectedExecutor]);
+  },[tenders,q,selectedExecutor,guaranteeFilter,showNotHeld]);
 
   // Жалпы тизмеде бирдей номердеги лоттор бир сапта; кызматкер бөлүмүндө өзүнчө.
   const [activeLotByTender,setActiveLotByTender]=useState({});
@@ -580,15 +592,26 @@ export default function App(){
   },[selectedExecutor,selectedExecutorsSet]);
 
   const total=useMemo(
-    ()=>(selectedExecutor?tenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor):tenders).reduce(
+    ()=>(selectedExecutor?tenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor):tenders).filter(t=>!isNotHeld(t)).reduce(
       (a,b)=>a+Number(b.sum||0),
       0
     ),
     [tenders,selectedExecutor]
   );
-  const scopeTenders=useMemo(()=>selectedExecutor
-    ?tenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)
-    :tenders,[tenders,selectedExecutor]);
+  const displayedTotal=selectedIds.length>0
+    ?selectedTenders.reduce((sum,t)=>sum+Number(t.sum||0),0)
+    :total;
+
+  const scopeTenders=useMemo(()=>tenders.filter(t=>!isNotHeld(t) && (!selectedExecutor || (t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)),[tenders,selectedExecutor]);
+
+  const chooseGuaranteeFilter=(kind,status)=>{
+    setGuaranteeFilter(previous=>previous?.kind===kind&&previous?.status===status?null:{kind,status});
+    setSelectedIds([]);
+    setOpenLotTender(null);
+    setEditingId(null);
+    setEditDraft(null);
+    setPaymentEditId(null);
+  };
 
   const toggleSelect=id=>{
     setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
@@ -617,7 +640,7 @@ export default function App(){
         return tender&&!isNotHeld(tender)?saveRemote(id,{...tender,status:'not_held'}):Promise.resolve();
       }));
       setSelectedIds([]);setDeleteConfirmOpen(false);
-      setNotice('Тендерлер «Не состоялся» деп белгиленди');
+      setNotice('Тендерлер «Не состоялся» бөлүмүнө которулду');
     }catch(err){reportError(err)}finally{setBusy(false)}
   };
   const restoreTenders=async()=>{
@@ -850,14 +873,20 @@ const tableGridStyle = {
             className={page==='tenders' && !selectedExecutor ?'on':''}
             onClick={()=>{
               setPage('tenders');
+              setShowNotHeld(false);
               setSelectedExecutor(null);
               setQ('');
+              setGuaranteeFilter(null);
               setSelectedIds([]);
               setMobileNavOpen(false);
             }}
           >
             <LayoutDashboard/>
             Тендерлер
+          </a>
+
+          <a className={page==='tenders' && showNotHeld ? 'on' : ''} onClick={()=>{setPage('tenders');setShowNotHeld(true);setSelectedExecutor(null);setGuaranteeFilter(null);setSelectedIds([]);setQ('');setMobileNavOpen(false);}}>
+            <X/> Не состоялся <span className="tfArchiveCount">{tenders.filter(isNotHeld).length}</span>
           </a>
 
           <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
@@ -877,6 +906,7 @@ const tableGridStyle = {
                     onClick={()=>{
                       setSelectedExecutor(execName);
                       setPage('tenders');
+                      setShowNotHeld(false);
                       setQ('');
                       setSelectedIds([]);
                       setMobileNavOpen(false);
@@ -1011,12 +1041,21 @@ const tableGridStyle = {
               <Stat
                 icon={<Wallet/>}
                 label={selectedExecutor?'Аткаруучунун жалпы суммасы':'Жалпы сумма'}
-                value={money(total)}
+                value={money(displayedTotal)}
               />
-              <Stat
+              <GuaranteeStat
+                kind="gopp"
                 icon={<PackageCheck/>}
-                label="ГОПП төлөнгөн"
-                value={scopeTenders.filter(t=>t.gopp&&(t.goppStatus==='paid'||t.goppStatus==='returned'||(!t.goppStatus&&t.goppPaid))).length}
+                tenders={scopeTenders}
+                activeFilter={guaranteeFilter}
+                onSelect={chooseGuaranteeFilter}
+              />
+              <GuaranteeStat
+                kind="goik"
+                icon={<CheckCircle2/>}
+                tenders={scopeTenders}
+                activeFilter={guaranteeFilter}
+                onSelect={chooseGuaranteeFilter}
               />
               <Stat
                 icon={<FileText/>}
@@ -1033,9 +1072,19 @@ const tableGridStyle = {
             <div className="panel tablePanel">
               <div className="panelhead" style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <div>
-                  <small>КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР</small>
+                  <small>{showNotHeld?'НЕ СОСТОЯЛСЯ — АРХИВ':'КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР'}</small>
                   <div className="tableTitleRow">
-                    <h2>Таблица {headerExecutorTitle ? `— ${headerExecutorTitle}` : ''}</h2>
+                    <h2>{showNotHeld?'Не состоялся':'Таблица'} {headerExecutorTitle ? `— ${headerExecutorTitle}` : ''}</h2>
+                    <div className="tfTableHeaderControls">
+                      <button type="button" className="tfTableSearchToggle" aria-expanded={tableSearchOpen} onClick={()=>{setTableSearchOpen(v=>!v);if(tableSearchOpen)setQ('')}}><Search size={16}/> Поиск</button>
+                      <div className={'tfTableSearchSlide'+(tableSearchOpen?' isOpen':'')}>
+                        <input aria-label="Таблицадан издөө" placeholder="Тендерди издөө..." value={q} onChange={e=>setQ(e.target.value)} tabIndex={tableSearchOpen?0:-1}/>
+                      </div>
+                      {showNotHeld&&<button type="button" className="tfBackToActive" onClick={()=>{setShowNotHeld(false);setSelectedIds([]);setQ('')}}>← Башкы тендерлер</button>}
+                    </div>
+              {guaranteeFilter&&<button type="button" className="guaranteeClearFilter" onClick={()=>chooseGuaranteeFilter(guaranteeFilter.kind,guaranteeFilter.status)}>
+                {guaranteeFilter.kind.toUpperCase()} — {guaranteeFilter.status==='paid'?'Төлөнгөн':'Төлөнө элек'} <X size={14}/>
+              </button>}
               {selectedExecutorsSet.length===1 && (
                 <div className="selectedExecutorSingle">
                   <User size={16}/>
@@ -2515,5 +2564,25 @@ function Stat({
       </div>
     </div>
   );
+}
+
+function GuaranteeStat({kind,icon,tenders,activeFilter,onSelect}){
+  const relevant=tenders.filter(t=>hasGuarantee(t,kind));
+  const paid=relevant.filter(t=>isGuaranteePaid(t,kind)).length;
+  const unpaid=relevant.length-paid;
+  return <div className="stat guaranteeStat">
+    <div className="statIcon">{icon}</div>
+    <div className="guaranteeStatBody">
+      <small>{kind.toUpperCase()}</small>
+      <div className="guaranteeStatChoices">
+        <button type="button" className={'guaranteeStatChoice paid'+(activeFilter?.kind===kind&&activeFilter.status==='paid'?' active':'')} aria-pressed={activeFilter?.kind===kind&&activeFilter.status==='paid'} onClick={()=>onSelect(kind,'paid')}>
+          <span>Төлөнгөн</span><strong>{paid}</strong>
+        </button>
+        <button type="button" className={'guaranteeStatChoice unpaid'+(activeFilter?.kind===kind&&activeFilter.status==='unpaid'?' active':'')} aria-pressed={activeFilter?.kind===kind&&activeFilter.status==='unpaid'} onClick={()=>onSelect(kind,'unpaid')}>
+          <span>Төлөнө элек</span><strong>{unpaid}</strong>
+        </button>
+      </div>
+    </div>
+  </div>;
 }
 

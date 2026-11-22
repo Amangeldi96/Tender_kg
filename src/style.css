@@ -2590,3 +2590,32 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .shell>aside .navbottom .sidebarLogoutOnly{width:100%;min-height:45px;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 16px;background:#344657;color:#f4f7fa;border:1px solid #44586b;border-radius:11px;font-size:14px;font-weight:750;cursor:pointer;transition:background .2s ease,border-color .2s ease}
 .shell>aside .navbottom .sidebarLogoutOnly:hover{background:#a52f39;border-color:#c34d55;color:#fff}
 .shell>aside .navbottom .sidebarLogoutOnly:focus-visible{outline:3px solid #94c5b4;outline-offset:3px}
+
+/* ГОПП/ГОИК — төлөнгөн жана төлөнө элек боюнча чыпкалоо */
+.tenderTopbar+.stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+.guaranteeStat{gap:10px;align-items:flex-start!important}
+.guaranteeStat .statIcon{flex-shrink:0}
+.guaranteeStatBody{flex:1;min-width:0}
+.guaranteeStatBody>small{display:block;margin-bottom:8px;font-size:11px;font-weight:750;color:#40576a}
+.guaranteeStatChoices{display:flex;flex-wrap:wrap;gap:6px}
+.guaranteeStatChoice{flex:1 1 90px;display:flex;justify-content:space-between;align-items:center;gap:7px;min-height:27px;border-radius:7px;padding:5px 8px;border:1px solid transparent;font-size:10px;line-height:1.25;font-weight:650;white-space:normal;text-align:left;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.guaranteeStatChoice>strong{font-size:13px;font-weight:850;flex:none}
+.guaranteeStatChoice.paid{background:#e9f6ee;color:#287448;border-color:#cfe8d8}
+.guaranteeStatChoice.unpaid{background:#fff0f0;color:#af4149;border-color:#f4d4d7}
+.guaranteeStatChoice.paid:hover,.guaranteeStatChoice.paid.active{background:#25774c;color:#fff;border-color:#25774c}
+.guaranteeStatChoice.unpaid:hover,.guaranteeStatChoice.unpaid.active{background:#bf414a;color:#fff;border-color:#bf414a}
+.guaranteeStatChoice.active{box-shadow:0 0 0 2px rgba(52,84,77,.12)}
+.guaranteeClearFilter{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #c5dcd3;border-radius:8px;background:#eaf5ef;color:#28675f;font-size:11px;font-weight:700;cursor:pointer}
+.guaranteeClearFilter:hover{background:#d9eee3}
+@media(max-width:1449px){.tenderTopbar+.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.tenderTopbar+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.tenderTopbar+.stats .stat:last-child{grid-column:1/-1}.guaranteeStat{flex-direction:column!important}.guaranteeStatChoices{width:100%}.guaranteeStatChoice{flex-basis:100%}}
+
+/* Таблицадагы ачылып-жабылуучу издөө жана архив */
+.tfTableHeaderControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.tfTableSearchToggle,.tfBackToActive{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #dce5e9;border-radius:9px;background:#f4f8f7;color:#2b655c;font-size:12px;font-weight:700}
+.tfTableSearchSlide{width:0;max-width:100%;opacity:0;overflow:hidden;transition:width .24s ease,opacity .2s ease}
+.tfTableSearchSlide.isOpen{width:260px;opacity:1}
+.tfTableSearchSlide input{width:100%;height:35px;padding:7px 11px;border:1px solid #dce5e9;border-radius:9px;font-size:12px}
+.tfArchiveCount{margin-left:auto;background:#394b59;color:#e9f4f0;border-radius:7px;padding:3px 8px;font-size:11px}
+@media(max-width:560px){.tfTableSearchSlide.isOpen{width:min(260px,100%)}.tfTableHeaderControls{width:100%}}
