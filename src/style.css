@@ -2585,3 +2585,8 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .tenderBulkNotHeld{background:#b91c1c;color:#fff;border:1px solid #b91c1c;box-shadow:0 2px 8px rgba(185,28,28,.20)}
 .tenderBulkRestore{background:#e8f7ec;color:#166534;border:1px solid #9fdbb4}
 @media(max-width:650px){.tenderBulkActions{width:100%;justify-content:flex-start}.tenderBulkActions>button{white-space:normal;min-height:38px}}
+
+/* Капталдагы аккаунт тизмесинин ордуна жалгыз чыгуу баскычы. */
+.shell>aside .navbottom .sidebarLogoutOnly{width:100%;min-height:45px;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 16px;background:#344657;color:#f4f7fa;border:1px solid #44586b;border-radius:11px;font-size:14px;font-weight:750;cursor:pointer;transition:background .2s ease,border-color .2s ease}
+.shell>aside .navbottom .sidebarLogoutOnly:hover{background:#a52f39;border-color:#c34d55;color:#fff}
+.shell>aside .navbottom .sidebarLogoutOnly:focus-visible{outline:3px solid #94c5b4;outline-offset:3px}

@@ -40,6 +40,7 @@ import{
   ArrowRight,
   ChevronDown,
   ChevronRight,
+  LogOut,
   User
 }from'lucide-react';
 import'./style.css';
@@ -224,11 +225,6 @@ export default function App(){
   const[executorsExpanded,setExecutorsExpanded]=useState(false);
   const[logoutConfirm,setLogoutConfirm]=useState(false);
   const[deleteConfirmOpen,setDeleteConfirmOpen]=useState(false);
-  const[accountMenuOpen,setAccountMenuOpen]=useState(false);
-  const[switchCompany,setSwitchCompany]=useState(null);
-  const[switchSecret,setSwitchSecret]=useState('');
-  const[switchError,setSwitchError]=useState('');
-  const[switchBusy,setSwitchBusy]=useState(false);
   const[mobileNavOpen,setMobileNavOpen]=useState(false);
   useEffect(()=>{
     document.body.classList.toggle('nav-lock', mobileNavOpen);
@@ -285,7 +281,7 @@ export default function App(){
     let unsubscribe=()=>{};
     (async()=>{
       try{
-        // Сеансты браузерде сактайбыз: F5 же браузерди кайра ачуу logout кылбайт.
+        // Firebase сеансы F5 басылганда жана браузер кайра ачылганда сакталат.
         await setPersistence(auth,browserLocalPersistence);
       }catch(err){console.error('Auth persistence:',err);}
       if(!mounted)return;
@@ -621,7 +617,7 @@ export default function App(){
         return tender&&!isNotHeld(tender)?saveRemote(id,{...tender,status:'not_held'}):Promise.resolve();
       }));
       setSelectedIds([]);setDeleteConfirmOpen(false);
-      setNotice('Тендерлер «Не состоялся»');
+      setNotice('Тендерлер «Не состоялся» деп белгиленди');
     }catch(err){reportError(err)}finally{setBusy(false)}
   };
   const restoreTenders=async()=>{
@@ -789,39 +785,6 @@ export default function App(){
     setAuthError('');
   };
 
-  const openAccountSwitch=company=>{
-    if(!company || company.email===user?.email)return;
-    setAccountMenuOpen(false);
-    setSwitchCompany(company);
-    setSwitchSecret('');
-    setSwitchError('');
-  };
-
-  const submitAccountSwitch=async e=>{
-    e.preventDefault();
-    if(!switchCompany)return;
-    if(!switchSecret){
-      setSwitchError('Парольду жазыңыз');
-      return;
-    }
-    setSwitchBusy(true);
-    setSwitchError('');
-    try{
-      await signInWithEmailAndPassword(auth,switchCompany.email,switchSecret);
-      rememberEmail(switchCompany.email);
-      setSelectedCompany(switchCompany);
-      setSwitchCompany(null);
-      setSwitchSecret('');
-      setPage('tenders');
-      setSelectedExecutor(null);
-      setNotice(`${switchCompany.name||'Компания'} аккаунтуна өттүңүз`);
-    }catch(err){
-      setSwitchError('Пароль туура эмес');
-    }finally{
-      setSwitchBusy(false);
-    }
-  };
-
   if(!authReady){
     return(
       <div className="authScreen">
@@ -979,99 +942,13 @@ const tableGridStyle = {
           </a>
         </nav>
 
-        <div className="navbottom accountSwitcher">
-          {accountMenuOpen&&(
-            <div className="accountSwitchMenu">
-              <div className="accountSwitchMenuHead">
-                <span>АККАУНТТАР</span>
-                <small>{companies.length}</small>
-              </div>
-              <div className="accountSwitchList">
-                {companies.map(company=>{
-                  const current=company.email===user.email;
-                  return(
-                    <button
-                      type="button"
-                      className={"accountSwitchItem"+(current?" current":"")}
-                      key={company.uid||company.docId||company.email}
-                      onClick={()=>current?setAccountMenuOpen(false):openAccountSwitch(company)}
-                    >
-                      <span className="accountMiniAvatar">{(company.name||company.email||'A').slice(0,2).toUpperCase()}</span>
-                      <span className="accountSwitchText">
-                        <b>{company.name||'Компания'}</b>
-                        <small>{current?'Азыркы аккаунт':company.email}</small>
-                      </span>
-                      {current?<CheckCircle2 size={16}/>:<ChevronRight size={16}/>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="user">
-            <div className="avatar">
-              {(currentCompany?.name||user.email||'A').slice(0,2).toUpperCase()}
-            </div>
-            <button
-              type="button"
-              className="loggedUserText accountSwitchTrigger"
-              onClick={()=>setAccountMenuOpen(v=>!v)}
-              aria-expanded={accountMenuOpen}
-              title="Башка аккаунтка өтүү"
-            >
-              <span>
-                <b>{currentCompany?.name||'Компания'}</b>
-                <small>Администратор</small>
-              </span>
-              <ChevronDown className={accountMenuOpen?'rotated':''} size={17}/>
-            </button>
-            <button className="logoutBtn" onClick={()=>setLogoutConfirm(true)} title="Аккаунттан чыгуу" aria-label="Аккаунттан чыгуу">
-              <X/>
-            </button>
-          </div>
+        <div className="navbottom">
+          <button type="button" className="sidebarLogoutOnly" onClick={()=>{setMobileNavOpen(false);setLogoutConfirm(true);}}>
+            <LogOut size={18}/>
+            Выйти
+          </button>
         </div>
       </aside>
-
-      {switchCompany&&(
-        <div className="accountSwitchShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!switchBusy)setSwitchCompany(null)}}>
-          <div className="accountSwitchDialog" role="dialog" aria-modal="true">
-            <button type="button" className="accountSwitchClose" onClick={()=>!switchBusy&&setSwitchCompany(null)} aria-label="Жабуу"><X size={17}/></button>
-            <div className="accountSwitchLogo">{(switchCompany.name||'A').slice(0,2).toUpperCase()}</div>
-            <small>АККАУНТТУ АЛМАШТЫРУУ</small>
-            <h2>{switchCompany.name||'Компания'}</h2>
-            <p>{switchCompany.authType==='password'?'Бул аккаунттун паролун жазыңыз.':'Бул аккаунттун 8 цифралык PIN-кодун жазыңыз.'}</p>
-            <form onSubmit={submitAccountSwitch} className="accountSwitchForm">
-              {switchCompany.authType==='password'?(
-                <input
-                  type="password"
-                  value={switchSecret}
-                  onChange={e=>setSwitchSecret(e.target.value)}
-                  placeholder="Пароль"
-                  autoFocus
-                  autoComplete="current-password"
-                />
-              ):(
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={switchSecret}
-                  onChange={e=>setSwitchSecret(e.target.value.replace(/\D/g,'').slice(0,8))}
-                  placeholder="8 цифралык PIN"
-                  autoFocus
-                  autoComplete="current-password"
-                />
-              )}
-              {switchError&&<div className="accountSwitchError">{switchError}</div>}
-              <button type="submit" className="accountSwitchSubmit" disabled={switchBusy}>
-                {switchBusy?'Текшерилүүдө...':'Бул аккаунтка өтүү'}
-                <ArrowRight size={17}/>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {deleteConfirmOpen&&(
         <div className="deleteConfirmShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setDeleteConfirmOpen(false)}}>
