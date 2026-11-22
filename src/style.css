@@ -2671,3 +2671,90 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
   overflow: visible !important;
   border-radius: 7px !important;
 }
+
+/* 5-вариант: компаниянын аты тендер номеринин астында */
+.tablePanel .bigTable .row{min-width:1275px}
+.bigTable .row>.tfTenderCompanyCell{white-space:normal;overflow:visible;align-items:center}
+.tfTenderCompanyStack{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;min-width:0;width:100%}
+.tfTenderCompanyStack>.tenderLink{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfTenderCompanyName{display:inline-flex;align-items:center;gap:5px;max-width:100%;min-width:0;color:#64748b;font-size:10px;font-weight:500;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfTenderCompanyName svg{flex:none;color:#557489}
+.tfTenderCompanyStack>.tableInput{box-sizing:border-box;width:100%;padding:5px 7px;font-size:11px}
+
+/* 5-варианттын визуалдык стили: таза ак карточкалар жана так акцент түстөр */
+.tenderTopbar + .stats{gap:12px;margin-bottom:14px}
+.tenderTopbar + .stats .stat{background:#fff;border:1px solid #e2e8f1;border-radius:12px;box-shadow:0 3px 14px rgba(34,48,79,.045);padding:14px 15px;min-height:79px;gap:12px}
+.tenderTopbar + .stats .statIcon{width:43px;height:43px;min-width:43px;border-radius:11px;background:#e8f6f0;color:#079878}
+.tenderTopbar + .stats .stat:nth-child(2) .statIcon{background:#eaf2ff;color:#1673e6}
+.tenderTopbar + .stats .stat:nth-child(3) .statIcon{background:#e8f7ed;color:#24985d}
+.tenderTopbar + .stats .stat:nth-child(4) .statIcon{background:#f1eafe;color:#8255d9}
+.tenderTopbar + .stats .stat:nth-child(5) .statIcon{background:#e6f8f7;color:#078f90}
+.tenderTopbar + .stats .statIcon svg{width:20px;height:20px;stroke-width:1.9}
+.tenderTopbar + .stats .stat small{color:#637395;font-size:10px;font-weight:600}
+.tenderTopbar + .stats .stat b{color:#162850;font-size:19px;font-weight:850;letter-spacing:-.35px;margin-top:5px}
+.tenderTopbar + .stats .guaranteeStatBody > small{font-size:10px;color:#52637c;margin-bottom:7px}
+.tenderTopbar + .stats .guaranteeStatChoices{gap:5px}
+.tenderTopbar + .stats .guaranteeStatChoice{min-height:23px;padding:4px 6px;border-radius:6px;font-size:9px;flex-basis:78px}
+.tenderTopbar + .stats .guaranteeStatChoice strong{font-size:11px}
+.tenderTopbar + .stats .guaranteeStatChoice.paid{background:#e3f7ea;border-color:#e3f7ea;color:#138746}
+.tenderTopbar + .stats .guaranteeStatChoice.unpaid{background:#ffebef;border-color:#ffebef;color:#cf3f56}
+.tenderTopbar + .stats .guaranteeStatChoice.paid.active,.tenderTopbar + .stats .guaranteeStatChoice.paid:hover{background:#1d8a4e;border-color:#1d8a4e;color:#fff}
+.tenderTopbar + .stats .guaranteeStatChoice.unpaid.active,.tenderTopbar + .stats .guaranteeStatChoice.unpaid:hover{background:#c83b4d;border-color:#c83b4d;color:#fff}
+.tablePanel{background:#fff;border:1px solid #e2e9f2;border-radius:13px;box-shadow:0 5px 22px rgba(30,49,91,.04)}
+.tablePanel .panelhead{padding:17px 19px 15px;border-bottom:1px solid #e8edf4}
+.tablePanel .panelhead small{color:#356e70;font-size:9px;font-weight:800;letter-spacing:1.25px}
+.tablePanel .panelhead h2{font-size:17px;color:#162c58;font-weight:850}
+.tablePanel .bigTable .row.head{background:#eff3f9;color:#425474;border-bottom:1px solid #e1e8f0;font-size:9px;font-weight:850}
+.tablePanel .bigTable .row:not(.head){background:#fff;border-color:#e9eef5;color:#263c5c;min-height:58px}
+.tablePanel .bigTable .row:not(.head):hover{background:#f7faff}
+.tablePanel .bigTable .row.tfTenderFailed:not(.head){background:#fff1f2!important}
+.bigTable .row .tenderLink{color:#006a69;font-weight:850;font-size:11px}
+.bigTable .row .tfTenderCompanyName{color:#526784;font-size:10px;font-weight:550;line-height:1.3}
+.bigTable .row .tfTenderCompanyName svg{color:#46648a}
+.tablePanel .bigTable .row>.tfTenderCompanyCell{align-items:center}
+.tablePanel .bigTable .row .filesBtn{background:#148465!important;color:#fff!important;border-radius:7px}
+.tablePanel .bigTable .row .editBtn{background:#50668f!important;color:#fff!important;border-radius:7px}
+.tablePanel .bigTable .row .pill.red,.tablePanel .bigTable .row .paidAmount.red{background:#df2450!important;color:#fff!important}
+.tablePanel .bigTable .row .pill.yellow,.tablePanel .bigTable .row .paidAmount.yellow{background:#f0a000!important;color:#fff!important}
+.tablePanel .bigTable .row .pill.gray{background:#7785a0!important;color:#fff!important}
+@media(max-width:560px){.tenderTopbar + .stats .stat{padding:11px;gap:8px}.tenderTopbar + .stats .statIcon{width:36px;height:36px;min-width:36px}.tenderTopbar + .stats .stat b{font-size:16px}}
+
+/* 5-варианттын сүрөтүнө шайкеш акыркы дизайн */
+.shell>main{background:#f7f9ff}
+.tenderTopbar+.stats{column-gap:12px;row-gap:12px;margin-bottom:13px!important}
+.tenderTopbar+.stats .stat{min-height:96px!important;border-radius:14px!important;padding:17px 19px!important;border-color:#dfe6f6!important;box-shadow:0 2px 7px rgba(32,54,118,.045)!important}
+.tenderTopbar+.stats .statIcon{width:55px!important;height:55px!important;min-width:55px!important;border-radius:15px!important}
+.tenderTopbar+.stats .statIcon svg{width:26px!important;height:26px!important;stroke-width:1.9}
+.tenderTopbar+.stats .stat small{font-size:12px!important;color:#516694!important;line-height:1.3}
+.tenderTopbar+.stats .stat b{font-size:23px!important;letter-spacing:-.5px!important;color:#101d47!important;line-height:1.14}
+.tenderTopbar+.stats .guaranteeStat{align-items:center!important;gap:12px!important}
+.tenderTopbar+.stats .guaranteeStatBody>small{margin-bottom:8px!important;font-size:14px!important;font-weight:700!important;color:#4a5e8b!important}
+.tenderTopbar+.stats .guaranteeStatChoices{flex-wrap:nowrap!important;gap:7px!important}
+.tenderTopbar+.stats .guaranteeStatChoice{padding:7px 10px!important;min-height:32px!important;min-width:0;border-radius:9px!important;font-size:10px!important;white-space:nowrap!important}
+.tenderTopbar+.stats .guaranteeStatChoice strong{font-size:15px!important}
+.tenderTopbar+.stats .guaranteeStatChoice.paid{background:#e5f7ec!important;color:#07803c!important;border-color:#e5f7ec!important}
+.tenderTopbar+.stats .guaranteeStatChoice.unpaid{background:#ffeaf0!important;color:#bf0f30!important;border-color:#ffeaf0!important}
+.tenderTopbar+.stats .guaranteeStatChoice.paid.active{background:#158b50!important;color:#fff!important;border-color:#158b50!important}
+.tenderTopbar+.stats .guaranteeStatChoice.unpaid.active{background:#ce2750!important;color:#fff!important;border-color:#ce2750!important}
+.tablePanel{border-color:#dfe6f6!important;border-radius:15px!important}
+.tablePanel .panelhead{padding:19px 21px 15px!important;min-height:88px!important;background:#fff!important}
+.tablePanel .panelhead small{color:#53699a!important;letter-spacing:1.45px!important;font-size:10px!important}
+.tablePanel .panelhead h2{font-size:22px!important;color:#13224c!important;font-weight:850!important;letter-spacing:-.55px!important}
+.tablePanel .bigTable .row.head{min-height:54px!important;background:#edf2fa!important;color:#273c68!important;font-size:10px!important;font-weight:800!important}
+.tablePanel .bigTable .row:not(.head){min-height:74px!important;font-size:12px!important;color:#1c305b!important;border-top:1px solid #e5ebf5!important}
+.tablePanel .bigTable .row>.tfTenderCompanyCell{padding-left:6px!important}
+.bigTable .row .tfTenderCompanyStack{gap:5px}
+.bigTable .row .tenderLink{font-size:13px!important;color:#007a65!important;font-weight:850!important;letter-spacing:-.2px}
+.bigTable .row .tfTenderCompanyName{font-size:11px!important;color:#263a64!important;font-weight:500!important;gap:8px!important}
+.bigTable .row .tfTenderCompanyName svg{width:16px!important;height:16px!important;stroke-width:1.9;color:#304e87!important}
+.tablePanel .bigTable .row .filesBtn,.tablePanel .bigTable .row .editBtn{min-height:38px!important;min-width:43px!important;border-radius:9px!important;box-shadow:0 3px 6px rgba(14,38,82,.09)!important}
+.tablePanel .bigTable .row .filesBtn{background:#038f61!important}
+.tablePanel .bigTable .row .editBtn{background:#526693!important}
+.tablePanel .bigTable .row .pill,.tablePanel .bigTable .row .paidAmount{border-radius:9px!important;font-size:11px!important;font-weight:750!important;padding:8px 10px!important}
+.tablePanel .bigTable .row .pill.red,.tablePanel .bigTable .row .paidAmount.red{background:#fa1047!important;border-color:#fa1047!important}
+.tablePanel .bigTable .row .pill.yellow,.tablePanel .bigTable .row .paidAmount.yellow{background:#f2a000!important;border-color:#f2a000!important}
+.tablePanel .bigTable .row .pill.gray{background:#7183a9!important;border-color:#7183a9!important}
+.tablePanel .bigTable .row.head>span,.tablePanel .bigTable .row:not(.head)>span{padding-left:7px;padding-right:7px}
+@media(max-width:1449px){.tenderTopbar+.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.tenderTopbar+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.tenderTopbar+.stats .stat{min-height:86px!important;padding:12px!important}.tenderTopbar+.stats .statIcon{width:42px!important;height:42px!important;min-width:42px!important}.tenderTopbar+.stats .statIcon svg{width:21px!important;height:21px!important}.tenderTopbar+.stats .stat b{font-size:19px!important}.tenderTopbar+.stats .guaranteeStatChoices{flex-wrap:wrap!important}}
+@media(max-width:560px){.tenderTopbar+.stats .stat small{font-size:10px!important}.tenderTopbar+.stats .stat b{font-size:17px!important}.tenderTopbar+.stats .guaranteeStatBody>small{font-size:11px!important}.tenderTopbar+.stats .guaranteeStatChoice{font-size:9px!important;padding:5px!important;min-height:25px!important}.tenderTopbar+.stats .guaranteeStatChoice strong{font-size:11px!important}.tablePanel .panelhead h2{font-size:19px!important}}

@@ -21,6 +21,7 @@ import{
 import{
   LayoutDashboard,
   Briefcase,
+  Building2,
   FileText,
   Settings,
   Search,
@@ -855,11 +856,11 @@ export default function App(){
   // ТАБЛИЦА СТАКТАЛГАН ТОЛУК СТИЛЬ КОЛОНКАЛАРЫ
 const tableGridStyle = {
   display: 'grid',
-  gridTemplateColumns: '34px 32px minmax(125px,1.3fr) minmax(130px,1.2fr) minmax(90px,1fr) minmax(115px,1.25fr) minmax(112px,1.05fr) minmax(110px,1.1fr) 90px 80px 105px 108px 72px 55px',
+  gridTemplateColumns: '34px 32px minmax(177px,1.65fr) minmax(90px,1fr) minmax(115px,1.25fr) minmax(112px,1.05fr) minmax(110px,1.1fr) 90px 80px 105px 108px 72px 55px',
   alignItems: 'center',
   columnGap: 0,
   width: '100%',
-  minWidth: '1410px',
+  minWidth: '1275px',
   boxSizing: 'border-box'
 };
   return(
@@ -1211,7 +1212,6 @@ const tableGridStyle = {
     </span>
     <span>№</span>
     <span>ТЕНДЕР НОМЕР</span>
-    <span>КАЙСЫ КОМПАНИЯ МЕНЕН</span>
     <span>МЕКЕМЕЛЕР</span>
     <span>LOT АТАЛЫШЫ</span>
     <span>СУММАСЫ</span>
@@ -1250,21 +1250,18 @@ const tableGridStyle = {
         <span>{i+1}</span>
 
         {/* ТЕНДЕР НОМЕР */}
-        <span>
+        <span className="tfTenderCompanyCell">
           {editing ? (
-            <input
-              className="tableInput"
-              value={editDraft.id}
-              onChange={e=>changeEdit('id',e.target.value)}
-            />
+            <span className="tfTenderCompanyStack">
+              <input className="tableInput" aria-label="Тендер номери" value={editDraft.id} onChange={e=>changeEdit('id',e.target.value)}/>
+              <input className="tableInput" aria-label="Кайсы компания менен аткарды" placeholder="Компаниянын аты" value={editDraft.partnerCompany||''} onChange={e=>changeEdit('partnerCompany',e.target.value)}/>
+            </span>
           ):(
-            <span className="tenderLink" title={failed?'Тендер не состоялся':t.id}>{t.id}{failed&&<small className="tfFailedBadge">Не состоялся</small>}</span>
+            <span className="tfTenderCompanyStack">
+              <span className="tenderLink" title={failed?'Тендер не состоялся':t.id}>{t.id}{failed&&<small className="tfFailedBadge">Не состоялся</small>}</span>
+              <span className="tfTenderCompanyName" title={t.partnerCompany||'Компания көрсөтүлгөн эмес'}><Building2 size={12} aria-hidden="true"/>{t.partnerCompany||'Компания көрсөтүлгөн эмес'}</span>
+            </span>
           )}
-        </span>
-
-        {/* КАЙСЫ КОМПАНИЯ МЕНЕН АТКАРДЫ */}
-        <span className="tfCompanyCell" title={t.partnerCompany||''}>
-          {editing?<input className="tableInput" value={editDraft.partnerCompany||''} onChange={e=>changeEdit('partnerCompany',e.target.value)}/>:t.partnerCompany||'—'}
         </span>
 
         {/* МЕКЕМЕ */}
