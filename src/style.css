@@ -2472,6 +2472,42 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .novaAuth *{box-sizing:border-box}.novaSide{background:#132b36;color:#fff;min-height:100vh;padding:45px clamp(28px,4vw,75px);display:flex;flex-direction:column;position:relative;overflow:hidden}.novaSide:before{content:"";position:absolute;width:480px;height:480px;border:1px solid #ffffff16;border-radius:50%;right:-240px;bottom:10%;box-shadow:0 0 0 80px #ffffff05,0 0 0 170px #ffffff04}.novaBrand{display:flex;align-items:center;gap:13px;position:relative}.novaBrandMark{width:47px;height:47px;border-radius:13px;background:#d5ed8a;color:#172f37;display:grid;place-items:center;font-weight:900}.novaBrand strong,.novaBrand small{display:block}.novaBrand strong{font-size:17px}.novaBrand small{font-size:9px;letter-spacing:2.4px;color:#a5b8bd;margin-top:5px}.novaSideBody{margin:auto 0;position:relative;max-width:500px}.novaKicker,.novaStep{font-size:11px;letter-spacing:2px;font-weight:800}.novaKicker{color:#d5ed8a}.novaSideBody h1{font-size:clamp(39px,4.5vw,70px);line-height:1.1;letter-spacing:-2.5px;margin:27px 0}.novaSideBody h1 em{font-style:normal;color:#d5ed8a}.novaSideBody p{font-size:15px;line-height:1.9;color:#b9c9cc;max-width:380px}.novaDecor{display:grid;gap:17px;margin-top:65px;max-width:350px}.novaDecor span{padding-bottom:14px;border-bottom:1px solid #ffffff2b;color:#b7c7c8;font-size:10px;letter-spacing:2px}.novaSideFoot{display:flex;justify-content:space-between;color:#7e9a9f;font-size:10px;letter-spacing:2px;position:relative}.novaMain{padding:36px clamp(25px,6vw,110px) 25px;display:flex;flex-direction:column;min-width:0;min-height:100vh}.novaMainTop{display:flex;align-items:center;gap:9px;color:#657e7b;font-size:10px;letter-spacing:1.6px;font-weight:800}.novaOnline{height:8px;width:8px;border-radius:50%;background:#5ba789}.novaTopRule{height:1px;background:#e1e7e1;flex:1;margin-left:18px}.novaContent{width:100%;max-width:590px;margin:auto}.novaTitle{margin-bottom:30px}.novaStep{color:#6b9180}.novaTitle h2{font-size:clamp(32px,3.5vw,51px);letter-spacing:-1.7px;line-height:1.15;margin:15px 0;color:#132b36;overflow-wrap:anywhere}.novaTitle p{color:#72818a;font-size:14px;line-height:1.8;margin:10px 0}.novaSearch{height:59px;display:flex;align-items:center;gap:12px;padding:0 18px;background:white;border:1px solid #dce4df;border-radius:15px;color:#7e928e;margin-bottom:18px}.novaSearch input{border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;width:100%;font-size:13px}.novaList{display:grid;gap:11px;max-height:320px;overflow-y:auto;padding:2px}.novaAccount{width:100%;background:white;border:1px solid #e1e8e2;border-radius:17px;display:flex;align-items:center;gap:15px;text-align:left;padding:17px;min-width:0;transition:transform .2s,border-color .2s}.novaAccount:hover{border-color:#8da99b;transform:translateX(4px);filter:none!important}.novaAccountIcon,.novaIdentityIcon{display:grid;place-items:center;flex-shrink:0;background:#e7efe8;color:#2c6156;border-radius:13px;width:52px;height:52px;font-size:21px;font-weight:800}.novaAccountInfo{flex:1;min-width:0}.novaAccountInfo strong,.novaAccountInfo small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.novaAccountInfo strong{font-size:15px;color:#20333c}.novaAccountInfo small{font-size:12px;color:#7b8c91;margin-top:5px}.novaAccountArrow{display:grid;place-items:center;color:#54796a}.novaCreateLink{margin-top:18px;width:100%;display:flex;align-items:center;gap:14px;padding:18px;border:1px dashed #aebfb4;border-radius:16px;background:#eef3ec;color:#264c41;text-align:left}.novaCreateLink>span{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#d9e8d8}.novaCreateLink strong{flex:1}.novaBack{border:0;background:transparent;padding:8px 0;color:#58766a;margin-bottom:37px;font-weight:700;font-size:13px}.novaLoginIdentity{display:flex;gap:18px;align-items:center;margin:20px 0}.novaLoginIdentity h2{font-size:clamp(25px,3vw,36px);margin:0}.novaLoginIdentity p{margin:5px 0}.novaIdentityIcon{width:65px;height:65px;font-size:26px}.novaForm{display:grid;gap:19px}.novaForm>label{display:grid;gap:9px;color:#344b52;font-size:13px;font-weight:700}.novaForm>label>input,.novaPassword input{width:100%;height:58px;border:1px solid #dce4df;border-radius:13px;background:white;padding:0 17px;font-size:14px;color:#152c35;outline:0;box-shadow:none}.novaForm input:focus,.novaPassword:focus-within{border-color:#6c9a86;box-shadow:0 0 0 3px #8eb8a51c}.novaPassword{display:flex;align-items:center;border:1px solid #dce4df;border-radius:13px;background:white}.novaPassword input{border:0;flex:1;min-width:0}.novaPassword button{border:0;background:transparent;color:#447a67;font-size:12px;font-weight:800;padding:12px}.novaForgot{border:0;background:transparent;color:#407864;justify-self:end;font-size:12px;font-weight:700;padding:0}.novaSubmit{height:60px;border:0;border-radius:14px;background:#132b36;color:white;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:space-between;padding:0 22px;margin-top:5px}.novaSubmit:hover{background:#244752;filter:none!important}.novaError{padding:14px;background:#fff0ef;color:#a34342;border-radius:12px;font-size:12px}.novaEmpty{padding:30px;text-align:center;color:#78898d;font-size:13px}.novaMainFoot{font-size:11px;color:#9aaba9;margin-top:30px}.novaMainFoot span{margin:0 9px}
 @media(max-width:850px){.novaAuth{grid-template-columns:1fr}.novaSide{min-height:auto;padding:20px 24px}.novaSideBody,.novaSideFoot{display:none}.novaMain{min-height:calc(100vh - 87px);padding:25px 24px}.novaContent{padding:38px 0}.novaMainFoot{margin-top:auto}}@media(max-width:480px){.novaMain{padding:20px 17px}.novaContent{padding:25px 0}.novaAccount{padding:12px}.novaAccountIcon{width:45px;height:45px}.novaTitle h2{font-size:33px}.novaBack{margin-bottom:25px}}
 
+/* Бир жолку катталуу жана андан кийинки кыска пароль формасы */
+.novaTextLink{display:block;margin:20px auto 0;padding:9px 12px;background:transparent;border:0;color:#386f60;font-size:13px;font-weight:750;text-align:center;cursor:pointer}
+.novaTextLink:hover{text-decoration:underline}
+
+/* Аткаруучулар: аккордеон ордуна түз тизме */
+.executorNavCount{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:23px;padding:0 6px;border-radius:7px;background:rgba(125,163,153,.17);font-size:11px;font-weight:750;color:var(--text-secondary)}
+
+/* Компаниянын өзүнчө тилкеси */
+.bigTable .row>.tfCompanyCell{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:#35655a}
+.bigTable .row>.tfCompanyCell .tableInput{width:100%;min-width:0}
+.tablePanel .bigTable .row{min-width:1410px}
+
+/* Катышпай калган тендер: ГОПП жана ГОИК гана иштейт */
+.bigTable .row.tfTenderFailed:not(.head){background:#fff3f3!important;border-left:3px solid #dc2626}
+.bigTable .row.tfTenderFailed:hover:not(.head){background:#ffe9e9!important}
+.tfFailedBadge{display:inline-flex;align-items:center;max-width:100%;font-size:9px!important;font-weight:800;color:#b91c1c!important;background:#fee2e2;border:1px solid #fecaca;border-radius:5px;padding:3px 6px;margin-left:5px;vertical-align:middle;line-height:1.3;white-space:normal}
+.bigTable .tfTenderFailed .tenderLink{color:#b91c1c}
+.bigTable .tfTenderFailed .filesBtn:disabled,.bigTable .tfTenderFailed .editBtn:disabled,.bigTable .tfTenderFailed .paidAmount:disabled,.tfTenderFailed .tfCardEdit:disabled,.tfTenderFailed .tfCardFiles:disabled{background:#fee2e2!important;color:#b91c1c!important;border:1px solid #fecaca!important;cursor:not-allowed;opacity:1;box-shadow:none}
+.bigTable .tfTenderFailed .pill.tfFailedInactive{background:#fee2e2!important;color:#b91c1c!important}
+.tfMobileTenderCard.tfTenderFailed{background:#fff4f4!important;border-color:#f3b5b5!important;box-shadow:0 2px 15px rgba(185,28,28,.07)!important}
+.tfMobileTenderCard .tfFailedBadge{margin:9px 0 0}
+.tfCardSelect{width:16px;height:16px;flex:none;accent-color:#28675f;cursor:pointer}
+.tfTenderFailed .tfCardAmounts .tfFailedInactive{pointer-events:none;cursor:not-allowed}
+.tfTenderFailed .tfCardAmounts .tfFailedInactive strong,.tfTenderFailed .tfCardAmounts .tfFailedInactive strong.positive{background:#dc2626!important;color:white!important}
+.tfTenderFailed .tfCardPrice b{background:#fee2e2!important;color:#b91c1c!important}
+.archiveAttach:disabled{background:#fee2e2!important;color:#b91c1c!important;cursor:not-allowed;opacity:1}
+
+/* Тандалган тендерге эки өзүнчө аракет */
+.tenderActionChoices{display:grid;gap:10px;margin-top:18px}
+.tenderActionChoices button{width:100%;min-height:44px;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:750;cursor:pointer}
+.tenderActionDelete{background:#b91c1c;border:1px solid #b91c1c;color:#fff}
+.tenderActionFailed{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
+.tenderActionRestore{background:#e4f7ee;border:1px solid #abdac3;color:#136d49}
+.tenderActionChoices .deleteCancelBtn{background:#f2f5f7;border:1px solid #e2e8f0;color:#586b7c}
+.tenderActionChoices button:disabled{opacity:.6;cursor:wait}
+
 /* Кирүү жана катталуу үчүн гана үн башкаргычы */
 .novaSoundToggle{flex-shrink:0;border:1px solid #d6e2e7;border-radius:999px;background:#fff;color:#344a60;font-size:12px;font-weight:700;padding:9px 13px;white-space:nowrap;cursor:pointer}.novaSoundToggle:hover{background:#edf5f8}.novaSoundToggle[aria-pressed="false"]{opacity:.65}@media(max-width:520px){.novaSoundToggle{font-size:10px;padding:7px 9px}}
 
@@ -2538,3 +2574,14 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 .tfLotOption{border-radius:6px!important;transition:background .15s ease!important}
 .tfLotOption:hover{background:#f5f6f8!important;text-decoration:none!important}
 .tfLotOption.selected{background:#f2f4f6!important}
+
+/* Тендер белгиленгенде эки аракет дароо таблицанын үстүндө көрүнөт. */
+.tablePanel .panelhead{flex-wrap:wrap;gap:12px}
+.tenderBulkActions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-left:auto}
+.tenderBulkActions>button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:8px 13px;border-radius:8px;font-size:12px;font-weight:750;line-height:1.25;white-space:nowrap;cursor:pointer;transition:transform .15s ease,background .15s ease}
+.tenderBulkActions>button:hover:not(:disabled){transform:translateY(-1px)}
+.tenderBulkActions>button:disabled{opacity:.55;cursor:wait}
+.tenderBulkDelete{background:#ef4444;color:#fff;border:1px solid #ef4444;box-shadow:0 2px 8px rgba(239,68,68,.25)}
+.tenderBulkNotHeld{background:#b91c1c;color:#fff;border:1px solid #b91c1c;box-shadow:0 2px 8px rgba(185,28,28,.20)}
+.tenderBulkRestore{background:#e8f7ec;color:#166534;border:1px solid #9fdbb4}
+@media(max-width:650px){.tenderBulkActions{width:100%;justify-content:flex-start}.tenderBulkActions>button{white-space:normal;min-height:38px}}

@@ -8,6 +8,8 @@ import{
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  setPersistence,
+  inMemoryPersistence,
   onAuthStateChanged,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
@@ -81,6 +83,24 @@ const matches=(value,term)=>String(value||'').toLocaleLowerCase().includes(term.
 const fileSize=n=>n ? (n<1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`) : '—';
 
 const COMPANY_CACHE_KEY='tf-companies';
+const REMEMBERED_EMAIL_KEY='tf-remembered-email';
+
+// Бул түзмөктө email гана сакталат. Пароль сакталбайт жана ар жаңы ачууда суралат.
+const getRememberedEmail=()=>{
+  try{
+    const remembered=String(localStorage.getItem(REMEMBERED_EMAIL_KEY)||'').trim().toLowerCase();
+    if(remembered)return remembered;
+    // Мурунку версиядан бир эле аккаунт болсо, кайра каттатпай ошол email'ди колдонобуз.
+    const cached=JSON.parse(localStorage.getItem(COMPANY_CACHE_KEY)||'[]');
+    return Array.isArray(cached)&&cached.length===1?String(cached[0]?.email||'').trim().toLowerCase():'';
+  }
+  catch{return '';}
+};
+const rememberEmail=email=>{
+  try{localStorage.setItem(REMEMBERED_EMAIL_KEY,String(email||'').trim().toLowerCase());}
+  catch{/* Жеке режимде localStorage жеткиликсиз болушу мүмкүн. */}
+};
+const isNotHeld=t=>t?.status==='not_held';
 
 const readCompanyCache=()=>{
   try{
@@ -202,7 +222,6 @@ export default function App(){
   const[selectedIds,setSelectedIds]=useState([]);
   const[openAccordionMap,setOpenAccordionMap]=useState({});
   const[executorsExpanded,setExecutorsExpanded]=useState(false);
-  const[openExecutorsNav,setOpenExecutorsNav]=useState({});
   const[logoutConfirm,setLogoutConfirm]=useState(false);
   const[deleteConfirmOpen,setDeleteConfirmOpen]=useState(false);
   const[accountMenuOpen,setAccountMenuOpen]=useState(false);
@@ -227,8 +246,11 @@ export default function App(){
   const[user,setUser]=useState(null);
   const[authReady,setAuthReady]=useState(false);
   const[companies,setCompanies]=useState(readCompanyCache);
-  const[authMode,setAuthMode]=useState('companies');
-  const[selectedCompany,setSelectedCompany]=useState(null);
+  const[authMode,setAuthMode]=useState(()=>getRememberedEmail()?'login':'create');
+  const[selectedCompany,setSelectedCompany]=useState(()=>{
+    const email=getRememberedEmail();
+    return email?{email,name:email.split('@')[0]}:null;
+  });
   const[authError,setAuthError]=useState('');
   const[authBusy,setAuthBusy]=useState(false);
   const[resetCode,setResetCode]=useState(
@@ -259,11 +281,23 @@ export default function App(){
   },[resetMode,resetCode]);
 
   React.useEffect(()=>{
-    const unsub=onAuthStateChanged(auth,u=>{
-      setUser(u);
-      setAuthReady(true);
-    });
-    return unsub;
+    let mounted=true;
+    let unsubscribe=()=>{};
+    (async()=>{
+      try{
+        // Firebase'дин туруктуу сеансын өчүрөбүз: жаңы ачканда сөзсүз пароль керек.
+        await setPersistence(auth,inMemoryPersistence);
+      }catch(err){console.error('Auth persistence:',err);}
+      try{
+        if(auth.authStateReady)await auth.authStateReady();
+        if(auth.currentUser)await signOut(auth);
+      }catch(err){console.error('Auth initialization:',err);}
+      if(mounted)unsubscribe=onAuthStateChanged(auth,u=>{
+        setUser(u);
+        setAuthReady(true);
+      });
+    })();
+    return()=>{mounted=false;unsubscribe();};
   },[]);
 
   React.useEffect(()=>{
@@ -338,22 +372,24 @@ export default function App(){
     e.preventDefault();setAuthError('');
     const f=new FormData(e.currentTarget);
     const email=String(f.get('email')||'').trim().toLowerCase();
-    const name=String(f.get('company')||'').trim();
     const password=String(f.get('password')||'');
     const repeatPassword=String(f.get('repeatPassword')||'');
-    if(!name || !email){setAuthError('Компаниянын аты жана email керек');return;}
+    if(!email){setAuthError('Email дарегин жазыңыз');return;}
     if(password.length<6){setAuthError('Пароль кеминде 6 символ болушу керек');return;}
     if(password!==repeatPassword){setAuthError('Паролдор дал келиши керек');return;}
     setAuthBusy(true);
     try{
       const credential=await createUserWithEmailAndPassword(auth,email,password);
+      const name=email.split('@')[0];
       const company={uid:credential.user.uid,email,name,authType:'password'};
+      rememberEmail(email);
+      setSelectedCompany(company);
       await Promise.all([
         setDoc(doc(db,'publicCompanies',credential.user.uid),company),
         setDoc(doc(db,'companies',credential.user.uid),company).catch(()=>null)
       ]);
       const next=[...companies.filter(c=>(c.uid||c.docId)!==credential.user.uid),company];
-      setCompanies(next);saveCompanyCache(next);setAuthMode('companies');
+      setCompanies(next);saveCompanyCache(next);setAuthMode('login');
     }catch(err){
       const code=err?.code||'';
       if(code==='auth/email-already-in-use')setAuthError('Бул email менен аккаунт мурунтан катталган');
@@ -364,20 +400,25 @@ export default function App(){
   const login=async e=>{
     e.preventDefault();setAuthError('');
     const f=new FormData(e.currentTarget);
+    const email=String(f.get('email')||selectedCompany?.email||'').trim().toLowerCase();
     const secret=String(f.get('password')||'');
+    if(!email){setAuthError('Email дарегин жазыңыз');return;}
     if(!secret){setAuthError('Парольду жазыңыз');return;}
     setAuthBusy(true);
     try{
-      await signInWithEmailAndPassword(auth,selectedCompany.email,secret);
+      await signInWithEmailAndPassword(auth,email,secret);
+      rememberEmail(email);
+      setSelectedCompany({email,name:email.split('@')[0]});
     }catch(err){
       setAuthError('Email же пароль туура эмес');
     }finally{setAuthBusy(false)}
   };
-  const resetPassword=async()=>{
-    if(!selectedCompany?.email)return;
+  const resetPassword=async(emailOverride='')=>{
+    const email=String(emailOverride||selectedCompany?.email||getRememberedEmail()).trim().toLowerCase();
+    if(!email)return;
     setAuthBusy(true);setAuthError('');
     try{
-      await sendPasswordResetEmail(auth,selectedCompany.email);
+      await sendPasswordResetEmail(auth,email);
       setAuthError('Пароль алмаштыруу шилтемеси email дарегине жөнөтүлдү.');
     }catch(err){setAuthError(err.message)}finally{setAuthBusy(false)}
   };
@@ -467,7 +508,7 @@ export default function App(){
 
   const filtered=useMemo(()=>{
     return sortTendersByDate(tenders.filter(t=>{
-      const matchesQuery=(t.id+t.org+t.name+(t.executor||''))
+      const matchesQuery=[t.id,t.org,t.name,t.executor,t.partnerCompany].join(' ')
         .toLowerCase()
         .includes(q.toLowerCase());
 
@@ -545,12 +586,15 @@ export default function App(){
   },[selectedExecutor,selectedExecutorsSet]);
 
   const total=useMemo(
-    ()=>tenders.reduce(
+    ()=>(selectedExecutor?tenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor):tenders).reduce(
       (a,b)=>a+Number(b.sum||0),
       0
     ),
-    [tenders]
+    [tenders,selectedExecutor]
   );
+  const scopeTenders=useMemo(()=>selectedExecutor
+    ?tenders.filter(t=>(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)
+    :tenders,[tenders,selectedExecutor]);
 
   const toggleSelect=id=>{
     setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
@@ -570,6 +614,31 @@ export default function App(){
     setDeleteConfirmOpen(true);
   };
 
+  const markNotHeld=async()=>{
+    if(!selectedIds.length)return;
+    setBusy(true);
+    try{
+      await Promise.all(selectedIds.map(id=>{
+        const tender=tenders.find(t=>tenderKey(t)===id);
+        return tender&&!isNotHeld(tender)?saveRemote(id,{...tender,status:'not_held'}):Promise.resolve();
+      }));
+      setSelectedIds([]);setDeleteConfirmOpen(false);
+      setNotice('Тендерлер «Не состоялся» деп белгиленди');
+    }catch(err){reportError(err)}finally{setBusy(false)}
+  };
+  const restoreTenders=async()=>{
+    if(!selectedIds.length)return;
+    setBusy(true);
+    try{
+      await Promise.all(selectedIds.map(id=>{
+        const tender=tenders.find(t=>tenderKey(t)===id);
+        return tender&&isNotHeld(tender)?saveRemote(id,{...tender,status:'active'}):Promise.resolve();
+      }));
+      setSelectedIds([]);setDeleteConfirmOpen(false);
+      setNotice('Тендерлер кайра активдештирилди');
+    }catch(err){reportError(err)}finally{setBusy(false)}
+  };
+
   const confirmDeleteSelected=async()=>{
     if(selectedIds.length===0){setDeleteConfirmOpen(false);return;}
     setBusy(true);
@@ -584,6 +653,10 @@ export default function App(){
 
   const update=async(id,patch)=>{
     const old=tenders.find(t=>tenderKey(t)===id);if(!old)return;
+    const allowed=new Set(['goppStatus','goppPaid','goikStatus','goikPaid']);
+    if(isNotHeld(old)&&Object.keys(patch).some(key=>!allowed.has(key))){
+      setNotice('Бул тендер токтотулган: ГОПП жана ГОИК гана өзгөртүлөт');return false;
+    }
     try{await saveRemote(id,{...old,...patch});setActive(x=>x&&tenderKey(x)===id?{...x,...patch}:x);return true;}
     catch(err){reportError(err);return false;}
   };
@@ -598,6 +671,7 @@ export default function App(){
       org:String(f.get('org')).trim(),
       name:String(f.get('name')).trim(),
       executor:String(f.get('executor')||'Аткаруучу').trim(),
+      partnerCompany:String(f.get('partnerCompany')||'').trim(),
       sum:+f.get('sum'),
       paid:0,
       gopp:String(f.get('gopp')||'').trim(),
@@ -609,7 +683,7 @@ export default function App(){
     };
 
     if(tenders.some(x=>x.id===t.id && x.name.trim().toLocaleLowerCase()===t.name.trim().toLocaleLowerCase())){setNotice('Бул тендерде мындай лот мурунтан бар! Башка лот аталышын киргизиңиз.');return;}
-    if(!t.id||!t.name||!t.org||!t.executor){setNotice('Милдеттүү талааларды толтуруңуз');return;}
+    if(!t.id||!t.name||!t.org||!t.executor||!t.partnerCompany){setNotice('Милдеттүү талааларды толтуруңуз');return;}
     setBusy(true);
     setAddFileError('');
     try{
@@ -654,6 +728,7 @@ export default function App(){
       org:t.org,
       name:t.name,
       executor:t.executor||'',
+      partnerCompany:t.partnerCompany||'',
       sum:t.sum,
       paid:t.paid||0,
       gopp:t.gopp||'',
@@ -674,6 +749,7 @@ export default function App(){
 
     const oldTender=tenders.find(t=>tenderKey(t)===oldId);
     if(!oldTender)return;
+    if(isNotHeld(oldTender)){setNotice('Токтотулган тендерди оңдоого болбойт');return;}
 
     const newId=String(editDraft.id||'').trim();
     const newSum=Math.max(0,Number(editDraft.sum)||0);
@@ -687,6 +763,7 @@ export default function App(){
       org:String(editDraft.org||'').trim(),
       name:String(editDraft.name||'').trim(),
       executor:String(editDraft.executor||'').trim(),
+      partnerCompany:String(editDraft.partnerCompany||'').trim(),
       sum:newSum,
       paid:newPaid,
       gopp:String(editDraft.gopp||'').trim(),
@@ -708,8 +785,9 @@ export default function App(){
 
   const logout=async()=>{
     await signOut(auth);
-    setAuthMode('companies');
-    setSelectedCompany(null);
+    setAuthMode('login');
+    const email=getRememberedEmail();
+    setSelectedCompany(email?{email,name:email.split('@')[0]}:null);
     setAuthError('');
   };
 
@@ -732,6 +810,8 @@ export default function App(){
     setSwitchError('');
     try{
       await signInWithEmailAndPassword(auth,switchCompany.email,switchSecret);
+      rememberEmail(switchCompany.email);
+      setSelectedCompany(switchCompany);
       setSwitchCompany(null);
       setSwitchSecret('');
       setPage('tenders');
@@ -777,11 +857,11 @@ export default function App(){
   // ТАБЛИЦА СТАКТАЛГАН ТОЛУК СТИЛЬ КОЛОНКАЛАРЫ
 const tableGridStyle = {
   display: 'grid',
-  gridTemplateColumns: '34px 32px minmax(125px,1.3fr) minmax(90px,1fr) minmax(115px,1.25fr) minmax(112px,1.05fr) minmax(110px,1.1fr) 90px 80px 105px 108px 72px 55px',
+  gridTemplateColumns: '34px 32px minmax(125px,1.3fr) minmax(130px,1.2fr) minmax(90px,1fr) minmax(115px,1.25fr) minmax(112px,1.05fr) minmax(110px,1.1fr) 90px 80px 105px 108px 72px 55px',
   alignItems: 'center',
   columnGap: 0,
   width: '100%',
-  minWidth: '1250px',
+  minWidth: '1410px',
   boxSizing: 'border-box'
 };
   return(
@@ -811,6 +891,7 @@ const tableGridStyle = {
               setPage('tenders');
               setSelectedExecutor(null);
               setQ('');
+              setSelectedIds([]);
               setMobileNavOpen(false);
             }}
           >
@@ -826,7 +907,6 @@ const tableGridStyle = {
             <div className="executorScrollable" aria-label="Аткаруучулардын тизмеси">
             {!Object.keys(executorsGroup).some(name=>matches(name,executorQuery))&&<p className="searchEmpty">Аткаруучу табылган жок</p>}
             {Object.entries(executorsGroup).filter(([name])=>matches(name,executorQuery)).map(([execName, execTenders])=>{
-              const isOpen=!!openExecutorsNav[execName];
               const isSelected=selectedExecutor===execName;
 
               return(
@@ -834,10 +914,13 @@ const tableGridStyle = {
                   <button
                     type="button"
                     onClick={()=>{
-                      setOpenExecutorsNav(prev=>({...prev,[execName]:!prev[execName]}));
                       setSelectedExecutor(execName);
                       setPage('tenders');
+                      setQ('');
+                      setSelectedIds([]);
+                      setMobileNavOpen(false);
                     }}
+                    aria-pressed={isSelected}
                     style={{
                       width:'100%',
                       background:isSelected?'rgba(255,255,255,0.12)':'transparent',
@@ -857,33 +940,8 @@ const tableGridStyle = {
                     <span style={{display:'flex',alignItems:'center',gap:'6px'}}>
                       <User size={13}/> {execName}
                     </span>
-                    {isOpen ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+                    <span className="executorNavCount">{execTenders.length}</span>
                   </button>
-
-                  {isOpen&&(
-                    <div style={{paddingLeft:'20px',display:'flex',flexDirection:'column',gap:'2px',marginTop:'2px'}}>
-                      {execTenders.map(t=>(
-                        <div
-                          key={tenderKey(t)}
-                          onClick={()=>{
-                            setPage('tenders');
-                            setSelectedExecutor(execName);
-                            setQ(t.name);
-                            setMobileNavOpen(false);
-                          }}
-                          style={{
-                            padding:'6px 8px',
-                            borderRadius:'4px',
-                            cursor:'pointer',
-                            fontSize:'12px',
-                            color:'var(--text-secondary)'
-                          }}
-                        >
-                          • {t.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -1019,17 +1077,15 @@ const tableGridStyle = {
 
       {deleteConfirmOpen&&(
         <div className="deleteConfirmShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setDeleteConfirmOpen(false)}}>
-          <div className="deleteConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+          <div className="deleteConfirmDialog tenderActionDialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
             <button type="button" className="deleteConfirmClose" disabled={busy} onClick={()=>setDeleteConfirmOpen(false)} aria-label="Жабуу"><X size={17}/></button>
             <div className="deleteConfirmIcon"><Trash2 size={23}/></div>
             <small>ӨЧҮРҮҮНҮ ЫРАСТОО</small>
             <h2 id="deleteConfirmTitle">{selectedIds.length} тендерди өчүрөсүзбү?</h2>
-            <p>Тандалган тендерлер өчүрүлөт. Бул аракетти артка кайтаруу мүмкүн эмес.</p>
+            <p>Тандалган тендерлер биротоло өчүрүлөт. Бул аракетти артка кайтаруу мүмкүн эмес.</p>
             <div className="deleteConfirmActions">
-              <button type="button" className="deleteCancelBtn" disabled={busy} onClick={()=>setDeleteConfirmOpen(false)}>Жок, калтыр</button>
-              <button type="button" className="deleteApproveBtn" disabled={busy} onClick={confirmDeleteSelected}>
-                <Trash2 size={16}/>{busy?'Өчүрүлүүдө...':'Ооба, өчүрүү'}
-              </button>
+              <button type="button" className="deleteCancelBtn" disabled={busy} onClick={()=>setDeleteConfirmOpen(false)}>Артка</button>
+              <button type="button" className="deleteApproveBtn" disabled={busy} onClick={confirmDeleteSelected}><Trash2 size={16}/>{busy?'Өчүрүлүүдө...':'Ооба, өчүрүү'}</button>
             </div>
           </div>
         </div>
@@ -1039,7 +1095,7 @@ const tableGridStyle = {
         <div className="logoutDialog" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
           <div className="logoutDialogIcon"><User size={22}/></div>
           <h2 id="logoutTitle">Аккаунттан чыгасызбы?</h2>
-          <p>Кайра кирүү үчүн компанияңызды тандап, пароль же PIN кодуңузду киргизесиз.</p>
+          <p>Кайра кирүү үчүн паролуңузду гана жазасыз.</p>
           <div className="logoutDialogActions">
             <button type="button" onClick={()=>setLogoutConfirm(false)}>Жок, калам</button>
             <button type="button" className="logoutConfirmButton" onClick={async()=>{setLogoutConfirm(false);await logout()}}>Ооба, чыгуу</button>
@@ -1074,24 +1130,24 @@ const tableGridStyle = {
             <section className="stats">
               <Stat
                 icon={<Briefcase/>}
-                label="Тендерлер"
-                value={tenders.length}
+                label={selectedExecutor?'Аткаруучунун тендерлери':'Тендерлер'}
+                value={scopeTenders.length}
               />
               <Stat
                 icon={<Wallet/>}
-                label="Жалпы сумма"
+                label={selectedExecutor?'Аткаруучунун жалпы суммасы':'Жалпы сумма'}
                 value={money(total)}
               />
               <Stat
                 icon={<PackageCheck/>}
                 label="ГОПП төлөнгөн"
-                value={tenders.filter(t=>t.gopp&&(t.goppStatus==='paid'||t.goppStatus==='returned'||(!t.goppStatus&&t.goppPaid))).length}
+                value={scopeTenders.filter(t=>t.gopp&&(t.goppStatus==='paid'||t.goppStatus==='returned'||(!t.goppStatus&&t.goppPaid))).length}
               />
               <Stat
                 icon={<FileText/>}
                 label="Файлдар"
                 value={
-                  tenders.reduce(
+                  scopeTenders.reduce(
                     (a,t)=>a+Object.keys(t.docs||{}).length,
                     0
                   )
@@ -1149,29 +1205,22 @@ const tableGridStyle = {
                   </div>
                 </div>
 
-                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                  {selectedIds.length>0 && (
-                    <button
-                      type="button"
-                      onClick={deleteSelected}
-                      style={{
-                        background:'#ef4444',
-                        color:'#fff',
-                        border:'none',
-                        padding:'8px 16px',
-                        borderRadius:'8px',
-                        display:'flex',
-                        alignItems:'center',
-                        gap:'6px',
-                        cursor:'pointer',
-                        fontWeight:'600',
-                        fontSize:'13px',
-                        boxShadow:'0 2px 8px rgba(239,68,68,0.3)'
-                      }}
-                    >
+                <div className="tenderBulkActions">
+                  {selectedIds.length>0 && <>
+                    <button type="button" className="tenderBulkDelete" disabled={busy} onClick={deleteSelected}>
                       <Trash2 size={15}/> Өчүрүү ({selectedIds.length})
                     </button>
-                  )}
+                    {selectedTenders.some(t=>!isNotHeld(t))&&(
+                      <button type="button" className="tenderBulkNotHeld" disabled={busy} onClick={markNotHeld}>
+                        <X size={15}/> {busy?'Сакталууда...':'Тендер не состоялся'}
+                      </button>
+                    )}
+                    {selectedTenders.some(isNotHeld)&&(
+                      <button type="button" className="tenderBulkRestore" disabled={busy} onClick={restoreTenders}>
+                        <CheckCircle2 size={15}/> Кайра активдештирүү
+                      </button>
+                    )}
+                  </>}
                   <span className="count">{displayFiltered.length}</span>
                 </div>
               </div>
@@ -1185,18 +1234,22 @@ const tableGridStyle = {
                     const state=t[kind+'Status'];
                     return state==='returned'?'Кайтарылды':state==='waiting'?'Күтүлүүдө':state==='unpaid'?'Төлөнө элек':state==='paid'||(!state&&t[kind+'Paid'])?'Төлөндү':Number(String(val||'').replace(/\s/g,''))>0?'Төлөнө элек':'Жок';
                   };
-                  return <article className="tfMobileTenderCard" key={key}>
+                  const failed=isNotHeld(t);
+                  return <article className={'tfMobileTenderCard'+(failed?' tfTenderFailed':'')} key={key}>
                     <div className="tfCardHead">
+                      <input type="checkbox" className="tfCardSelect" aria-label={`Тендер ${t.id} тандоо`} checked={selectedIds.includes(key)} onChange={()=>toggleSelect(key)}/>
                       <div className="tfCardNumber"><FileText size={15}/> <span>Тендер №: {t.id}</span></div>
                       <span className="tfCardDate">{t.date||'—'}</span>
-                      <button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>
+                      <button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" disabled={failed} onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>
                     </div>
+                    {failed&&<span className="tfFailedBadge">Тендер не состоялся</span>}
+                    <div className="tfCardInfo org"><small>КОМПАНИЯ:</small><strong>{t.partnerCompany||'—'}</strong></div>
                     <div className="tfCardInfo org"><small>МЕКЕМЕ:</small><strong>{t.org}</strong></div>
                     <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small>{lots.length>1?<select className="tfLotMobileSelect" value={key} onChange={e=>selectLot(groupKey,e.target.value)}>{lots.map(item=><option key={tenderKey(item)} value={tenderKey(item)}>{item.name}</option>)}</select>:<strong>{t.name}</strong>}</div>
-                    <div className="tfCardAmounts"><div><small>Бюджет (Суммасы):</small><strong>{money(t.sum)}</strong></div><div role="button" tabIndex={0} onClick={()=>{startPayment(t);setMobilePaymentTender(t)}} onKeyDown={e=>{if(e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: ✎</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong></div></div>
+                    <div className="tfCardAmounts"><div><small>Бюджет (Суммасы):</small><strong>{money(t.sum)}</strong></div><div role={failed?undefined:'button'} tabIndex={failed?-1:0} className={failed?'tfFailedInactive':''} onClick={()=>{if(!failed){startPayment(t);setMobilePaymentTender(t)}}} onKeyDown={e=>{if(!failed&&e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: {failed?'':'✎'}</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong></div></div>
                     <div className="tfCardGuarantees">{['gopp','goik'].map(kind=><div key={kind}><small>{kind.toUpperCase()}:</small><button type="button" className={'tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red')} onClick={()=>setPayStatusModal({t,type:kind})}>{status(kind)}{t[kind]?' · '+t[kind]+' сом':''}</button></div>)}</div>
                     <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
-                    <button type="button" className="tfCardFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
+                    <button type="button" className="tfCardFiles" disabled={failed} onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
                   </article>;
                 })}
               </div>
@@ -1217,6 +1270,7 @@ const tableGridStyle = {
     </span>
     <span>№</span>
     <span>ТЕНДЕР НОМЕР</span>
+    <span>КАЙСЫ КОМПАНИЯ МЕНЕН</span>
     <span>МЕКЕМЕЛЕР</span>
     <span>LOT АТАЛЫШЫ</span>
     <span>СУММАСЫ</span>
@@ -1234,10 +1288,11 @@ const tableGridStyle = {
     const editing=editingId===tenderKey(t);
     const paymentEditing=paymentEditId===tenderKey(t);
     const isChecked=selectedIds.includes(tenderKey(t));
+    const failed=isNotHeld(t);
 
     return(
       <div
-        className={'row '+(editing?'editingRow':'')}
+        className={'row '+(editing?'editingRow':'')+(failed?' tfTenderFailed':'')}
         key={tenderKey(t)}
         style={tableGridStyle}
       >
@@ -1262,8 +1317,13 @@ const tableGridStyle = {
               onChange={e=>changeEdit('id',e.target.value)}
             />
           ):(
-            <span className="tenderLink">{t.id}</span>
+            <span className="tenderLink" title={failed?'Тендер не состоялся':t.id}>{t.id}{failed&&<small className="tfFailedBadge">Не состоялся</small>}</span>
           )}
+        </span>
+
+        {/* КАЙСЫ КОМПАНИЯ МЕНЕН АТКАРДЫ */}
+        <span className="tfCompanyCell" title={t.partnerCompany||''}>
+          {editing?<input className="tableInput" value={editDraft.partnerCompany||''} onChange={e=>changeEdit('partnerCompany',e.target.value)}/>:t.partnerCompany||'—'}
         </span>
 
         {/* МЕКЕМЕ */}
@@ -1327,6 +1387,8 @@ const tableGridStyle = {
               value={editDraft.paid}
               onChange={e=>changeEdit('paid',e.target.value)}
             />
+          ):failed?(
+            <button type="button" className="paidAmount red tfFailedInactive" disabled>Жеткиликсиз</button>
           ):paymentEditing ? (
             <div className="paymentEditor">
               <input
@@ -1397,12 +1459,12 @@ const tableGridStyle = {
         <span>
           <b
             className={
-              hasPriceTable(t.docs)
+              failed?'pill red tfFailedInactive':hasPriceTable(t.docs)
                 ?'pill green'
                 :'pill gray'
             }
           >
-            {hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}
+            {failed?'Токтотулган':hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}
           </b>
         </span>
 
@@ -1424,6 +1486,7 @@ const tableGridStyle = {
         <span>
           <button
             className="filesBtn"
+            disabled={failed}
             onClick={()=>{
               setActive(t);
               setDocsOpen(true);
@@ -1447,6 +1510,7 @@ const tableGridStyle = {
           ):(
             <button
               className="editBtn"
+              disabled={failed}
               title="Изменить"
               onClick={()=>startEdit(t)}
             >
@@ -1505,6 +1569,11 @@ const tableGridStyle = {
               <label>
                 Ким аткарды (Аткаруучу) *
                 <input name="executor" required placeholder="Мисалы: Аскаров Б."/>
+              </label>
+
+              <label>
+                Кайсы компания менен аткарды? *
+                <input name="partnerCompany" required placeholder="Мисалы: Альфа Строй"/>
               </label>
 
               <label className="full">
@@ -1577,7 +1646,7 @@ const tableGridStyle = {
             <small>ТЕНДЕРДИ ОҢДОО</small><h2>Тендер маалыматтары</h2>
             <form onSubmit={e=>{e.preventDefault();saveEdit(editingId)}}>
               <div className="tfMobileEditFields">
-                {[['id','Тендер номери'],['org','Мекеме'],['name','Лот аталышы'],['executor','Аткаруучу'],['sum','Суммасы'],['paid','Төлөнгөн сумма'],['gopp','ГОПП'],['goik','ГОИК'],['date','Срок вскрытия']].map(([field,label])=><label key={field}>{label}<input required={['id','org','name','executor'].includes(field)} type={field==='date'?'date':['sum','paid'].includes(field)?'number':'text'} min={['sum','paid'].includes(field)?'0':undefined} value={editDraft[field]??''} onChange={e=>changeEdit(field,e.target.value)}/></label>)}
+                {[['id','Тендер номери'],['partnerCompany','Кайсы компания менен аткарды'],['org','Мекеме'],['name','Лот аталышы'],['executor','Аткаруучу'],['sum','Суммасы'],['paid','Төлөнгөн сумма'],['gopp','ГОПП'],['goik','ГОИК'],['date','Срок вскрытия']].map(([field,label])=><label key={field}>{label}<input required={['id','org','name','executor'].includes(field)} type={field==='date'?'date':['sum','paid'].includes(field)?'number':'text'} min={['sum','paid'].includes(field)?'0':undefined} value={editDraft[field]??''} onChange={e=>changeEdit(field,e.target.value)}/></label>)}
               </div>
               <div className="tfMobileEditActions"><button type="button" onClick={()=>{setMobileEditOpen(false);setEditingId(null);setEditDraft(null)}}>Жок</button><button type="submit" className="primary" disabled={busy}><Save size={16}/> {busy?'Сакталууда...':'Сактоо'}</button></div>
             </form>
@@ -1868,11 +1937,10 @@ function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,cre
     raf=requestAnimationFrame(draw);
     return()=>{cancelAnimationFrame(raf);observer.disconnect();side.removeEventListener('pointermove',move);side.removeEventListener('pointerleave',leave);side.removeEventListener('pointerdown',click)};
   },[]);
-  const [search,setSearch]=useState('');
   const [showPassword,setShowPassword]=useState(false);
+  const [loginEmail,setLoginEmail]=useState('');
   const isRegister=mode==='create';
-  const filtered=companies.filter(c=>`${c.name||''} ${c.email||''}`.toLowerCase().includes(search.toLowerCase()));
-  const back=()=>{setSelected(null);setMode('companies');setShowPassword(false)};
+  const hasRememberedEmail=!!selected?.email;
   return <div className="novaAuth">
     <aside className="novaSide">
       <canvas ref={visualCanvas} className="novaLiquidCanvas" aria-hidden="true"/>
@@ -1883,28 +1951,33 @@ function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,cre
     </aside>
     <main className="novaMain"><div className="novaMainTop"><span className="novaOnline"/> КООПСУЗ КИРҮҮ <span className="novaTopRule"/></div>
       <div className="novaContent">
-      {!selected&&!isRegister?<>
-        <div className="novaTitle"><span className="novaStep">01 — АККАУНТ ТАНДОО</span><h2>Кош келиңиз!</h2><p>Катталган аккаунтуңузду тандаңыз. Андан кийин пароль киргизесиз.</p></div>
-        <div className="novaSearch"><Search size={20}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Аккаунтту аты же email боюнча издөө" aria-label="Аккаунт издөө"/></div>
-        <div className="novaList">{filtered.map((c,i)=><button className="novaAccount" type="button" key={c.uid||c.docId||c.email} onClick={()=>{setSelected(c);setShowPassword(false)}}><span className="novaAccountIcon">{(c.name||'А').slice(0,1).toUpperCase()}</span><span className="novaAccountInfo"><strong>{c.name||'Аккаунт'}</strong><small>{c.email}</small></span><span className="novaAccountArrow"><ArrowRight size={19}/></span></button>)}{!filtered.length&&<div className="novaEmpty">{companies.length?'Издөө боюнча аккаунт табылган жок':'Катталган аккаунт азырынча жок'}</div>}</div>
-        <button className="novaCreateLink" type="button" onClick={()=>{setSelected(null);setMode('create')}}><span><Plus size={20}/></span><strong>Жаңы аккаунт каттоо</strong><ArrowRight size={19}/></button>
-      </>:<>
-        <button className="novaBack" type="button" onClick={back}>← Аккаунттарга кайтуу</button>
-        {isRegister?<><div className="novaTitle"><span className="novaStep">02 — ЖАҢЫ АККАУНТ</span><h2>Катталуу</h2><p>Жаңы аккаунт түзүү үчүн маалыматтарды толтуруңуз.</p></div><form className="novaForm" onSubmit={createAccount}>
-          <label>Компаниянын аты<input name="company" autoComplete="organization" placeholder="Компаниянын аталышы" required/></label>
+      {isRegister?<>
+        <div className="novaTitle"><span className="novaStep">01 — БИР ЖОЛКУ КАТТАЛУУ</span><h2>Катталуу</h2><p>Email жана пароль киргизип аккаунт түзүңүз. Кийинки жолу пароль гана суралат.</p></div>
+        <form className="novaForm" onSubmit={createAccount}>
           <label>Email дареги<input name="email" type="email" autoComplete="email" placeholder="example@mail.com" required/></label>
           <label>Пароль<SecretField name="password" placeholder="Кеминде 6 символ"/></label>
           <label>Парольду кайталоо<SecretField name="repeatPassword" placeholder="Парольду кайра жазыңыз"/></label>
           {error&&<div className="novaError" role="alert">{error}</div>}
-          <button className="novaSubmit" disabled={busy}>{busy?'Катталууда...':'Аккаунт түзүү'}<ArrowRight size={19}/></button>
-        </form></>:<><div className="novaTitle"><span className="novaStep">02 — ПАРОЛЬ МЕНЕН КИРҮҮ</span><div className="novaLoginIdentity"><span className="novaIdentityIcon">{(selected.name||'А').slice(0,1).toUpperCase()}</span><span><h2>{selected.name||'Аккаунт'}</h2><p>{selected.email}</p></span></div><p>Улантуу үчүн аккаунттун паролун киргизиңиз.</p></div><form className="novaForm" onSubmit={login}>
+          <button className="novaSubmit" disabled={busy}>{busy?'Катталууда...':'Регистрация'}<ArrowRight size={19}/></button>
+        </form>
+        <button type="button" className="novaTextLink" onClick={()=>{setMode('login');setSelected(null)}}>Аккаунтуңуз барбы? Email менен кириңиз</button>
+      </>:<>
+        <div className="novaTitle"><span className="novaStep">ПАРОЛЬ МЕНЕН КИРҮҮ</span>
+          {hasRememberedEmail?<div className="novaLoginIdentity"><span className="novaIdentityIcon">{(selected.name||selected.email||'А').slice(0,1).toUpperCase()}</span><span><h2>Кош келиңиз!</h2><p>{selected.email}</p></span></div>:<h2>Кирүү</h2>}
+          <p>{hasRememberedEmail?'Паролуңузду жазып эле кириңиз.':'Катталган email жана паролуңузду жазыңыз.'}</p>
+        </div>
+        <form className="novaForm" onSubmit={login}>
+          {!hasRememberedEmail&&<label>Email дареги<input name="email" type="email" autoComplete="email" placeholder="example@mail.com" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} required autoFocus/></label>}
           <label>Пароль<div className="novaPassword"><input name="password" type={showPassword?'text':'password'} autoComplete="current-password" placeholder="Паролуңузду жазыңыз" required autoFocus/><button type="button" onClick={()=>setShowPassword(v=>!v)}>{showPassword?'Жашыруу':'Көрсөтүү'}</button></div></label>
-          <button type="button" className="novaForgot" onClick={resetPassword} disabled={busy}>Парольду унуттуңузбу?</button>
+          <button type="button" className="novaForgot" onClick={()=>resetPassword(hasRememberedEmail?'':loginEmail)} disabled={busy||(!hasRememberedEmail&&!loginEmail.trim())}>Парольду унуттуңузбу?</button>
           {error&&<div className="novaError" role="alert">{error}</div>}
-          <button className="novaSubmit" disabled={busy}>{busy?'Кирүүдө...':'Аккаунтка кирүү'}<ArrowRight size={19}/></button>
-        </form></>}
+          <button className="novaSubmit" disabled={busy}>{busy?'Кирүүдө...':'Кирүү'}<ArrowRight size={19}/></button>
+        </form>
+        <button type="button" className="novaTextLink" onClick={()=>{setSelected(null);setShowPassword(false);setMode(hasRememberedEmail?'login':'create')}}>
+          {hasRememberedEmail?'Башка email менен кирүү':'Жаңы аккаунт каттоо'}
+        </button>
       </>}
-      </div><div className="novaMainFoot">Тендер База <span>•</span> Аккаунттарды башкаруу</div>
+      </div><div className="novaMainFoot">Тендер База <span>•</span> Коопсуз кирүү</div>
     </main>
   </div>;
 }
@@ -2136,7 +2209,7 @@ function FilesPage({tenders,openDocs}){
 
                   {isTenderOpen&&(
                     <div className="tenderAccordionDocsList">
-                      <button className="primary archiveAttach" onClick={()=>openDocs(tender)}><Paperclip size={16}/> Документ тиркөө / башкаруу</button>
+                      <button className="primary archiveAttach" disabled={isNotHeld(tender)} title={isNotHeld(tender)?'Бул тендер токтотулган':''} onClick={()=>openDocs(tender)}><Paperclip size={16}/> Документ тиркөө / башкаруу</button>
                       {docEntries.length===0 ? (
                         <div className="noDocsInline">Бул тендерге документ тиркеле элек</div>
                       ) : (
