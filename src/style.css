@@ -2758,3 +2758,112 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 @media(max-width:1449px){.tenderTopbar+.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.tenderTopbar+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.tenderTopbar+.stats .stat{min-height:86px!important;padding:12px!important}.tenderTopbar+.stats .statIcon{width:42px!important;height:42px!important;min-width:42px!important}.tenderTopbar+.stats .statIcon svg{width:21px!important;height:21px!important}.tenderTopbar+.stats .stat b{font-size:19px!important}.tenderTopbar+.stats .guaranteeStatChoices{flex-wrap:wrap!important}}
 @media(max-width:560px){.tenderTopbar+.stats .stat small{font-size:10px!important}.tenderTopbar+.stats .stat b{font-size:17px!important}.tenderTopbar+.stats .guaranteeStatBody>small{font-size:11px!important}.tenderTopbar+.stats .guaranteeStatChoice{font-size:9px!important;padding:5px!important;min-height:25px!important}.tenderTopbar+.stats .guaranteeStatChoice strong{font-size:11px!important}.tablePanel .panelhead h2{font-size:19px!important}}
+
+/* Тендер номерин көчүрүү: курсор менен барганда подсказка */
+.tfTenderCopy{appearance:none;border:0;background:transparent;padding:0;margin:0;color:#007a65;cursor:copy;font:inherit;font-weight:850;text-align:left;display:inline-flex;align-items:center;gap:5px;position:relative;overflow:visible;max-width:100%;white-space:nowrap}
+.tfTenderCopy:hover{color:#05a282!important;text-decoration:underline;text-underline-offset:3px}
+.tfTenderCopy:focus-visible{outline:2px solid #40ac92;outline-offset:4px;border-radius:3px}
+.tfTenderCopy::after{content:attr(data-copy-tip);position:absolute;left:50%;top:calc(100% + 9px);transform:translate(-50%,-4px);opacity:0;visibility:hidden;pointer-events:none;z-index:40;background:#172840;color:#fff;border:1px solid #2c4562;border-radius:7px;padding:7px 10px;box-shadow:0 8px 20px rgba(11,26,48,.2);font:600 11px/1.2 Inter,system-ui,sans-serif;letter-spacing:0;white-space:nowrap;text-decoration:none;transition:opacity .15s ease,transform .15s ease,visibility .15s}
+.tfTenderCopy:is(:hover,:focus-visible)::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.tfCardNumber.tfTenderCopy{display:inline-flex;align-items:center;gap:5px;background:transparent;border:0;max-width:100%;font-size:inherit;color:inherit}
+.tfCardNumber.tfTenderCopy::after{left:18px;transform:translate(0,-4px)}
+.tfCardNumber.tfTenderCopy:is(:hover,:focus-visible)::after{transform:translate(0,0)}
+
+/* Капталдагы меню — терең көк фон, бирдиктүү бирюза акцент */
+.shell>aside{background:linear-gradient(165deg,#15263b 0%,#172b3b 55%,#102331 100%)!important;border-right:1px solid #2b4057;color:#eef7fb}
+.shell>aside .brand{border-bottom:1px solid rgba(177,208,222,.13);margin-bottom:14px;padding-bottom:21px}
+.shell>aside .brand .logo{background:linear-gradient(135deg,#d9f6ea,#a0ded1)!important;color:#125b52!important;border:1px solid #a2dfd2!important;box-shadow:0 5px 15px rgba(1,19,28,.16)}
+.shell>aside .brand b{color:#f4fbfe!important;letter-spacing:-.5px}
+.shell>aside .brand small{color:#9fc4cf!important}
+.shell>aside nav>a{position:relative;border-radius:10px!important;color:#b9cad9!important;background:transparent;transition:background .18s,color .18s,box-shadow .18s}
+.shell>aside nav>a svg{color:#97b2c8!important;stroke-width:1.85}
+.shell>aside nav>a:hover{background:#273e51!important;color:#fff!important}
+.shell>aside nav>a.on{background:linear-gradient(100deg,#1e625f,#275d62)!important;color:#fff!important;box-shadow:inset 3px 0 0 #6ce0c1,0 4px 12px rgba(0,0,0,.09)!important;font-weight:800}
+.shell>aside nav>a.on svg{color:#a3f1d8!important}
+.shell>aside nav>a.failedNavActive{background:#6b3545!important;color:#fff!important;box-shadow:inset 3px 0 0 #ff9aab!important}
+.shell>aside nav a .failedNavCount{background:#713a49!important;color:#ffc1ca!important}
+.shell>aside .navAccordionSection>div:first-child{color:#99bbca!important;letter-spacing:1.2px!important}
+.shell>aside .executorSearch{background:#21394c!important;border:1px solid #37536a!important;border-radius:10px;color:#9fb9c9!important}
+.shell>aside .executorSearch input{color:#eef7fc!important}
+.shell>aside .executorSearch input::placeholder{color:#9aafbf!important}
+.shell>aside .executorScrollable button{color:#d3e2ed!important;border-radius:9px!important;transition:background .16s ease,color .16s ease}
+.shell>aside .executorScrollable button:hover{background:#2a4455!important;color:#fff!important}
+.shell>aside .executorScrollable button[aria-pressed="true"]{background:#255b5a!important;color:#e5fff5!important;box-shadow:inset 3px 0 0 #73dabb}
+.shell>aside .executorNavCount{background:#2a4557!important;color:#d6ebf0!important;border-radius:7px!important}
+.shell>aside .executorScrollable button[aria-pressed="true"] .executorNavCount{background:#37756a!important;color:#fff!important}
+.shell>aside .navbottom{border-top:1px solid rgba(175,211,227,.14)}
+.shell>aside .navbottom .sidebarLogoutOnly{background:#293e50!important;border:1px solid #395568!important;color:#e6f2f8!important}
+.shell>aside .navbottom .sidebarLogoutOnly:hover{background:#973a49!important;border-color:#bd5966!important;color:white!important}
+
+/* 6-вариант: жарык, минималдуу каптал меню */
+.shell>aside{background:#f5f8fc!important;color:#18314b!important;border-right:1px solid #dfe8f0!important;box-shadow:3px 0 19px rgba(35,65,100,.035)!important}
+.shell>aside .brand{border-bottom:1px solid #d4e0e9!important;margin-bottom:14px!important}
+.shell>aside .brand .logo{background:#d2f2e5!important;color:#07624c!important;border:1px solid #c5e9dc!important;box-shadow:none!important}
+.shell>aside .brand b{color:#142d47!important}
+.shell>aside .brand small{color:#326e6c!important}
+.shell>aside nav>a{color:#213c59!important;font-weight:700!important;border:1px solid transparent!important}
+.shell>aside nav>a svg{color:#1a7b68!important}
+.shell>aside nav>a:hover{background:#e8f2f1!important;color:#096f5a!important}
+.shell>aside nav>a.on{background:#d9f3e9!important;color:#0b7658!important;box-shadow:inset 4px 0 0 #00885c!important;border-color:#e0f3e9!important}
+.shell>aside nav>a.on svg{color:#07885b!important}
+.shell>aside nav>a.failedNavActive{background:#fce6eb!important;color:#a92748!important;box-shadow:inset 4px 0 0 #d44b67!important;border-color:#fce6eb!important}
+.shell>aside nav a .failedNavCount{background:#e6a1ae!important;color:#802b41!important}
+.shell>aside .navAccordionSection>div:first-child{color:#223f60!important;font-weight:850!important}
+.shell>aside .executorSearch{background:#eef4f8!important;border:1px solid #d4dfe8!important;color:#687c8f!important;box-shadow:none!important}
+.shell>aside .executorSearch:focus-within{border-color:#51a791!important}
+.shell>aside .executorSearch input{color:#193951!important}
+.shell>aside .executorSearch input::placeholder{color:#738799!important}
+.shell>aside .executorScrollable button{color:#193b55!important}
+.shell>aside .executorScrollable button:hover{background:#e8f3ef!important;color:#096f54!important}
+.shell>aside .executorScrollable button[aria-pressed="true"]{background:#d7f2e6!important;color:#086e51!important;box-shadow:inset 3px 0 0 #178d69!important}
+.shell>aside .executorNavCount{background:#d8f1e7!important;color:#1b755d!important}
+.shell>aside .executorScrollable button[aria-pressed="true"] .executorNavCount{background:#b6e4d0!important;color:#086347!important}
+.shell>aside .navbottom{border-top:1px solid #d4e0e9!important}
+.shell>aside .navbottom .sidebarLogoutOnly{background:#fff!important;border:1px solid #c9d9e4!important;color:#203952!important;box-shadow:0 2px 7px rgba(28,54,85,.035)!important}
+.shell>aside .navbottom .sidebarLogoutOnly:hover{background:#ffedf0!important;border-color:#e8b8c2!important;color:#ac3b50!important}
+.shell>aside .mobileNavToggle{background:#e6f1ec!important;color:#1b7a62!important}
+
+/* Подсказканы body ичине чыгаруу: таблицанын scroll аймагы кесип салбайт */
+.tfTenderCopy::after{display:none!important}
+.tfCopyFloatingTip{position:fixed;z-index:99999;transform:translateX(-50%);display:inline-flex;align-items:center;gap:6px;pointer-events:none;padding:8px 11px;border-radius:8px;background:#173249;color:#fff;font:700 12px/1.15 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 9px 28px rgba(12,40,61,.22);animation:tfCopyTipIn .13s ease both}
+.tfCopyFloatingTip svg{color:#acebd8;stroke-width:2}
+@keyframes tfCopyTipIn{from{opacity:0;transform:translate(-50%,-5px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(prefers-reduced-motion:reduce){.tfCopyFloatingTip{animation:none}}
+
+/* Так тандалган 6-вариант: жашыл outline издөө талаасы */
+.tableTitleRow{align-items:center!important;column-gap:14px!important}
+.tableHeaderSearch{height:38px!important;width:32px!important;border-radius:20px!important;border:1px solid transparent!important;transition:width .35s cubic-bezier(.22,1,.36,1),border-color .25s ease,background .25s ease!important}
+.tableHeaderSearch.expanded{width:min(345px,42vw)!important;background:#fff!important;border:1.5px solid #188f67!important;border-radius:19px!important;box-shadow:0 2px 9px rgba(22,133,90,.07)!important}
+.tableSearchToggle{width:32px!important;height:36px!important;color:#087e61!important}
+.tableHeaderSearch.expanded .tableSearchToggle{color:#3d5a67!important;right:3px!important}
+.tfSearchInsideIcon{position:absolute;left:12px;top:9px;color:#087e61;pointer-events:none;z-index:2}
+.tableHeaderSearch.expanded .tableHeaderSearchField{left:35px!important;right:39px!important;opacity:1!important;pointer-events:auto!important}
+.tableHeaderSearch.expanded .tableHeaderSearchField input{border:0!important;box-shadow:none!important;background:transparent!important;font-size:12px!important;color:#244d60!important;padding-left:5px!important}
+.tableHeaderSearch.expanded .tableHeaderSearchField input::placeholder{color:#6b8095!important;opacity:1}
+.tablePanel .panelhead h2{font-weight:900!important}
+
+/* Номердин үстүндөгү күбөлөнгөн көчүрүү подсказкасы жана иконка */
+.bigTable .row .tfTenderCopy{display:inline-flex!important;align-items:center!important;gap:7px!important;min-height:28px!important;padding:3px 6px!important;margin-left:-6px!important;border-radius:8px!important;overflow:visible!important;text-decoration:none!important;transition:background .18s,color .18s}
+.bigTable .row .tfTenderCopy:hover,.bigTable .row .tfTenderCopy:focus-visible{background:#e1f7ed!important;color:#007c5d!important}
+.bigTable .row .tfCopyInlineIcon{color:#385b91;opacity:.75;flex-shrink:0;stroke-width:2;transition:color .16s,opacity .16s}
+.bigTable .row .tfTenderCopy:hover .tfCopyInlineIcon,.bigTable .row .tfTenderCopy:focus-visible .tfCopyInlineIcon{color:#00886a;opacity:1}
+.tfCopyFloatingTip{background:#25344a!important;border-radius:7px!important;padding:8px 12px!important;font-weight:700!important;box-shadow:0 8px 18px rgba(21,42,65,.25)!important}
+.tfCopyFloatingTip::after{content:"";position:absolute;bottom:-5px;left:calc(50% - 5px);width:10px;height:10px;background:#25344a;transform:rotate(45deg)}
+
+/* Сүрөттөгү төмөнкү оң жактагы жашыл ийгиликтүү көчүрүү билдирүүсү */
+.tfToast.tfToastCopied{position:fixed!important;left:auto!important;top:auto!important;right:24px!important;bottom:25px!important;background:linear-gradient(100deg,#0c925e,#008b60)!important;color:#fff!important;border:0!important;border-radius:13px!important;min-height:57px!important;display:flex!important;align-items:center!important;gap:12px!important;padding:13px 17px!important;box-shadow:0 12px 30px rgba(0,101,63,.18)!important}
+.tfToast.tfToastCopied>svg{flex-shrink:0;color:#fff;fill:#fff;stroke:#098a59}
+.tfToast.tfToastCopied span{color:#fff!important;font-size:14px;font-weight:800}
+.tfToast.tfToastCopied button{color:#fff!important;background:transparent!important;border:0!important;margin-left:12px}
+
+/* Жарык sidebar: сүрөттөгү так аралыктар, ачык иконкалар */
+.shell>aside{background:#f8fbfe!important}
+.shell>aside nav{gap:6px!important}
+.shell>aside nav>a{min-height:44px!important;padding:10px 13px!important;font-size:13px!important}
+.shell>aside nav>a.on{background:linear-gradient(90deg,#d3f3e6,#d5f6e9)!important;border-radius:11px!important;box-shadow:none!important}
+.shell>aside nav>a.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:6px;background:#00916b}
+.shell>aside .executorScrollable button{min-height:43px!important;padding:9px 10px!important}
+.shell>aside .executorSearch{background:#fbfdff!important}
+.shell>aside .executorNavCount{background:#d8f5e9!important}
+.shell>aside .navbottom .sidebarLogoutOnly{min-height:48px!important;border-radius:12px!important;background:#fff!important}
+@media(max-width:600px){.tableHeaderSearch.expanded{width:min(270px,48vw)!important}.tfToast.tfToastCopied{right:12px!important;bottom:12px!important}}

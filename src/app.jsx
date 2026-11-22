@@ -22,6 +22,7 @@ import{
   LayoutDashboard,
   Briefcase,
   Building2,
+  Copy,
   FileText,
   Settings,
   Search,
@@ -229,6 +230,8 @@ export default function App(){
   const[q,setQ]=useState('');
   const[tableSearchOpen,setTableSearchOpen]=useState(false);
   const tableSearchInputRef=useRef(null);
+  const tableSearchContainerRef=useRef(null);
+  const[copyTip,setCopyTip]=useState(null);
   const[guaranteeFilter,setGuaranteeFilter]=useState(null);
   const[page,setPage]=useState('tenders');
   const[payStatusModal,setPayStatusModal]=useState(null);
@@ -377,6 +380,31 @@ export default function App(){
   };
   const reportError=(err)=>{console.error(err);setNotice('Firebase катасы: '+(err?.message||String(err)));};
 
+  const showCopyTip=(event)=>{
+    const rect=event.currentTarget.getBoundingClientRect();
+    setCopyTip({left:Math.min(window.innerWidth-76,Math.max(76,rect.right-14)),top:Math.max(10,rect.top-40)});
+  };
+
+  const copyTenderNumber=async(number)=>{
+    const value=String(number||'');
+    if(!value)return;
+    try{
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(value);
+      }else{
+        const input=document.createElement('textarea');
+        input.value=value;
+        input.style.position='fixed';input.style.opacity='0';
+        document.body.appendChild(input);
+        input.select();
+        const copied=document.execCommand('copy');
+        input.remove();
+        if(!copied)throw new Error('copy failed');
+      }
+      setNotice('Номер скопирован');
+    }catch(err){setNotice('Номер көчүрүлгөн жок. Кайра аракет кылыңыз.');}
+  };
+
   const createAccount=async e=>{
     e.preventDefault();setAuthError('');
     const f=new FormData(e.currentTarget);
@@ -506,6 +534,17 @@ export default function App(){
 
   const isFailedPage=page==='not-held';
   useEffect(()=>{if(tableSearchOpen)tableSearchInputRef.current?.focus();},[tableSearchOpen]);
+  useEffect(()=>{
+    if(!tableSearchOpen)return;
+    const closeOnOutside=(event)=>{
+      if(!tableSearchContainerRef.current?.contains(event.target)){
+        setTableSearchOpen(false);
+        setQ('');
+      }
+    };
+    document.addEventListener('pointerdown',closeOnOutside);
+    return ()=>document.removeEventListener('pointerdown',closeOnOutside);
+  },[tableSearchOpen]);
 
   const executorsGroup=useMemo(()=>{
     const map={};
@@ -865,7 +904,8 @@ const tableGridStyle = {
 };
   return(
     <div className="shell">
-      {notice&&<div className="tfToast" role="alert"><span>{notice}</span><button onClick={()=>setNotice('')} aria-label="Жабуу"><X size={16}/></button></div>}
+      {notice&&<div className={'tfToast'+(notice==='Номер скопирован'?' tfToastCopied':'')} role="alert">{notice==='Номер скопирован'&&<CheckCircle2 size={20}/>}<span>{notice}</span><button onClick={()=>setNotice('')} aria-label="Жабуу"><X size={16}/></button></div>}
+      {copyTip&&createPortal(<div className="tfCopyFloatingTip" role="tooltip" style={{left:copyTip.left,top:copyTip.top}}><Copy size={12}/> Скопировать</div>,document.body)}
 
       <div className="mobileTopbar">
         <div className="mobileTopbarBrand"><span className="mobileTopbarLogo">ТБ</span><strong>Тендер База</strong></div>
@@ -1092,7 +1132,8 @@ const tableGridStyle = {
                   <small>{isFailedPage?'НЕ СОСТОЯЛСЯ ТЕНДЕРЛЕР':'КАТЫШЫП ЖАТКАН ТЕНДЕРЛЕР'}</small>
                   <div className="tableTitleRow">
                     <h2>{isFailedPage?'Не состоялся':'Таблица'}{headerExecutorTitle ? ` — ${headerExecutorTitle}` : ''}</h2>
-                    <div className={'tableHeaderSearch'+(tableSearchOpen?' expanded':'')}>
+                    <div ref={tableSearchContainerRef} className={'tableHeaderSearch'+(tableSearchOpen?' expanded':'')}>
+                      {tableSearchOpen&&<Search className="tfSearchInsideIcon" size={17} aria-hidden="true"/>}
                       <button type="button" className="tableSearchToggle" aria-expanded={tableSearchOpen} aria-controls="tender-table-search" aria-label={tableSearchOpen?'Издөөнү жабуу':'Таблицадан издөө'} title={tableSearchOpen?'Издөөнү жабуу':'Поиск'} onClick={()=>{setTableSearchOpen(open=>!open);if(tableSearchOpen)setQ('');}}>
                         {tableSearchOpen?<X size={15}/>:<Search size={16}/>}
                       </button>
@@ -1180,7 +1221,7 @@ const tableGridStyle = {
                   return <article className={'tfMobileTenderCard'+(failed?' tfTenderFailed':'')} key={key}>
                     <div className="tfCardHead">
                       <input type="checkbox" className="tfCardSelect" aria-label={`Тендер ${t.id} тандоо`} checked={selectedIds.includes(key)} onChange={()=>toggleSelect(key)}/>
-                      <div className="tfCardNumber"><FileText size={15}/> <span>Тендер №: {t.id}</span></div>
+                      <button type="button" className="tfCardNumber tfTenderCopy" aria-label={`Скопировать тендер № ${t.id}`} onMouseEnter={showCopyTip} onMouseLeave={()=>setCopyTip(null)} onFocus={showCopyTip} onBlur={()=>setCopyTip(null)} onClick={()=>{setCopyTip(null);copyTenderNumber(t.id)}}><FileText size={15}/> <span>Тендер №: {t.id}</span></button>
                       <span className="tfCardDate">{t.date||'—'}</span>
                       <button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" disabled={failed} onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>
                     </div>
@@ -1258,7 +1299,7 @@ const tableGridStyle = {
             </span>
           ):(
             <span className="tfTenderCompanyStack">
-              <span className="tenderLink" title={failed?'Тендер не состоялся':t.id}>{t.id}{failed&&<small className="tfFailedBadge">Не состоялся</small>}</span>
+              <button type="button" className="tenderLink tfTenderCopy" aria-label={`Скопировать тендер № ${t.id}`} onMouseEnter={showCopyTip} onMouseLeave={()=>setCopyTip(null)} onFocus={showCopyTip} onBlur={()=>setCopyTip(null)} onClick={()=>{setCopyTip(null);copyTenderNumber(t.id)}}>{t.id}<Copy className="tfCopyInlineIcon" size={14} aria-hidden="true"/>{failed&&<small className="tfFailedBadge">Не состоялся</small>}</button>
               <span className="tfTenderCompanyName" title={t.partnerCompany||'Компания көрсөтүлгөн эмес'}><Building2 size={12} aria-hidden="true"/>{t.partnerCompany||'Компания көрсөтүлгөн эмес'}</span>
             </span>
           )}
