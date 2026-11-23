@@ -954,7 +954,9 @@ export default function App(){
 
   async function add(e){
     e.preventDefault();
-    if(!canManageTenders||isFailedPage){setNotice('Жаңы тендерди аткаруучунун бөлүмүнөн кошуңуз');return;}
+    // Жалпы таблица көрүү үчүн гана, бирок жаңы тендерди бул жерден да кошууга болот.
+    // Мурдагы тендерлерди өзгөртүү/өчүрүү укуктары canManageTenders менен корголот.
+    if(page!=='tenders'){setNotice('Жаңы тендерди «Тендерлер» бөлүмүнөн кошуңуз');return;}
     if(busy)return;
     const f=new FormData(e.currentTarget);
 
@@ -1462,7 +1464,7 @@ const tableGridStyle = {
                     defaultYear={Number(availableMonths[0]?.slice(0,4))||new Date().getFullYear()}
                     onChange={next=>{setDateRange(next);setSelectedIds([]);setEditingId(null);setEditDraft(null);}}
                   />
-                  {canManageTenders&&!isFailedPage&&<button type="button" className="primary tenderToolbarAdd" onClick={()=>setAddOpen(true)}><Plus size={20}/>Тендер кошуу</button>}
+                  {page==='tenders'&&<button type="button" className="primary tenderToolbarAdd" onClick={()=>{setAddFileError('');setAddOpen(true);}}><Plus size={20}/>Тендер кошуу</button>}
                 </div>
                 <div className="tenderBulkActions">
                   {canManageTenders&&selectedIds.length>0 && <>
@@ -1797,7 +1799,7 @@ const tableGridStyle = {
       </main>
 
       {/* ТЕНДЕР КОШУУ МОДАЛКАСЫ */}
-      {addOpen&&canManageTenders&&
+      {addOpen&&page==='tenders'&&
         <Modal close={()=>{if(!busy){setAddOpen(false);setAddFiles([]);setAddFileError('');}}}>
           <form onSubmit={add}>
             <small>ЖАҢЫ ТЕНДЕР</small>
@@ -1816,7 +1818,14 @@ const tableGridStyle = {
 
               <label>
                 Ким аткарды (Аткаруучу) *
-                <input name="executor" required defaultValue={selectedExecutor||''} readOnly title="Аткаруучу сол жактагы менюдан тандалды"/>
+                <input name="executor" required defaultValue={selectedExecutor||''}
+                  readOnly={Boolean(selectedExecutor)}
+                  list={selectedExecutor?undefined:'tenderExecutorOptions'}
+                  placeholder="Аткаруучуну тандаңыз же атын жазыңыз"
+                  title={selectedExecutor?'Аткаруучу менюдан тандалды':'Тизмеден тандаңыз же жаңы аткаруучуну жазыңыз'}/>
+                {!selectedExecutor&&<datalist id="tenderExecutorOptions">
+                  {Object.keys(executorsGroup).filter(name=>name!=='Аткаруучу көрсөтүлгөн эмес').map(name=><option value={name} key={name}/>)}
+                </datalist>}
               </label>
 
               <label>
