@@ -26,6 +26,11 @@ import{
   FileText,
   Settings,
   Search,
+  CalendarDays,
+  Menu,
+  ShoppingBag,
+  Coins,
+  ClipboardList,
   Users,
   ShieldCheck,
   Plus,
@@ -42,6 +47,7 @@ import{
   Download,
   Printer,
   ArrowRight,
+  ChevronLeft,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -56,6 +62,190 @@ const DOC_GROUPS={
   'Башка': ['Другие документы']
 };
 const DOCS=Object.values(DOC_GROUPS).flat();
+
+// №13 логотип: «Т» тамгасы жана документтердин катмарлары.
+function TenderLogo({className=''}){
+  return <svg className={className} viewBox="0 0 72 84" role="img" aria-label="Тендерлер логотиби" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="tenderLogoHex" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#087744"/><stop offset="1" stopColor="#003f35"/></linearGradient><linearGradient id="tenderLogoLayer" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#2ac63e"/><stop offset="1" stopColor="#006a43"/></linearGradient></defs>
+    <path d="M36 2 67 20v25L36 63 5 45V20Z" fill="url(#tenderLogoHex)"/>
+    <path d="M22 21h28v9H40v25h-9V30h-9Z" fill="#fff"/>
+    <path d="m5 55 31 17 31-17v8L36 80 5 63Z" fill="url(#tenderLogoLayer)"/>
+    <path d="m5 68 31 16 31-16v7L36 91 5 75Z" fill="#359d61" transform="translate(0 -7)"/>
+  </svg>;
+}
+
+// Сүрөттөгү тоолор — тышкы серверсиз иштей турган SVG декорациясы.
+// aria-hidden болгондуктан навигацияга жана баскычтарга тоскоол болбойт.
+function MountainIllustration({variant='sidebar'}){
+  const isHeader=variant==='header';
+  const prefix=isHeader?'mountainHeader':'mountainSidebar';
+  return <svg className={'tenderMountain tenderMountain--'+variant} viewBox="0 0 600 260" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id={`${prefix}Far`} x1="0" y1="0" x2="0" y2="1"><stop stopColor={isHeader?'#b6caed':'#406d98'}/><stop offset="1" stopColor={isHeader?'#edf4ff':'#0d2943'}/></linearGradient>
+      <linearGradient id={`${prefix}Near`} x1="0" y1="0" x2=".3" y2="1"><stop stopColor={isHeader?'#9eb9df':'#1c466d'}/><stop offset="1" stopColor={isHeader?'#dfeafb':'#092238'}/></linearGradient>
+    </defs>
+    <path d="M0 233 65 176 113 202 179 113 211 159 287 65 354 154 400 92 457 168 502 115 600 219V260H0Z" fill={`url(#${prefix}Far)`} opacity={isHeader?'.48':'.83'}/>
+    <path d="m104 206 75-93 15 39 16-19 36 64-46-22-18 18-20-32-20 50Zm107-47 76-94 23 50 22-24 47 80-56-29-28 20-18-52-18 41Zm146 16 43-83 24 43 14-15 42 62-53-22-23 14-12-39-18 39Zm126 7 19-67 19 32 15-6 25 53-44-20-14 9Z" fill={isHeader?'#f9fcff':'#c4ddf3'} opacity={isHeader?'.82':'.94'}/>
+    <path d="m0 251 115-46 63 24 108-97 63 56 57-43 80 76 63-39 51 37v41H0Z" fill={`url(#${prefix}Near)`}/>
+    <path d="m198 209 88-77 27 41 13-17 22 34-39-10-20-27-16 37-22-15-30 43Zm166-29 42-35 22 35 14-11 34 43-49-23-19 14-13-30-14 18Z" fill={isHeader?'#f8fbff':'#e6f3ff'} opacity=".9"/>
+    <path d="M0 249 91 222 146 242l99-21 61 18 72-24 73 31 83-27 66 27v14H0Z" fill={isHeader?'#d8e7fa':'#092139'} opacity={isHeader?'.34':'.8'}/>
+  </svg>;
+}
+
+// Аткаруучу/дата фильтрлери: браузердин системалык select менюсуна
+// көз каранды эмес, сайттын дизайны менен бирдей ачылма тизме.
+function TenderFilterDropdown({icon,ariaLabel,value,options,onChange,variant=''}){
+  const[open,setOpen]=useState(false);
+  const rootRef=useRef(null);
+  const triggerRef=useRef(null);
+  const optionRefs=useRef([]);
+  const selectedIndex=Math.max(0,options.findIndex(option=>option.value===value));
+  const selectedLabel=options[selectedIndex]?.label||options[0]?.label||'';
+
+  useEffect(()=>{
+    if(!open)return;
+    const onOutside=event=>{if(!rootRef.current?.contains(event.target))setOpen(false)};
+    document.addEventListener('pointerdown',onOutside);
+    return()=>document.removeEventListener('pointerdown',onOutside);
+  },[open]);
+  useEffect(()=>{
+    if(open)optionRefs.current[selectedIndex]?.focus();
+  },[open]);
+
+  const selectOption=nextValue=>{
+    onChange(nextValue);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+  const handleKeyDown=event=>{
+    if(event.key==='Escape'&&open){event.preventDefault();setOpen(false);triggerRef.current?.focus();return;}
+    if(!open){
+      if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+        event.preventDefault();setOpen(true);
+      }
+      return;
+    }
+    if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+      event.preventDefault();
+      const current=optionRefs.current.indexOf(document.activeElement);
+      const index=event.key==='Home'?0:event.key==='End'?options.length-1:
+        (Math.max(0,current)+(event.key==='ArrowDown'?1:options.length-1))%options.length;
+      optionRefs.current[index]?.focus();
+    }
+  };
+
+  return <div ref={rootRef} className={'tenderFilterSelect tenderFilterSelect--'+variant+(open?' isOpen':'')} onKeyDown={handleKeyDown}>
+    <button ref={triggerRef} type="button" className="tenderDropdownTrigger" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} title={selectedLabel} onClick={()=>setOpen(previous=>!previous)}>
+      <span className="tenderDropdownIcon">{icon}</span>
+      <span className="tenderDropdownCurrent">{selectedLabel}</span>
+      <ChevronDown size={16} className={'tenderDropdownChevron'+(open?' rotated':'')}/>
+    </button>
+    {open&&<div className="tenderDropdownPanel" role="listbox" aria-label={ariaLabel}>
+      {options.map((option,index)=><button type="button" key={option.value} ref={element=>{optionRefs.current[index]=element}} role="option" aria-selected={option.value===value} className={'tenderDropdownOption'+(option.value===value?' selected':'')} onClick={()=>selectOption(option.value)}>
+        <span>{option.label}</span>{option.value===value&&<CheckCircle2 size={16} aria-hidden="true"/>}
+      </button>)}
+    </div>}
+  </div>;
+}
+
+// Айлардын аралыгы: башталган жана аяктаган ай өз-өзүнчө календардан тандалат.
+const CALENDAR_MONTHS=['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+const formatCalendarMonth=value=>{
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(value||''))return '';
+  const [year,month]=value.split('-');
+  return `${CALENDAR_MONTHS[Number(month)-1]} ${year}`;
+};
+
+function TenderMonthRangePicker({value,onChange,defaultYear}){
+  const[open,setOpen]=useState(false);
+  const[draftFrom,setDraftFrom]=useState(value.from||'');
+  const[draftTo,setDraftTo]=useState(value.to||'');
+  const[fromYear,setFromYear]=useState(Number(value.from?.slice(0,4))||defaultYear);
+  const[toYear,setToYear]=useState(Number(value.to?.slice(0,4))||defaultYear);
+  const rootRef=useRef(null);
+  const triggerRef=useRef(null);
+
+  useEffect(()=>{
+    if(!open)return;
+    const onOutside=e=>{if(!rootRef.current?.contains(e.target))setOpen(false)};
+    const onEscape=e=>{if(e.key==='Escape'){setOpen(false);triggerRef.current?.focus()}};
+    document.addEventListener('pointerdown',onOutside);
+    document.addEventListener('keydown',onEscape);
+    return()=>{
+      document.removeEventListener('pointerdown',onOutside);
+      document.removeEventListener('keydown',onEscape);
+    };
+  },[open]);
+
+  const toggleOpen=()=>{
+    if(!open){
+      setDraftFrom(value.from||'');
+      setDraftTo(value.to||'');
+      setFromYear(Number(value.from?.slice(0,4))||defaultYear);
+      setToYear(Number(value.to?.slice(0,4))||defaultYear);
+    }
+    setOpen(previous=>!previous);
+  };
+  const makeMonth=(year,index)=>`${year}-${String(index+1).padStart(2,'0')}`;
+  const selectFrom=month=>{
+    setDraftFrom(month);
+    if(draftTo&&draftTo<month)setDraftTo('');
+  };
+  const selectTo=month=>{
+    setDraftTo(month);
+    if(draftFrom&&draftFrom>month)setDraftFrom('');
+  };
+  const apply=()=>{
+    if(!draftFrom||!draftTo||draftTo<draftFrom)return;
+    onChange({from:draftFrom,to:draftTo});
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+  const clear=()=>{
+    onChange({from:'',to:''});
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+  const renderMonthGrid=(mode,year,setYear,selected,onSelect)=>{
+    return <div className="tenderCalendarSection" key={mode}>
+      <div className="tenderCalendarSectionLabel">{mode==='from'?'КАЙСЫ АЙДАН':'КАЙСЫ АЙГА ЧЕЙИН'}</div>
+      <div className="tenderCalendarYear">
+        <button type="button" aria-label={`${mode==='from'?'Башталган':'Аяктаган'} жылды артка жылдыруу`} onClick={()=>setYear(y=>y-1)}><ChevronLeft size={17}/></button>
+        <strong>{year}</strong>
+        <button type="button" aria-label={`${mode==='from'?'Башталган':'Аяктаган'} жылды алдыга жылдыруу`} onClick={()=>setYear(y=>y+1)}><ChevronRight size={17}/></button>
+      </div>
+      <div className="tenderCalendarMonths">
+        {CALENDAR_MONTHS.map((label,index)=>{
+          const month=makeMonth(year,index);
+          const isStart=month===draftFrom;
+          const isEnd=month===draftTo;
+          const inRange=!!draftFrom&&!!draftTo&&month>=draftFrom&&month<=draftTo;
+          return <button type="button" key={month} aria-label={`${label} ${year}`} aria-pressed={month===selected}
+            className={'tenderCalendarMonth'+(inRange?' inRange':'')+(isStart?' rangeStart':'')+(isEnd?' rangeEnd':'')+(month===selected?' chosen':'')}
+            onClick={()=>onSelect(month)}>{label}</button>;
+        })}
+      </div>
+    </div>;
+  };
+  const summary=value.from&&value.to?`${formatCalendarMonth(value.from)} — ${formatCalendarMonth(value.to)}`:'Бардык даталар';
+
+  return <div ref={rootRef} className={'tenderFilterSelect tenderFilterSelect--date tenderMonthPicker'+(open?' isOpen':'')}>
+    <button ref={triggerRef} type="button" className="tenderDropdownTrigger" aria-label="Айлар аралыгын тандоо" aria-haspopup="dialog" aria-expanded={open} title={summary} onClick={toggleOpen}>
+      <span className="tenderDropdownIcon"><CalendarDays size={16}/></span>
+      <span className="tenderDropdownCurrent">{summary}</span>
+      <ChevronDown size={16} className={'tenderDropdownChevron'+(open?' rotated':'')}/>
+    </button>
+    {open&&<div className="tenderMonthCalendar" role="dialog" aria-label="Тендерлердин айлар аралыгын тандоо">
+      <div className="tenderCalendarTitle"><span className="tenderCalendarTitleIcon"><CalendarDays size={19}/></span><div><strong>Айлар аралыгын тандоо</strong><small>Башталган жана аяктаган айды белгилеңиз</small></div><button type="button" aria-label="Календарды жабуу" className="tenderCalendarClose" onClick={()=>setOpen(false)}><X size={18}/></button></div>
+      <div className="tenderCalendarGrids">
+        {renderMonthGrid('from',fromYear,setFromYear,draftFrom,selectFrom)}
+        {renderMonthGrid('to',toYear,setToYear,draftTo,selectTo)}
+      </div>
+      <div className="tenderCalendarSummary"><CalendarDays size={15}/>{draftFrom&&draftTo?`${formatCalendarMonth(draftFrom)} — ${formatCalendarMonth(draftTo)}`:'Керектүү эки айды тең тандаңыз'}</div>
+      <div className="tenderCalendarActions"><button type="button" className="tenderCalendarClear" onClick={clear}>Тазалоо</button><button type="button" className="tenderCalendarApply" disabled={!draftFrom||!draftTo||draftTo<draftFrom} onClick={apply}><CheckCircle2 size={16}/> Колдонуу</button></div>
+    </div>}
+  </div>;
+}
 
 // Таблица цен документин эски жана жаңы сактоо форматтарынан аныктоо.
 const hasPriceTable = docs => Object.entries(docs || {}).some(([key, file]) => {
@@ -75,6 +265,13 @@ const dateOrderValue = value => {
   const [year, month, day] = date.split('-').map(Number);
   const check = new Date(Date.UTC(year, month - 1, day));
   return check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day ? date : '';
+};
+const matchesMonthRange=(t,range)=>{
+  if(!range?.from&&!range?.to)return true;
+  const date=dateOrderValue(t?.date);
+  if(!date)return false;
+  const month=date.slice(0,7);
+  return (!range.from||month>=range.from)&&(!range.to||month<=range.to);
 };
 const sortTendersByDate = list => [...list].sort((a, b) => {
   const da = dateOrderValue(a.date);
@@ -172,6 +369,8 @@ export default function App(){
   const[docsOpen,setDocsOpen]=useState(false);
   const[q,setQ]=useState('');
   const[tableSearchOpen,setTableSearchOpen]=useState(false);
+  const[desktopNavCollapsed,setDesktopNavCollapsed]=useState(false);
+  const[dateRange,setDateRange]=useState({from:'',to:''});
   const tableSearchInputRef=useRef(null);
   const tableSearchContainerRef=useRef(null);
   const[copyTip,setCopyTip]=useState(null);
@@ -180,6 +379,7 @@ export default function App(){
   const[payStatusModal,setPayStatusModal]=useState(null);
 
   const[selectedExecutor,setSelectedExecutor]=useState(null);
+  useEffect(()=>setDateRange({from:'',to:''}),[page,selectedExecutor]);
   const[executorQuery,setExecutorQuery]=useState('');
   const[selectedIds,setSelectedIds]=useState([]);
   const[openAccordionMap,setOpenAccordionMap]=useState({});
@@ -187,6 +387,16 @@ export default function App(){
   const[logoutConfirm,setLogoutConfirm]=useState(false);
   const[deleteConfirmOpen,setDeleteConfirmOpen]=useState(false);
   const[mobileNavOpen,setMobileNavOpen]=useState(false);
+  useEffect(()=>{
+    // index.html'да viewport теги жок болсо, телефон 980px desktop деп
+    // эсептелип, бургер меню жашырылып калышы мүмкүн.
+    if(!document.head.querySelector('meta[name="viewport"]')){
+      const viewport=document.createElement('meta');
+      viewport.name='viewport';
+      viewport.content='width=device-width, initial-scale=1';
+      document.head.appendChild(viewport);
+    }
+  },[]);
   useEffect(()=>{
     document.body.classList.toggle('nav-lock', mobileNavOpen);
     return ()=>document.body.classList.remove('nav-lock');
@@ -589,7 +799,8 @@ export default function App(){
   const groupedLots=useMemo(()=>{
     const groups=new Map();
     sortTendersByDate(tenders.filter(t=>belongsToCurrentSection(t)&&
-      (!selectedExecutor||(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor))).forEach(t=>{
+      (!selectedExecutor||(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)&&
+      matchesMonthRange(t,dateRange))).forEach(t=>{
       const number=String(t.id||'').trim();
       const key=number || `single:${tenderKey(t)}`;
       if(!groups.has(key))groups.set(key,[]);
@@ -600,7 +811,7 @@ export default function App(){
       [t.id,t.org,t.name,t.executor,t.partnerCompany].join(' ').toLocaleLowerCase().includes(q.trim().toLocaleLowerCase())
       && matchesGuaranteeFilter(t,guaranteeFilter)
     )));
-  },[tenders,isFailedPage,selectedExecutor,q,guaranteeFilter]);
+  },[tenders,isFailedPage,selectedExecutor,q,guaranteeFilter,dateRange]);
   const displayGroups=useMemo(()=>{
     const entries=Array.from(groupedLots.entries());
     return entries.map(([groupKey,lots])=>{
@@ -643,6 +854,7 @@ export default function App(){
   const scopeTenders=useMemo(()=>selectedExecutor
     ?tenders.filter(t=>belongsToCurrentSection(t)&&(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)
     :tenders.filter(belongsToCurrentSection),[tenders,selectedExecutor,isFailedPage]);
+  const availableMonths=useMemo(()=>Array.from(new Set(scopeTenders.map(t=>dateOrderValue(t.date).slice(0,7)).filter(Boolean))).sort().reverse(),[scopeTenders]);
   const scopeTenderCount=useMemo(()=>new Set(scopeTenders.map(t=>String(t.id||tenderKey(t)).trim())).size,[scopeTenders]);
   const total=useMemo(()=>scopeTenders.reduce((sum,t)=>sum+(Number(t.sum)||0),0),[scopeTenders]);
   const displayedTotal=selectedIds.length>0
@@ -906,7 +1118,7 @@ export default function App(){
   if(!authReady){
     return(
       <div className="authScreen">
-        <div className="authLoading">Тендер База жүктөлүүдө...</div>
+        <div className="authLoading">Тендерлер жүктөлүүдө...</div>
       </div>
     );
   }
@@ -944,22 +1156,23 @@ const tableGridStyle = {
   boxSizing: 'border-box'
 };
   return(
-    <div className="shell">
+    <div className={'shell tenderDesign'+(desktopNavCollapsed?' sidebarCollapsed':'')}>
       {notice&&<div className={'tfToast'+(notice==='Номер скопирован'?' tfToastCopied':'')} role="alert">{notice==='Номер скопирован'&&<CheckCircle2 size={20}/>}<span>{notice}</span><button onClick={()=>setNotice('')} aria-label="Жабуу"><X size={16}/></button></div>}
       {copyTip&&createPortal(<div className="tfCopyFloatingTip" role="tooltip" style={{left:copyTip.left,top:copyTip.top}}><Copy size={12}/> Скопировать</div>,document.body)}
 
       <div className="mobileTopbar">
-        <div className="mobileTopbarBrand"><span className="mobileTopbarLogo">ТБ</span><strong>Тендер База</strong></div>
+        <div className="mobileTopbarBrand"><span className="mobileTopbarLogo"><TenderLogo className="tenderLogoSvg"/></span><strong>Тендерлер</strong></div>
         <button type="button" className={"mobileMenuTrigger tfHamburger "+(mobileNavOpen?"isOpen":"")} aria-label={mobileNavOpen?"Менюну жабуу":"Менюну ачуу"} aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(v=>!v)}><i/><i/><i/></button>
       </div>
       {mobileNavOpen && <button type="button" className="mobileNavBackdrop" aria-label="Менюну жабуу" onClick={()=>setMobileNavOpen(false)}/>}
       <aside className={mobileNavOpen ? "mobileNavOpen" : ""}>
+        <button type="button" className="mobileSidebarClose" aria-label="Менюну жабуу" onClick={()=>setMobileNavOpen(false)}><X size={18}/></button>
 
         <div className="brand">
           
-          <div className="logo">ТБ</div>
+          <div className="logo"><TenderLogo className="tenderLogoSvg"/></div>
           <div>
-            <b>Тендер База</b>
+            <b>Тендерлер</b>
             <small>ТЕНДЕРЛЕР БАЗАСЫ</small>
           </div>
         </div>
@@ -1082,6 +1295,7 @@ const tableGridStyle = {
           </a>
         </nav>
 
+        <MountainIllustration/>
         <div className="navbottom">
           <button type="button" className="sidebarLogoutOnly" onClick={()=>{setMobileNavOpen(false);setLogoutConfirm(true);}}>
             <LogOut size={18}/>
@@ -1133,24 +1347,25 @@ const tableGridStyle = {
         {(page==='tenders'||page==='not-held') ? (
           <>
             <header className="tenderTopbar">
-              <h1>{isFailedPage?'Тендер не состоялся':isGeneralPage?<>Тендерлерди <em>оңой башкарыңыз.</em></>:<>{selectedExecutor} — <em>тендерлерди башкаруу.</em></>}</h1>
-              {canManageTenders&&!isFailedPage&&<div className="actions"><button
-                  className="primary"
-                  onClick={()=>setAddOpen(true)}
-                >
-                  <Plus/>
-                  Тендер кошуу
-                </button></div>}
+              <div className="tenderPageHeading">
+                <button type="button" className="desktopCollapseToggle" aria-label={desktopNavCollapsed?'Менюну көрсөтүү':'Менюну жашыруу'} aria-expanded={!desktopNavCollapsed} onClick={()=>setDesktopNavCollapsed(v=>!v)}><Menu size={26}/></button>
+                <div>
+                  <h1>{isFailedPage?'Тендер не состоялся':isGeneralPage?<>Тендерлерди оңой башкарыңыз.</>:<>{selectedExecutor} — тендерлерди башкаруу.</>}</h1>
+                  <p>Тендерлер, аткаруучулар жана документтер бир системада.</p>
+                </div>
+              </div>
+              <label className="dashboardTopSearch"><Search size={21}/><input aria-label="Тендерлерди издөө" value={q} onChange={e=>setQ(e.target.value)} placeholder="Тендер номер же аталышы боюнча издөө..."/>{q&&<button type="button" aria-label="Издөөнү тазалоо" onClick={()=>setQ('')}><X size={16}/></button>}</label>
+              <MountainIllustration variant="header"/>
             </header>
 
             <section className="stats">
               <Stat
-                icon={<Briefcase/>}
+                icon={<ShoppingBag/>}
                 label={selectedExecutor?'Аткаруучунун тендерлери':'Тендерлер'}
                 value={syncState==='loading'&&tenders.length===0?'…':scopeTenderCount}
               />
               <Stat
-                icon={<Wallet/>}
+                icon={<Coins/>}
                 label={selectedExecutor?'Аткаруучунун жалпы суммасы':'Жалпы сумма'}
                 value={syncState==='loading'&&tenders.length===0?'Жүктөлүүдө…':money(displayedTotal)}
               />
@@ -1163,7 +1378,7 @@ const tableGridStyle = {
               />
               <GuaranteeStat
                 kind="goik"
-                icon={<CheckCircle2/>}
+                icon={<ShieldCheck/>}
                 tenders={scopeTenders}
                 activeFilter={guaranteeFilter}
                 onSelect={chooseGuaranteeFilter}
@@ -1185,16 +1400,7 @@ const tableGridStyle = {
                 <div>
                   <small>{isFailedPage?'НЕ СОСТОЯЛСЯ ТЕНДЕРЛЕР':isGeneralPage?'БАРДЫК ТЕНДЕРЛЕР — КӨРҮҮ ГАНА':'АТКАРУУЧУНУН ТЕНДЕРЛЕРИ'}</small>
                   <div className="tableTitleRow">
-                    <h2>{isFailedPage?'Не состоялся':'Таблица'}{headerExecutorTitle ? ` — ${headerExecutorTitle}` : ''}</h2>
-                    <div ref={tableSearchContainerRef} className={'tableHeaderSearch'+(tableSearchOpen?' expanded':'')}>
-                      {tableSearchOpen&&<Search className="tfSearchInsideIcon" size={17} aria-hidden="true"/>}
-                      <button type="button" className="tableSearchToggle" aria-expanded={tableSearchOpen} aria-controls="tender-table-search" aria-label={tableSearchOpen?'Издөөнү жабуу':'Таблицадан издөө'} title={tableSearchOpen?'Издөөнү жабуу':'Поиск'} onClick={()=>{setTableSearchOpen(open=>!open);if(tableSearchOpen)setQ('');}}>
-                        {tableSearchOpen?<X size={15}/>:<Search size={16}/>}
-                      </button>
-                      <div className="tableHeaderSearchField">
-                        <input id="tender-table-search" ref={tableSearchInputRef} aria-label="Тендер издөө" tabIndex={tableSearchOpen?0:-1} value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setTableSearchOpen(false);setQ('')}}} placeholder="Номер, мекеме, товар..."/>
-                      </div>
-                    </div>
+                    <h2><ClipboardList className="tableHeadingIcon" size={23}/>{isFailedPage?'Не состоялся':'Тендерлердин таблицасы'}{headerExecutorTitle ? ` — ${headerExecutorTitle}` : ''}</h2>
               {guaranteeFilter&&<button type="button" className="guaranteeClearFilter" onClick={()=>chooseGuaranteeFilter(guaranteeFilter.kind,guaranteeFilter.status)}>
                 {guaranteeLabel(guaranteeFilter.kind)} — {guaranteeFilter.status==='paid'?'Төлөнгөн':'Төлөнө элек'} <X size={14}/>
               </button>}
@@ -1242,6 +1448,22 @@ const tableGridStyle = {
                   </div>
                 </div>
 
+                <div className="tenderFilterToolbar">
+                  <TenderFilterDropdown
+                    icon={<Users size={16}/>}
+                    ariaLabel="Аткаруучуну тандоо"
+                    variant="executor"
+                    value={selectedExecutor||''}
+                    options={[{value:'',label:'Бардык аткаруучу'},...Object.keys(sidebarExecutorsGroup).map(name=>({value:name,label:name}))]}
+                    onChange={next=>{setSelectedExecutor(next||null);setSelectedIds([]);setGuaranteeFilter(null);setEditingId(null);setEditDraft(null);setQ('');}}
+                  />
+                  <TenderMonthRangePicker
+                    value={dateRange}
+                    defaultYear={Number(availableMonths[0]?.slice(0,4))||new Date().getFullYear()}
+                    onChange={next=>{setDateRange(next);setSelectedIds([]);setEditingId(null);setEditDraft(null);}}
+                  />
+                  {canManageTenders&&!isFailedPage&&<button type="button" className="primary tenderToolbarAdd" onClick={()=>setAddOpen(true)}><Plus size={20}/>Тендер кошуу</button>}
+                </div>
                 <div className="tenderBulkActions">
                   {canManageTenders&&selectedIds.length>0 && <>
                     <button type="button" className="tenderBulkDelete" disabled={busy} onClick={deleteSelected}>
@@ -1261,13 +1483,6 @@ const tableGridStyle = {
                   <span className="count">{displayFiltered.length}</span>
                 </div>
               </div>
-
-              {!selectedExecutor&&<div className="tfSharedViewSummary" role="status">
-                <span><Briefcase size={15}/> Firebase: <strong>{syncState==='loading'&&tenders.length===0?'Жүктөлүүдө…':`${tenders.length} лот`}</strong></span>
-                <span>Бул бөлүмдө: <strong>{scopeTenders.length} лот</strong></span>
-                <span>Таблицада: <strong>{displayGroups.length} сап</strong> (бирдей номерлер бириккен)</span>
-                <span className="tfReadonlyBadge"><CheckCircle2 size={14}/> Көрүү гана</span>
-              </div>}
 
               <div className="tfMobileTenderList">
                 {displayGroups.map(({t,lots,groupKey,totalSum,totalPaid})=>{
@@ -1994,9 +2209,9 @@ function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,cre
     <aside className="novaSide">
       <canvas ref={visualCanvas} className="novaLiquidCanvas" aria-hidden="true"/>
       <div className="novaLiquidCaption">ЖАНДУУ ИНТЕРАКТИВДҮҮ ФОН <span>● Мышканы кыймылдатыңыз</span></div>
-      <div className="novaBrand"><span className="novaBrandMark">ТБ</span><span><strong>Тендер База</strong><small>WORKSPACE / 2026</small></span></div>
+      <div className="novaBrand"><span className="novaBrandMark"><TenderLogo className="tenderLogoSvg"/></span><span><strong>Тендерлер</strong><small>WORKSPACE / 2026</small></span></div>
       <div className="novaSideBody"><span className="novaKicker">БИРДИКТҮҮ БАШКАРУУ</span><h1>Бардык тендерлер.<br/><em>Бир жерде.</em></h1><p>Документтерди, келишимдерди жана аткаруучуларды ыңгайлуу башкарыңыз.</p><div className="novaDecor"><span>01 / АККАУНТТАР</span><span>02 / ТЕНДЕРЛЕР</span><span>03 / ДОКУМЕНТТЕР</span></div></div>
-      <div className="novaSideFoot">TENDER BAZA <span>© 2026</span></div>
+      <div className="novaSideFoot">ТЕНДЕРЛЕР <span>© 2026</span></div>
     </aside>
     <main className="novaMain"><div className="novaMainTop"><span className="novaOnline"/> КООПСУЗ КИРҮҮ <span className="novaTopRule"/></div>
       <div className="novaContent">
@@ -2026,7 +2241,7 @@ function CompanyAuth({companies,mode,setMode,selected,setSelected,error,busy,cre
           {hasRememberedEmail?'Башка email менен кирүү':'Жаңы аккаунт каттоо'}
         </button>
       </>}
-      </div><div className="novaMainFoot">Тендер База <span>•</span> Коопсуз кирүү</div>
+      </div><div className="novaMainFoot">Тендерлер <span>•</span> Коопсуз кирүү</div>
     </main>
   </div>;
 }
