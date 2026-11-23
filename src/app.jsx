@@ -492,6 +492,9 @@ export default function App(){
   // Аткаруучуну менюдан тандаганда гана анын тендерлерин башкаруу ачылат.
   const isGeneralPage=page==='tenders'&&!selectedExecutor;
   const canManageTenders=Boolean(selectedExecutor)&&(page==='tenders'||page==='not-held');
+  // «Не состоялся» бөлүмүндө аткаруучу тандалбаса да ГОПП, ГОИК жана файлдар иштейт.
+  // Жалпы «Тендерлер» бөлүмү мурдагыдай көрүү үчүн гана калат.
+  const canManageGuaranteesAndFiles=canManageTenders||isFailedPage;
   useEffect(()=>{if(tableSearchOpen)tableSearchInputRef.current?.focus();},[tableSearchOpen]);
   useEffect(()=>{
     if(!tableSearchOpen)return;
@@ -658,6 +661,12 @@ export default function App(){
       setNotice('Өзгөртүү үчүн сол жактан ушул тендердин аткаруучусун тандаңыз');return false;
     }
     const allowed=new Set(['goppStatus','goppPaid','goikStatus','goikPaid','docs']);
+    const isOnlyAllowedFields=Object.keys(patch).every(key=>allowed.has(key));
+    const managingOwnExecutor=canManageTenders&&(old.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor;
+    const managingFailedExtras=isFailedPage&&isNotHeld(old)&&isOnlyAllowedFields;
+    if(!managingOwnExecutor&&!managingFailedExtras){
+      setNotice('Өзгөртүү үчүн сол жактан ушул тендердин аткаруучусун тандаңыз');return false;
+    }
     if(isNotHeld(old)&&Object.keys(patch).some(key=>!allowed.has(key))){
       setNotice('Бул тендер токтотулган: ГОПП, ГОИК жана файлдар гана өзгөртүлөт');return false;
     }
@@ -1231,7 +1240,7 @@ const tableGridStyle = {
                     <div className="tfCardGuarantees">{['gopp','goik'].map(kind=>{
                       const cls='tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red');
                       const label=status(kind)+(t[kind]?' · '+t[kind]+' сом':'');
-                      return <div key={kind}><small>{guaranteeLabel(kind)}:</small>{canManageTenders?<button type="button" className={cls} onClick={()=>setPayStatusModal({t,type:kind})}>{label}</button>:<span className={cls+' tfReadonlyPill'}>{label}</span>}</div>;
+                      return <div key={kind}><small>{guaranteeLabel(kind)}:</small>{canManageGuaranteesAndFiles?<button type="button" className={cls} onClick={()=>setPayStatusModal({t,type:kind})}>{label}</button>:<span className={cls+' tfReadonlyPill'}>{label}</span>}</div>;
                     })}</div>
                     <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
                     <button type="button" className="tfCardFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
@@ -1381,7 +1390,7 @@ const tableGridStyle = {
             <PaidAmount
               t={lots.length>1?{...t,paid:totalPaid,sum:totalSum}:t}
               onClick={()=>startPayment(t)}
-              readOnly={!canManageTenders}
+              readOnly={!canManageTenders||failed}
             />
           )}
         </span>
@@ -1400,7 +1409,7 @@ const tableGridStyle = {
               t={t}
               type="gopp"
               openStatus={()=>setPayStatusModal({t,type:'gopp'})}
-              readOnly={!canManageTenders}
+              readOnly={!canManageGuaranteesAndFiles}
             />
           )}
         </span>
@@ -1419,7 +1428,7 @@ const tableGridStyle = {
               t={t}
               type="goik"
               openStatus={()=>setPayStatusModal({t,type:'goik'})}
-              readOnly={!canManageTenders}
+              readOnly={!canManageGuaranteesAndFiles}
             />
           )}
         </span>
@@ -1604,7 +1613,7 @@ const tableGridStyle = {
         <Documents
           t={currentActive}
           update={update}
-          readOnly={!canManageTenders||(currentActive.executor||'Аткаруучу көрсөтүлгөн эмес')!==selectedExecutor}
+          readOnly={!(isFailedPage&&isNotHeld(currentActive))&&(!canManageTenders||(currentActive.executor||'Аткаруучу көрсөтүлгөн эмес')!==selectedExecutor)}
           close={()=>setDocsOpen(false)}
         />, document.body
       )}
@@ -1632,7 +1641,7 @@ const tableGridStyle = {
           </div>
         </Modal>
       )}
-      {payStatusModal&&canManageTenders&&(
+      {payStatusModal&&canManageGuaranteesAndFiles&&(
         <PaymentStatusModal
           t={tenders.find(item=>tenderKey(item)===tenderKey(payStatusModal.t))||payStatusModal.t}
           type={payStatusModal.type}
