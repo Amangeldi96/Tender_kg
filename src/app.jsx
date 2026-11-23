@@ -533,7 +533,9 @@ export default function App(){
   const[mobilePaymentTender,setMobilePaymentTender]=useState(null);
 
   const isFailedPage=page==='not-held';
-  // Жалпы «Тендерлер» бардык статустарды көрсөтөт, бирок өзгөртүүгө жабык.
+  // «Тендерлер» бөлүмүндө активдүү лоттор гана, «Не состоялся» бөлүмүндө
+  // токтотулган лоттор гана көрсөтүлөт. Эки тизме бири-бирине аралашпайт.
+  const belongsToCurrentSection=t=>isFailedPage?isNotHeld(t):!isNotHeld(t);
   // Аткаруучуну менюдан тандаганда гана анын тендерлерин башкаруу ачылат.
   const isGeneralPage=page==='tenders'&&!selectedExecutor;
   const canManageTenders=Boolean(selectedExecutor)&&(page==='tenders'||page==='not-held');
@@ -563,6 +565,16 @@ export default function App(){
     Object.keys(map).forEach(name=>{map[name]=sortTendersByDate(map[name]);});
     return map;
   },[tenders]);
+  // Сол жактагы аткаруучулардын саны да учурдагы бөлүмгө гана тиешелүү.
+  // Настройкадагы башкаруу үчүн executorsGroup толук бойдон сакталат.
+  const sidebarExecutorsGroup=useMemo(()=>{
+    const map={};
+    Object.entries(executorsGroup).forEach(([name,items])=>{
+      const visible=items.filter(t=>isFailedPage?isNotHeld(t):!isNotHeld(t));
+      if(visible.length)map[name]=visible;
+    });
+    return map;
+  },[executorsGroup,isFailedPage]);
 
   // Бир номердеги лоттор жалпы тизмеде да, аткаруучунун бөлүмүндө да бир сапта.
   const [activeLotByTender,setActiveLotByTender]=useState({});
@@ -576,7 +588,7 @@ export default function App(){
   },[openLotTender]);
   const groupedLots=useMemo(()=>{
     const groups=new Map();
-    sortTendersByDate(tenders.filter(t=>(!isFailedPage||isNotHeld(t))&&
+    sortTendersByDate(tenders.filter(t=>belongsToCurrentSection(t)&&
       (!selectedExecutor||(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor))).forEach(t=>{
       const number=String(t.id||'').trim();
       const key=number || `single:${tenderKey(t)}`;
@@ -629,8 +641,8 @@ export default function App(){
   },[selectedExecutor,selectedExecutorsSet]);
 
   const scopeTenders=useMemo(()=>selectedExecutor
-    ?tenders.filter(t=>(!isFailedPage||isNotHeld(t))&&(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)
-    :tenders.filter(t=>!isFailedPage||isNotHeld(t)),[tenders,selectedExecutor,isFailedPage]);
+    ?tenders.filter(t=>belongsToCurrentSection(t)&&(t.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor)
+    :tenders.filter(belongsToCurrentSection),[tenders,selectedExecutor,isFailedPage]);
   const scopeTenderCount=useMemo(()=>new Set(scopeTenders.map(t=>String(t.id||tenderKey(t)).trim())).size,[scopeTenders]);
   const total=useMemo(()=>scopeTenders.reduce((sum,t)=>sum+(Number(t.sum)||0),0),[scopeTenders]);
   const displayedTotal=selectedIds.length>0
@@ -992,8 +1004,8 @@ const tableGridStyle = {
             </div>
             <label className="executorSearch"><Search size={15}/><input aria-label="Аткаруучуларды издөө" placeholder="Аткаруучуну издөө…" value={executorQuery} onChange={e=>setExecutorQuery(e.target.value)}/></label>
             <div className="executorScrollable" aria-label="Аткаруучулардын тизмеси">
-            {!Object.keys(executorsGroup).some(name=>matches(name,executorQuery))&&<p className="searchEmpty">Аткаруучу табылган жок</p>}
-            {Object.entries(executorsGroup).filter(([name])=>matches(name,executorQuery)).map(([execName, execTenders])=>{
+            {!Object.keys(sidebarExecutorsGroup).some(name=>matches(name,executorQuery))&&<p className="searchEmpty">Аткаруучу табылган жок</p>}
+            {Object.entries(sidebarExecutorsGroup).filter(([name])=>matches(name,executorQuery)).map(([execName, execTenders])=>{
               const isSelected=selectedExecutor===execName;
 
               return(
