@@ -1,25 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function ownsExisting() { return signedIn() && resource.data.ownerUid == request.auth.uid; }
-    match /companies/{uid} {
-      // Directory for login picker: company name and email only, no secrets.
-      allow read: if true;
-      allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['uid','name','email'])
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Профиль ар бир аккаунтка гана таандык; жалпы тендерлерден өзүнчө.
+    match /publicCompanies/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == uid;
-      allow update: if signedIn() && request.auth.uid == uid;
       allow delete: if false;
     }
-    match /tenders/{id} {
+
+    match /companies/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.uid == uid;
+      allow delete: if false;
+    }
+
+    // Орток тендер базасы: бардык кирген аккаунттар бир эле коллекцияны көрөт.
+    // Колдонмодогу аткаруучулар — өзүнчө Firebase Auth UID эмес, executor аты.
+    match /tenders/{recordId} {
+      allow read: if signedIn();
+
+      // recordId Firestore документинин ачкычы, id — тендердин номери.
+      // Бир номерде бир нече лот болгондуктан алар бирдей болушу шарт эмес.
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.id == id;
-      allow read, delete: if ownsExisting();
-      allow update: if ownsExisting()
-        && request.resource.data.ownerUid == resource.data.ownerUid
-        && request.resource.data.id == id;
+        && request.resource.data.recordId == recordId;
+
+      // Биринчи кошкон адам жана Firestore документ ачкычы өзгөрбөйт.
+      allow update: if signedIn()
+        && request.resource.data.get('ownerUid', null) == resource.data.get('ownerUid', null)
+        && request.resource.data.get('recordId', null) == resource.data.get('recordId', null);
+
+      // Бул ички долбоордо бардык кирген аккаунттар аткаруучулардын
+      // тендерлерин башкара алат. UI'дагы чектөөлөр сервердик роль эмес.
+      allow delete: if signedIn();
     }
   }
 }

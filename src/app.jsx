@@ -2,7 +2,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import{FieldPath,collection,deleteDoc,deleteField,doc,getDoc,getDocsFromServer,setDoc,updateDoc,onSnapshot}from'firebase/firestore';
+import{FieldPath,collection,deleteDoc,doc,getDoc,getDocsFromServer,setDoc,updateDoc,onSnapshot}from'firebase/firestore';
 import { db, auth, firebaseApp } from "./firebase";
 import{
   createUserWithEmailAndPassword,
@@ -26,6 +26,8 @@ import{
   FileText,
   Settings,
   Search,
+  Users,
+  ShieldCheck,
   Plus,
   Upload,
   Wallet,
@@ -479,6 +481,49 @@ export default function App(){
     }finally{setBusy(false)}
   };
 
+  // Аткаруучулар Firestore'до өзүнчө аккаунт эмес: алардын аты тендерлерде сакталат.
+  // Өчүрүү Cloudinary менен Firestore'ду тең тазалаган корголгон сервердик API аркылуу өтөт.
+  const manageExecutor=async(action,executorName,newName='',currentPassword='')=>{
+    if(!user?.email||busy)return {ok:false,error:'Аккаунтка кириңиз'};
+    setBusy(true);
+    try{
+      if(action==='delete'){
+        if(!currentPassword)return {ok:false,error:'Өз аккаунтуңуздун паролун жазыңыз'};
+        await reauthenticateWithCredential(user,EmailAuthProvider.credential(user.email,currentPassword));
+      }
+      const token=await user.getIdToken(action==='delete');
+      const response=await fetch('/api/manage-executor',{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+        body:JSON.stringify({action,executorName,newName:action==='rename'?newName:undefined})
+      });
+      // Vite localhost:5173 API жок учурда index.html'ди 200 катары кайтарышы мүмкүн.
+      // Ошону ийгиликтүү операция деп кабыл алууга БОЛБОЙТ.
+      if(!response.headers.get('content-type')?.includes('application/json'))
+        throw new Error('Аткаруучулар API табылган жок. Бул функцияны Vercel сайтында текшериңиз (локалдык Vite сервери /api иштетпейт).');
+      const result=await response.json().catch(()=>{throw new Error('Сервер туура JSON жооп берген жок');});
+      if(!response.ok)throw new Error(result.error||`Сервер катасы (${response.status})`);
+      if(action==='rename'&&!Number.isInteger(result.updated))throw new Error('Сервер өзгөртүүнү ырастаган жок');
+      if(action==='delete'&&(!Number.isInteger(result.deleted)||!Number.isInteger(result.filesDeleted)))throw new Error('Сервер толук өчүрүүнү ырастаган жок');
+      if(action==='rename'){
+        if(selectedExecutor===executorName)setSelectedExecutor(newName.trim());
+        setNotice(`«${executorName}» → «${newName.trim()}»: ${result.updated} тендер өзгөртүлдү`);
+      }else{
+        if(selectedExecutor===executorName){setSelectedExecutor(null);setPage('tenders');}
+        setSelectedIds([]);
+        setNotice(`«${executorName}» өчүрүлдү: ${result.deleted} тендер, ${result.filesDeleted} файл`);
+      }
+      return {ok:true};
+    }catch(err){
+      const message=['auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials'].includes(err?.code)
+        ?'Азыркы аккаунттун паролу туура эмес'
+        :err?.code==='auth/too-many-requests'
+          ?'Көп аракет болду. Бир аздан кийин кайра аракет кылыңыз'
+          :err?.message||'Өзгөртүү аткарылган жок';
+      return {ok:false,error:message};
+    }finally{setBusy(false);}
+  };
+
   const[paymentEditId,setPaymentEditId]=useState(null);
   const[paymentValue,setPaymentValue]=useState('');
 
@@ -657,9 +702,6 @@ export default function App(){
 
   const update=async(id,patch)=>{
     const old=tenders.find(t=>tenderKey(t)===id);if(!old)return;
-    if(!canManageTenders||(old.executor||'Аткаруучу көрсөтүлгөн эмес')!==selectedExecutor){
-      setNotice('Өзгөртүү үчүн сол жактан ушул тендердин аткаруучусун тандаңыз');return false;
-    }
     const allowed=new Set(['goppStatus','goppPaid','goikStatus','goikPaid','docs']);
     const isOnlyAllowedFields=Object.keys(patch).every(key=>allowed.has(key));
     const managingOwnExecutor=canManageTenders&&(old.executor||'Аткаруучу көрсөтүлгөн эмес')===selectedExecutor;
@@ -1513,9 +1555,11 @@ const tableGridStyle = {
           <SettingsPage
             user={user}
             company={currentCompany}
+            executors={Object.entries(executorsGroup).filter(([name])=>name!=='Аткаруучу көрсөтүлгөн эмес')}
             busy={busy}
             updateCompanyName={updateCompanyName}
             changeAccountPassword={changeAccountPassword}
+            manageExecutor={manageExecutor}
             sendReset={async()=>{
               try{await sendPasswordResetEmail(auth,user.email);setNotice('Пароль алмаштыруу шилтемеси email дарегине жөнөтүлдү');}
               catch(err){reportError(err)}
@@ -2096,8 +2140,38 @@ function PaymentStatusModal({t,type,update,close}){
   );
 }
 
-function SettingsPage({user,company,busy,updateCompanyName,changeAccountPassword,sendReset,logout}){
+function SettingsPage({user,company,executors,busy,updateCompanyName,changeAccountPassword,manageExecutor,sendReset,logout}){
   const legacy=company?.authType==='pin';
+  const[managersOpen,setManagersOpen]=useState(false);
+  const[executorSearch,setExecutorSearch]=useState('');
+  const[editExecutor,setEditExecutor]=useState(null);
+  const[editName,setEditName]=useState('');
+  const[deleteExecutor,setDeleteExecutor]=useState(null);
+  const[deletePassword,setDeletePassword]=useState('');
+  const[actionError,setActionError]=useState('');
+  const visibleExecutors=executors.filter(([name])=>matches(name,executorSearch))
+    .sort(([first],[second])=>first.localeCompare(second,'ru'));
+  const startRename=name=>{
+    setDeleteExecutor(null);setEditExecutor(name);setEditName(name);setActionError('');
+  };
+  const rename=async e=>{
+    e.preventDefault();
+    const next=editName.trim();
+    if(next.length<2){setActionError('Аты кеминде 2 символ болушу керек');return;}
+    if(next===editExecutor){setEditExecutor(null);return;}
+    setActionError('');
+    const result=await manageExecutor('rename',editExecutor,next);
+    if(result.ok)setEditExecutor(null);
+    else setActionError(result.error);
+  };
+  const remove=async e=>{
+    e.preventDefault();
+    if(!deleteExecutor)return;
+    setActionError('');
+    const result=await manageExecutor('delete',deleteExecutor,undefined,deletePassword);
+    if(result.ok){setDeleteExecutor(null);setDeletePassword('');}
+    else setActionError(result.error);
+  };
   return <div className="settingsPage">
     <header className="settingsHeader">
       <div><small>АККАУНТ</small><h1>Настройки</h1><p>Компания жана аккаунт маалыматын ушул жерден башкарасыз.</p></div>
@@ -2125,11 +2199,55 @@ function SettingsPage({user,company,busy,updateCompanyName,changeAccountPassword
         <div className="settingsCardTitle"><FileText/><div><h2>Аккаунт маалыматы</h2><p>Firebase аккаунтуңуздун негизги маалыматы</p></div></div>
         <div className="settingsInfo"><span>Email<strong>{user?.email||'—'}</strong></span><span>Кирүү түрү<strong>{legacy?'8 цифралык PIN':'Кадимки пароль'}</strong></span><span>UID<strong>{user?.uid||'—'}</strong></span></div>
       </section>
+      <section className="settingsCard settingsManagersCard">
+        <button type="button" className="settingsManagersToggle" aria-expanded={managersOpen} onClick={()=>{setManagersOpen(open=>!open);setEditExecutor(null);setActionError('');}}>
+          <span className="settingsManagersIcon"><Users size={21}/></span>
+          <span className="settingsManagersText"><b>Управление пользователями / Аткаруучулар</b><small>Аткаруучунун атын өзгөртүү же анын бардык тендерлерин жана файлдарын өчүрүү</small></span>
+          <span className="settingsManagersCount">{executors.length}</span>
+          {managersOpen?<ChevronDown size={18}/>:<ChevronRight size={18}/>}
+        </button>
+        {managersOpen&&<div className="settingsManagersPanel">
+          <label className="settingsManagerSearch"><Search size={16}/><input aria-label="Аткаруучуну издөө" placeholder="Аткаруучуну издөө..." value={executorSearch} onChange={e=>setExecutorSearch(e.target.value)}/></label>
+          {actionError&&<p role="alert" className="settingsManagerError">{actionError}</p>}
+          {!visibleExecutors.length&&<p className="settingsManagerEmpty">Аткаруучу табылган жок</p>}
+          <div className="settingsManagersList">{visibleExecutors.map(([name,items])=><div className="settingsManagerRow" key={name}>
+            {editExecutor===name ? <form className="settingsManagerEdit" onSubmit={rename}>
+              <label>Жаңы аты<input autoFocus value={editName} maxLength={80} onChange={e=>setEditName(e.target.value)} disabled={busy} required/></label>
+              <button type="submit" className="settingsManagerSave" disabled={busy}><Save size={15}/>Сактоо</button>
+              <button type="button" className="settingsManagerCancel" disabled={busy} onClick={()=>{setEditExecutor(null);setActionError('');}}>Жок</button>
+            </form> : <>
+              <span className="settingsManagerAvatar"><User size={17}/></span>
+              <span className="settingsManagerIdentity"><b>{name}</b><small>{items.length} лот · {new Set(items.map(t=>String(t.id||tenderKey(t)))).size} тендер</small></span>
+              <button type="button" className="settingsManagerRename" disabled={busy} onClick={()=>startRename(name)}><Pencil size={15}/><span>Изменить</span></button>
+              <button type="button" className="settingsManagerDelete" disabled={busy} onClick={()=>{setEditExecutor(null);setActionError('');setDeletePassword('');setDeleteExecutor(name);}}><Trash2 size={15}/><span>Удалить</span></button>
+            </>}
+          </div>)}</div>
+          <div className="settingsManagersFootnote"><ShieldCheck size={16}/> Өчүрүүгө учурда кирип турган аккаунттун паролу жана администратор укугу талап кылынат.</div>
+        </div>}
+      </section>
       <section className="settingsCard dangerSettings">
         <div className="settingsCardTitle"><X/><div><h2>Сеанс</h2><p>Бул түзмөктөгү аккаунттан чыгуу</p></div></div>
         <button type="button" className="settingsLogout" onClick={logout}>Аккаунттан чыгуу</button>
       </section>
     </div>
+    {deleteExecutor&&<div className="settingsDeleteShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy){setDeleteExecutor(null);setDeletePassword('');setActionError('');}}}>
+      <div className="settingsDeleteDialog" role="dialog" aria-modal="true" aria-labelledby="settingsDeleteTitle">
+        <span className="settingsDeleteIcon"><Trash2 size={23}/></span>
+        <small>ӨЧҮРҮҮНҮ ЫРАСТОО</small>
+        <h2 id="settingsDeleteTitle">«{deleteExecutor}» аткаруучусун өчүрөсүзбү?</h2>
+        <p>Бул аткаруучунун <strong>{executors.find(([name])=>name===deleteExecutor)?.[1].length||0} лоту</strong>, Firebase'деги маалыматтары жана Cloudinary'деги бардык файлдары биротоло өчүрүлөт. Артка кайтаруу мүмкүн эмес.</p>
+        <form onSubmit={remove}>
+          <label>Өчүрүү үчүн өз аккаунтуңуздун азыркы паролун жазыңыз
+            <input autoFocus type="password" autoComplete="current-password" value={deletePassword} onChange={e=>setDeletePassword(e.target.value)} disabled={busy} required placeholder="Введите пароль своей учётной записи"/>
+          </label>
+          {actionError&&<div className="settingsManagerError" role="alert">{actionError}</div>}
+          <div className="settingsDeleteActions">
+            <button type="button" disabled={busy} onClick={()=>{setDeleteExecutor(null);setDeletePassword('');setActionError('');}}>Отмена</button>
+            <button type="submit" disabled={busy||!deletePassword}><Trash2 size={16}/>{busy?'Өчүрүлүүдө...':'Удалить навсегда'}</button>
+          </div>
+        </form>
+      </div>
+    </div>}
   </div>;
 }
 
@@ -2413,17 +2531,17 @@ function Documents({t,update,close,readOnly=false}){
         headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
         body:JSON.stringify({tenderId:tenderKey(t),docName:deleteTarget.key})
       });
-      const result=await response.json().catch(()=>({}));
-      // Кээ бир Vercel долбоорлорунда /api/delete-file жок: андайда жок дегенде
-      // Firestore тизмесинен алып салабыз, бирок Cloudinary файлы калышы мүмкүн.
-      const metadataOnly=!response.ok&&[404,405].includes(response.status);
-      if(!response.ok&&!metadataOnly)throw new Error(result.error||`Өчүрүү катасы (${response.status})`);
-      await updateDoc(doc(db,'tenders',tenderKey(t)),new FieldPath('docs',deleteTarget.key),deleteField());
+      if(!response.headers.get('content-type')?.includes('application/json'))
+        throw new Error('Файл өчүрүү API табылган жок. Vercel сервердик функциясын жана настройкасын текшериңиз.');
+      const result=await response.json().catch(()=>{throw new Error('Сервер туура JSON жооп берген жок');});
+      if(!response.ok)throw new Error(result.error||`Өчүрүү катасы (${response.status})`);
+      if(result.ok!==true)throw new Error('Сервер Cloudinary жана Firebase өчүрүүнү ырастаган жок');
+      // /api/delete-file Cloudinary менен Firestore'дон өзү өчүрөт.
+      // Экинчи updateDoc'тун кереги жок: ал жарым-жартылай ката жаратышы мүмкүн.
       const next={...drafts};delete next[deleteTarget.key];
       setDrafts(next);
       if(preview?.key===deleteTarget.key)setPreview(null);
       setDeleteTarget(null);
-      if(metadataOnly)setError("Файл тизмеден алынды. Cloudinary'дан толук өчүрүү үчүн сервердин /api/delete-file функциясы керек.");
     }catch(err){setError('Өчүрүү ишке ашкан жок: '+err.message)}
     finally{setBusy(false)}
   };
