@@ -3691,3 +3691,7 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
   width: 0 !important;
   height: 0 !important;
 }
+
+/* Editable calendar year, independent on both sides */
+.tenderDesign .tenderCalendarYear .tenderCalendarYearInput{width:78px;min-width:0;height:34px;padding:3px 6px;text-align:center;font-size:17px;font-weight:850;color:#162c44;background:#fff;border:1px solid #dfe8ef;border-radius:8px;font-variant-numeric:tabular-nums;}
+.tenderDesign .tenderCalendarYear .tenderCalendarYearInput:focus{border-color:#009b70;box-shadow:0 0 0 2px #009b701a!important;}

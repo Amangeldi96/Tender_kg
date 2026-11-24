@@ -186,6 +186,8 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
     }
     setOpen(previous=>!previous);
   };
+  const validCalendarYear=year=>/^\d{4}$/.test(String(year))&&Number(year)>=1900&&Number(year)<=9999;
+  const normalizeCalendarYear=year=>validCalendarYear(year)?Number(year):defaultYear;
   const makeMonth=(year,index)=>`${year}-${String(index+1).padStart(2,'0')}`;
   const selectFrom=month=>{
     setDraftFrom(month);
@@ -208,9 +210,9 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
     return <div className="tenderCalendarSection" key={mode}>
       <div className="tenderCalendarSectionLabel">{mode==='from'?'КАЙСЫ АЙДАН':'КАЙСЫ АЙГА ЧЕЙИН'}</div>
       <div className="tenderCalendarYear">
-        <button type="button" aria-label={`${mode==='from'?'Башталган':'Аяктаган'} жылды артка жылдыруу`} onClick={()=>setYear(y=>y-1)}><ChevronLeft size={17}/></button>
-        <strong>{year}</strong>
-        <button type="button" aria-label={`${mode==='from'?'Башталган':'Аяктаган'} жылды алдыга жылдыруу`} onClick={()=>setYear(y=>y+1)}><ChevronRight size={17}/></button>
+        <button type="button" aria-label={`${mode==='from'?'Башталган':'Аяктаган'} жылды артка жылдыруу`} onClick={()=>setYear(y=>Math.max(1900,normalizeCalendarYear(y)-1))}><ChevronLeft size={17}/></button>
+        <input className="tenderCalendarYearInput" type="text" inputMode="numeric" maxLength={4} aria-label={mode==='from'?'Башталган жыл':'Аяктаган жыл'} value={year} onChange={e=>setYear(e.target.value.replace(/\D/g,'').slice(0,4))} onBlur={()=>setYear(y=>normalizeCalendarYear(y))} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.blur()}}}/>
+        <button type="button" aria-label={`${mode==='from'?'Башталган':'Аяктаган'} жылды алдыга жылдыруу`} onClick={()=>setYear(y=>Math.min(9999,normalizeCalendarYear(y)+1))}><ChevronRight size={17}/></button>
       </div>
       <div className="tenderCalendarMonths">
         {CALENDAR_MONTHS.map((label,index)=>{
@@ -218,7 +220,7 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
           const isSelected=selected===month;
           return <button type="button" key={month} aria-label={`${label} ${year}`} aria-pressed={isSelected}
             className={'tenderCalendarMonth'+(isSelected?' chosen':'')}
-            onClick={()=>onSelect(month)}>{label}</button>;
+            disabled={!validCalendarYear(year)} onClick={()=>onSelect(month)}>{label}</button>;
         })}
       </div>
     </div>;
