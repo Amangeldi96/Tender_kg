@@ -217,9 +217,9 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
       <div className="tenderCalendarMonths">
         {CALENDAR_MONTHS.map((label,index)=>{
           const month=makeMonth(year,index);
-          const isStart=month===draftFrom;
-          const isEnd=month===draftTo;
-          const inRange=!!draftFrom&&!!draftTo&&month>=draftFrom&&month<=draftTo;
+          const isStart=mode==='from'&&month===draftFrom;
+          const isEnd=mode==='to'&&month===draftTo;
+          const inRange=false;
           return <button type="button" key={month} aria-label={`${label} ${year}`} aria-pressed={month===selected}
             className={'tenderCalendarMonth'+(inRange?' inRange':'')+(isStart?' rangeStart':'')+(isEnd?' rangeEnd':'')+(month===selected?' chosen':'')}
             onClick={()=>onSelect(month)}>{label}</button>;
