@@ -189,11 +189,9 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
   const makeMonth=(year,index)=>`${year}-${String(index+1).padStart(2,'0')}`;
   const selectFrom=month=>{
     setDraftFrom(month);
-    if(draftTo&&draftTo<month)setDraftTo('');
   };
   const selectTo=month=>{
     setDraftTo(month);
-    if(draftFrom&&draftFrom>month)setDraftFrom('');
   };
   const apply=()=>{
     if(!draftFrom||!draftTo||draftTo<draftFrom)return;
@@ -217,11 +215,9 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
       <div className="tenderCalendarMonths">
         {CALENDAR_MONTHS.map((label,index)=>{
           const month=makeMonth(year,index);
-          const isStart=mode==='from'&&month===draftFrom;
-          const isEnd=mode==='to'&&month===draftTo;
-          const inRange=false;
-          return <button type="button" key={month} aria-label={`${label} ${year}`} aria-pressed={month===selected}
-            className={'tenderCalendarMonth'+(inRange?' inRange':'')+(isStart?' rangeStart':'')+(isEnd?' rangeEnd':'')+(month===selected?' chosen':'')}
+          const isSelected=selected===month;
+          return <button type="button" key={month} aria-label={`${label} ${year}`} aria-pressed={isSelected}
+            className={'tenderCalendarMonth'+(isSelected?' chosen':'')}
             onClick={()=>onSelect(month)}>{label}</button>;
         })}
       </div>
@@ -241,7 +237,7 @@ function TenderMonthRangePicker({value,onChange,defaultYear}){
         {renderMonthGrid('from',fromYear,setFromYear,draftFrom,selectFrom)}
         {renderMonthGrid('to',toYear,setToYear,draftTo,selectTo)}
       </div>
-      <div className="tenderCalendarSummary"><CalendarDays size={15}/>{draftFrom&&draftTo?`${formatCalendarMonth(draftFrom)} — ${formatCalendarMonth(draftTo)}`:'Керектүү эки айды тең тандаңыз'}</div>
+      <div className="tenderCalendarSummary"><CalendarDays size={15}/>{draftFrom&&draftTo?(draftTo<draftFrom?'Аяктаган ай башталган айдан эрте болбошу керек':`${formatCalendarMonth(draftFrom)} — ${formatCalendarMonth(draftTo)}`):'Керектүү эки айды тең тандаңыз'}</div>
       <div className="tenderCalendarActions"><button type="button" className="tenderCalendarClear" onClick={clear}>Тазалоо</button><button type="button" className="tenderCalendarApply" disabled={!draftFrom||!draftTo||draftTo<draftFrom} onClick={apply}><CheckCircle2 size={16}/> Колдонуу</button></div>
     </div>}
   </div>;
