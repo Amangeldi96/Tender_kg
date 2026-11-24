@@ -827,6 +827,24 @@ export default function App(){
     });
   },[groupedLots,activeLotByTender,q,guaranteeFilter]);
   const displayFiltered=useMemo(()=>displayGroups.map(x=>x.t),[displayGroups]);
+  const tenderTableRef=useRef(null);
+  useEffect(()=>{
+    const table=tenderTableRef.current;
+    if(!table)return;
+    const measure=()=>{
+      const rows=Array.from(table.children).filter(el=>el.classList.contains('row'));
+      if(!table.clientWidth||rows.length<12){table.style.removeProperty('--tender-table-limit');return;}
+      const height=rows.slice(0,11).reduce((sum,row)=>sum+row.getBoundingClientRect().height,0);
+      const horizontalBar=table.offsetHeight-table.clientHeight;
+      table.style.setProperty('--tender-table-limit',`${Math.ceil(height+horizontalBar)}px`);
+    };
+    const observer=new ResizeObserver(measure);
+    observer.observe(table);
+    Array.from(table.children).slice(0,11).forEach(row=>observer.observe(row));
+    measure();
+    return()=>observer.disconnect();
+  },[displayGroups,page,authReady,user]);
+
   const selectLot=(groupKey,recordId)=>{
     setActiveLotByTender(prev=>({...prev,[groupKey]:recordId}));
     setOpenLotTender(null);
@@ -1521,7 +1539,7 @@ const tableGridStyle = {
 
               {/* ТАБЛИЦА */}
             {/* ТАБЛИЦА БӨЛҮГҮ */}
-<div className="bigTable">
+<div className="bigTable" ref={tenderTableRef}>
   {/* ШАПКАСЫ */}
   <div className="row head" style={tableGridStyle}>
     <span style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
