@@ -2902,7 +2902,6 @@ function Documents({t,update,close,readOnly=false}){
         </div>;
       })}
     </div>
-    {!readOnly&&<button type="button" className="tfxSideAdd" onClick={()=>{setSideOpen(false);openUpload();}}><Plus size={17}/> Файл кошуу</button>}
   </aside>;
 
   return <div className="tfxShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}>
@@ -2936,8 +2935,7 @@ function Documents({t,update,close,readOnly=false}){
             {!visibleFiles.length?<div className="tfxEmpty">
               <span className="tfxEmptyIcon"><FolderOpen size={34}/></span>
               <b>{search?'Эч нерсе табылган жок':'Азырынча файл жок'}</b>
-              <span>{readOnly?'Бул тендерге файл тиркеле элек.':'Төмөнкү «+» баскычы менен биринчи файлды кошуңуз.'}</span>
-              {!readOnly&&<button type="button" className="tfxEmptyAdd" onClick={openUpload}><Plus size={17}/> Файл кошуу</button>}
+              <span>{readOnly?'Бул тендерге файл тиркеле элек.':'«Файл кошуу» же «+» баскычы менен биринчи файлды кошуңуз.'}</span>
             </div>:<div className="tfxGrid">
               {visibleFiles.map(item=><div className="tfxCard" key={item.key}>
                 <button type="button" className="tfxCardOpen" onClick={()=>openPreview(item)} title={item.file.name}>
@@ -2969,7 +2967,7 @@ function Documents({t,update,close,readOnly=false}){
         </section>
       </div>
 
-      {!readOnly&&!preview&&!uploadOpen&&!deleteTarget&&<button type="button" className="tfxFab" aria-label="Файл кошуу" onClick={openUpload}><Plus size={26}/></button>}
+      {!readOnly&&!preview&&!uploadOpen&&!deleteTarget&&!sideOpen&&<button type="button" className="tfxFab" aria-label="Файл кошуу" onClick={openUpload}><Plus size={26}/></button>}
 
       {uploadOpen&&!readOnly&&<div className="tfxSheetShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setUploadOpen(false)}}>
         <form className="tfxSheet" onSubmit={saveFiles} role="dialog" aria-modal="true" aria-labelledby="tfxUploadTitle">

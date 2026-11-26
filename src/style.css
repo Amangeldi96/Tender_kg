@@ -4180,4 +4180,5 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
   .tfxShade,.tfx,.tfxSheet,.tfxConfirm,.tfxSide,.tfxSheetShade,.tfxSideBackdrop{animation:none!important;transition:none!important}
 }
 
-@media(min-width:901px){.tfxSideAdd{display:none}}
+/* ПКда «+» баскычы жок: шапкадагы «Файл кошуу» жетиштүү */
+@media(min-width:901px){.tfxFab{display:none!important}}
