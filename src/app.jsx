@@ -1383,7 +1383,15 @@ const tableGridStyle = {
                   <p>Тендерлер, аткаруучулар жана документтер бир системада.</p>
                 </div>
               </div>
-              <label className="dashboardTopSearch"><Search size={21}/><input aria-label="Тендерлерди издөө" value={q} onChange={e=>setQ(e.target.value)} placeholder="Тендер номер же аталышы боюнча издөө..."/>{q&&<button type="button" aria-label="Издөөнү тазалоо" onClick={()=>setQ('')}><X size={16}/></button>}</label>
+              <div className={'tfSearchWrap'+(q?' hasQuery':'')}>
+                <label className="dashboardTopSearch"><Search size={21}/><input aria-label="Тендерлерди издөө" value={q} enterKeyHint="search" autoComplete="off" onChange={e=>setQ(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.blur();document.querySelector('.tablePanel')?.scrollIntoView({behavior:'smooth',block:'start'});}if(e.key==='Escape')setQ('');}}
+                  placeholder="Номер, мекеме, лот же компания…"/>{q&&<button type="button" aria-label="Издөөнү тазалоо" onClick={()=>setQ('')}><X size={16}/></button>}</label>
+                {q.trim()&&<div className="tfSearchHint" role="status">
+                  <span><b>{displayGroups.length}</b> тендер табылды</span>
+                  {displayGroups.length>0&&<button type="button" onClick={()=>document.querySelector('.tablePanel')?.scrollIntoView({behavior:'smooth',block:'start'})}>Көрсөтүү <ChevronDown size={14}/></button>}
+                </div>}
+              </div>
               <MountainIllustration variant="header"/>
             </header>
 

@@ -4182,3 +4182,38 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 
 /* ПКда «+» баскычы жок: шапкадагы «Файл кошуу» жетиштүү */
 @media(min-width:901px){.tfxFab{display:none!important}}
+
+/* Башкы издөө: ПКда мурдагыдай, телефондо — чоң, толук туурасы, жыйынтык саны менен. */
+.tenderDesign .tfSearchWrap{position:relative;z-index:2;flex:0 1 420px;min-width:240px;display:flex;flex-direction:column;gap:8px}
+.tenderDesign .tfSearchWrap .dashboardTopSearch{flex:none;width:100%;min-width:0;transition:border-color .15s,box-shadow .15s}
+.tenderDesign .tfSearchWrap .dashboardTopSearch:focus-within{border-color:#18a874;box-shadow:0 0 0 3px rgba(24,168,116,.14),0 4px 15px rgba(40,73,125,.08)}
+.tenderDesign .tfSearchWrap .dashboardTopSearch>svg{flex:none;color:#0a8a5c}
+.tenderDesign .tfSearchHint{display:none}
+@media(max-width:900px){
+  .tenderDesign .tfSearchWrap{flex:1 1 100%!important;width:100%!important;max-width:none!important;min-width:0!important;align-self:stretch}
+  .tenderDesign .tfSearchWrap .dashboardTopSearch{
+    height:50px!important;max-width:none!important;margin:0!important;
+    padding:0 8px 0 14px!important;gap:10px;border-radius:14px!important;
+    border:1.5px solid #d6e2ee!important;background:#fff!important;
+    box-shadow:0 6px 18px rgba(20,50,90,.08)!important;
+  }
+  .tenderDesign .tfSearchWrap .dashboardTopSearch:focus-within{border-color:#0fa06d!important;box-shadow:0 0 0 4px rgba(15,160,109,.14),0 6px 18px rgba(20,50,90,.08)!important}
+  .tenderDesign .tfSearchWrap .dashboardTopSearch>svg{width:20px;height:20px}
+  .tenderDesign .tfSearchWrap .dashboardTopSearch input{font-size:16px!important;font-weight:600;color:#14283f!important}
+  .tenderDesign .tfSearchWrap .dashboardTopSearch input::placeholder{color:#8a9cb0;font-weight:500}
+  .tenderDesign .tfSearchWrap .dashboardTopSearch button{
+    display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:0!important;
+    border-radius:10px!important;background:#eef3f7!important;color:#4d6378!important;
+  }
+  .tenderDesign .tfSearchHint{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 8px 8px 12px;border-radius:12px;background:#e9f6f0;border:1px solid #c9e9d9;
+    color:#28564a;font-size:13px;animation:tfmFade .18s ease;
+  }
+  .tenderDesign .tfSearchHint b{color:#07704b;font-size:14px}
+  .tenderDesign .tfSearchHint button{
+    display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:0 12px;
+    border:0;border-radius:9px;background:#0a9a68;color:#fff;font-size:12px;font-weight:800;
+  }
+  .tenderDesign .tablePanel{scroll-margin-top:72px}
+}
