@@ -3695,3 +3695,489 @@ button.primary{min-height:42px;padding:10px 16px;font-size:12px;font-weight:760}
 /* Editable calendar year, independent on both sides */
 .tenderDesign .tenderCalendarYear .tenderCalendarYearInput{width:78px;min-width:0;height:34px;padding:3px 6px;text-align:center;font-size:17px;font-weight:850;color:#162c44;background:#fff;border:1px solid #dfe8ef;border-radius:8px;font-variant-numeric:tabular-nums;}
 .tenderDesign .tenderCalendarYear .tenderCalendarYearInput:focus{border-color:#009b70;box-shadow:0 0 0 2px #009b701a!important;}
+
+/* ==========================================================================
+   MOBILE 2.0 — акыркы, негизги мобилдик катмар (меню, аткаруучулар, карточкалар).
+   Мурунку катмарлардын үстүнөн жазылат; ПК версиясына тийбейт.
+   ========================================================================== */
+
+/* Барак капталга «сүзүп» кетпеши үчүн (iOS/Android) */
+.tenderDesign.shell,.tenderDesign.shell>main{overflow-x:clip}
+.tenderDesign .tenderTopbar{overflow:hidden}
+.mobileTopbarText{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.mobileTopbarText small{display:none}
+.executorSectionCount{display:inline-grid;place-items:center;min-width:20px;height:18px;margin-left:6px;padding:0 6px;border-radius:9px;background:rgba(255,255,255,.12);font-size:10px;letter-spacing:0;vertical-align:1px}
+
+@media(max-width:900px),(hover:none) and (pointer:coarse){
+  /* ---------- Үстүңкү тилке ---------- */
+  .tenderDesign .mobileTopbar{padding:0 12px 0 14px!important;gap:10px}
+  .tenderDesign .mobileTopbarBrand{min-width:0;flex:1}
+  .tenderDesign .mobileTopbarLogo{flex:0 0 36px;background:transparent!important}
+  .tenderDesign .mobileTopbarLogo svg{width:30px;height:35px}
+  .tenderDesign .mobileTopbarText strong{font-size:16px!important}
+  .tenderDesign .mobileTopbarText small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700;color:#0a7a55;margin-top:2px}
+
+  /* ---------- Меню (drawer): бүтүндөй бир скролл ---------- */
+  .tenderDesign.shell>aside,.tenderDesign.shell>aside.mobileNavOpen{
+    width:min(340px,88vw)!important;
+    padding:14px 12px calc(16px + env(safe-area-inset-bottom))!important;
+    overflow-y:auto!important;overflow-x:hidden!important;
+    overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+    display:block!important;
+  }
+  .tenderDesign.shell>aside .brand,
+  .tenderDesign.shell>aside .mobileSidebarClose,
+  .tenderDesign.shell>aside .tenderMountain{display:none!important}
+
+  .tenderDesign.shell>aside nav,
+  .tenderDesign.shell>aside.mobileNavOpen nav{
+    display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;
+    flex:none!important;overflow:visible!important;margin:0!important;min-height:0!important;
+  }
+  .tenderDesign.shell>aside nav>a{
+    order:1!important;margin:0!important;min-height:52px!important;
+    display:flex!important;align-items:center!important;gap:9px!important;
+    padding:10px 11px!important;border-radius:12px!important;
+    background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.08)!important;
+    font-size:13px!important;font-weight:750!important;line-height:1.2!important;
+    color:#dbe8f3!important;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .tenderDesign.shell>aside nav>a svg{width:19px!important;height:19px!important;flex:0 0 19px}
+  .tenderDesign.shell>aside nav>a.on{background:linear-gradient(120deg,#07955f,#0bab74)!important;border-color:transparent!important;color:#fff!important;box-shadow:0 6px 16px rgba(4,120,80,.3)!important}
+  .tenderDesign.shell>aside nav>a.failedNavActive{background:linear-gradient(120deg,#c43a3a,#e05252)!important;box-shadow:0 6px 16px rgba(190,50,50,.3)!important}
+  .tenderDesign.shell>aside nav>a .failedNavCount{margin-left:auto}
+  .tenderDesign.shell>aside nav>a[href]{grid-column:1/-1!important;min-height:46px!important;order:3!important}
+
+  /* Аткаруучулар: толук тизме, ички кичине скролл жок */
+  .tenderDesign.shell>aside .navAccordionSection{
+    order:5!important;grid-column:1/-1!important;margin:10px 0 0!important;padding:14px 0 0!important;
+    border-top:1px solid rgba(255,255,255,.1);
+    max-height:none!important;overflow:visible!important;display:block!important;flex:none!important;
+  }
+  .tenderDesign.shell>aside .executorSectionTitle{display:flex;align-items:center;padding:0 4px;margin-bottom:10px!important;font-size:11px!important;color:#9fb6c9!important;letter-spacing:1px!important}
+  .tenderDesign.shell>aside .executorSearch{min-height:44px;margin-bottom:8px!important}
+  .tenderDesign.shell>aside .executorSearch input{font-size:16px!important}
+  .tenderDesign.shell>aside .executorScrollable{max-height:none!important;overflow:visible!important;padding:0!important;flex:none!important}
+  .tenderDesign.shell>aside .executorScrollable>div{margin-bottom:3px!important}
+  .tenderDesign.shell>aside .executorScrollable button{
+    min-height:48px!important;padding:10px 12px!important;font-size:14px!important;border-radius:11px!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tenderDesign.shell>aside .executorScrollable button svg{width:16px;height:16px}
+  .tenderDesign.shell>aside .executorNavCount{min-width:28px;height:24px;display:inline-grid;place-items:center;font-size:12px!important;flex:none!important}
+
+  .tenderDesign.shell>aside .navbottom{margin-top:16px!important;padding-top:14px!important;border-top:1px solid rgba(255,255,255,.1)}
+  .tenderDesign.shell>aside .sidebarLogoutOnly{min-height:48px}
+  .tenderDesign .mobileNavBackdrop{animation:tfmFade .2s ease}
+  @keyframes tfmFade{from{opacity:0}to{opacity:1}}
+}
+
+@media(max-width:900px){
+  /* ---------- Тендер карточкалары ---------- */
+  .tenderDesign .tfMobileTenderList{display:grid!important;gap:12px!important;padding:12px 0 8px!important}
+  .tfmCard{
+    position:relative;min-width:0;background:#fff;border:1px solid #e1e9f0;border-radius:16px;
+    padding:14px;box-shadow:0 4px 14px rgba(20,45,70,.06);color:#1d2f44;
+    display:grid;gap:10px;
+  }
+  .tfmCard::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:#0a9a68}
+  .tfmCard.isFailed{background:#fffafa;border-color:#f5d6d6}
+  .tfmCard.isFailed::before{background:#d64545}
+  .tfmCard.isChecked{border-color:#0a9a68;box-shadow:0 0 0 2px rgba(10,154,104,.18)}
+
+  .tfmHead{display:flex;align-items:center;gap:8px;min-width:0}
+  .tfmCheck{display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;margin:-4px 0 -4px -4px}
+  .tfmCheck input{width:19px;height:19px;accent-color:#0a9a68;margin:0}
+  .tfmNumber{
+    flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;padding:4px 0!important;
+    background:none!important;border:0!important;box-shadow:none!important;text-align:left;color:#0a6f4d!important;
+  }
+  .tfmNumber small{font-size:10px;font-weight:800;color:#6b7f93;text-transform:uppercase;letter-spacing:.4px;flex:none}
+  .tfmNumber strong{font-size:16px;font-weight:850;min-width:0;overflow-wrap:anywhere;line-height:1.2}
+  .tfmNumber svg{flex:none;color:#7c93a8;align-self:center}
+  .tfmDate{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:11px;font-weight:700;color:#5f7489;background:#f2f6f9;border-radius:8px;padding:5px 7px;white-space:nowrap}
+  .tfmEdit{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;padding:0!important;border-radius:10px!important;background:#eaf5f0!important;border:1px solid #cfe7dc!important;color:#0a7a55!important}
+  .tfmEdit:disabled{opacity:.4}
+  .tfmFailed{display:inline-flex;align-items:center;gap:5px;justify-self:start;font-size:11px;font-weight:800;color:#b83232;background:#fdeaea;border-radius:8px;padding:5px 9px}
+
+  .tfmMeta{display:grid;gap:6px;background:#f6f9fb;border-radius:12px;padding:10px 11px}
+  .tfmMeta>div{display:flex;align-items:flex-start;gap:9px;min-width:0}
+  .tfmMeta>div>svg{flex:none;margin-top:2px;color:#0a8a5d}
+  .tfmMeta span{display:grid;gap:1px;min-width:0}
+  .tfmMeta small,.tfmLot>small,.tfmAmounts small,.tfmGuarantee small{font-size:10px;font-weight:800;color:#7186a0;text-transform:uppercase;letter-spacing:.4px}
+  .tfmMeta strong{font-size:13px;font-weight:700;color:#1f3248;overflow-wrap:anywhere;line-height:1.35}
+
+  .tfmLot{display:grid;gap:4px;min-width:0;padding:0 2px}
+  .tfmLot>strong{font-size:14px;font-weight:700;line-height:1.4;color:#16283c;overflow-wrap:anywhere}
+  .tfmLot .tfLotPicker{width:100%;min-width:0}
+  .tfmLot .tfLotTrigger{width:100%;min-height:42px}
+  .tfmLot .tfLotDropdown{max-width:calc(100vw - 48px)}
+
+  .tfmAmounts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tfmAmounts>div{display:grid;gap:4px;min-width:0;padding:10px 11px;border-radius:12px;background:#f3f6fa;border:1px solid transparent}
+  .tfmAmounts strong{font-size:15px;font-weight:850;color:#13263b;overflow-wrap:anywhere;line-height:1.2}
+  .tfmAmounts small{display:flex;align-items:center;gap:5px}
+  .tfmPaid.ok{background:#e9f7ef;border-color:#c5ead4}.tfmPaid.ok strong{color:#14773f}
+  .tfmPaid.no{background:#fdf0f0;border-color:#f5d3d3}.tfmPaid.no strong{color:#b73a3a}
+  .tfmPaid.off{opacity:.6}
+  .tfmPaid.canEdit{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .tfmPaid.canEdit:active{transform:scale(.98)}
+
+  .tfmGuarantees{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tfmGuarantee{
+    display:grid!important;gap:2px;justify-items:start;text-align:left;min-width:0;min-height:0!important;
+    padding:9px 11px!important;border-radius:12px!important;border:1px solid #e2e8ee!important;
+    background:#f4f6f8!important;color:#5d7083!important;box-shadow:none!important;font:inherit;
+  }
+  .tfmGuarantee span{font-size:13px;font-weight:800}
+  .tfmGuarantee em{font-style:normal;font-size:11px;font-weight:700;opacity:.85}
+  .tfmGuarantee small{color:inherit!important;opacity:.8}
+  .tfmGuarantee.blue{background:#ecf4ff!important;border-color:#c5dcfc!important;color:#0d56c4!important}
+  .tfmGuarantee.green{background:#eaf8ee!important;border-color:#bfe9cc!important;color:#16803b!important}
+  .tfmGuarantee.red{background:#fff1f1!important;border-color:#f5d0d0!important;color:#b23d3d!important}
+  .tfmGuarantee.yellow{background:#fff8e6!important;border-color:#f3e1ad!important;color:#8d6600!important}
+  button.tfmGuarantee:active{transform:scale(.98)}
+
+  .tfmFoot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid #edf1f5}
+  .tfmPrice{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:750;color:#8193a5;background:#f2f4f7;border-radius:9px;padding:7px 10px}
+  .tfmPrice.ok{color:#127a45;background:#e8f7ee}
+  .tfmFiles{
+    display:inline-flex!important;align-items:center;gap:6px;min-height:38px;padding:0 13px!important;
+    border-radius:10px!important;border:0!important;font-size:13px!important;font-weight:800!important;
+    background:linear-gradient(110deg,#07965e,#007f50)!important;color:#fff!important;box-shadow:0 4px 10px rgba(0,120,80,.2)!important;
+  }
+  .tfmFiles b{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:rgba(255,255,255,.22);font-size:11px}
+  .tfmEmpty{display:grid;justify-items:center;gap:6px;padding:34px 16px;text-align:center;color:#6c8096;background:#fff;border:1px dashed #cfdbe5;border-radius:16px}
+  .tfmEmpty strong{color:#1e3248;font-size:15px}
+  .tfmEmpty span{font-size:12px}
+
+  /* Тандалган тендерлер үчүн аракеттер — колго ыңгайлуу */
+  .tenderDesign .tenderBulkActions{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+  .tenderDesign .tenderBulkActions>button{flex:1 1 140px;min-height:42px}
+
+  /* Инпуттар iOS-то зумдабасын */
+  .tenderDesign .tfMobileEditDialog input,.tenderDesign .dashboardTopSearch input{font-size:16px!important}
+}
+
+@media(max-width:380px){
+  .tfmAmounts,.tfmGuarantees{gap:6px}
+  .tfmCard{padding:12px}
+  .tfmDate{padding:5px}
+  .tenderDesign.shell>aside nav>a{font-size:12px!important;padding:9px!important}
+}
+
+@media(prefers-reduced-motion:reduce){.tenderDesign .mobileNavBackdrop{animation:none}}
+
+/* ПК таблицасы: бир номердеги лоттордун тизмеси тар колонкага кысылбай,
+   үстүнө калкып чыгат (мурда тамгалар бирден үзүлүп жазылчу). */
+@media(min-width:901px){
+  .tenderDesign .bigTable .row .lotCell .tfLotPicker > .tfLotDropdown{
+    position:absolute!important;top:calc(100% + 4px)!important;left:0!important;
+    width:360px!important;max-width:min(420px,70vw)!important;max-height:270px!important;
+    overflow-y:auto!important;margin-top:0;z-index:60!important;
+    background:#fff!important;border:1px solid #dbe5ec!important;
+    border-radius:12px!important;box-shadow:0 16px 38px rgba(18,40,64,.2)!important;
+  }
+  .tenderDesign .bigTable .row .lotCell .tfLotOptionName strong{font-size:12px;overflow-wrap:normal;word-break:normal}
+  .tenderDesign .bigTable .row:has(.tfLotPickerOpen){z-index:40!important;position:relative}
+}
+
+/* ==========================================================================
+   ФАЙЛДАР 2.0 — документтер модалы (ПК: чоң терезе, телефон: толук экран,
+   бургер-меню менен папкалар, бурчтагы «+» баскычы).
+   ========================================================================== */
+.tfxShade{
+  position:fixed;inset:0;z-index:6000;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:rgba(8,22,36,.58);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  animation:tfxFade .18s ease;
+}
+@keyframes tfxFade{from{opacity:0}to{opacity:1}}
+@keyframes tfxRise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.tfx{
+  position:relative;display:flex;flex-direction:column;overflow:hidden;
+  width:min(1260px,100%);height:min(880px,calc(100dvh - 48px));
+  background:#f4f7fb;border-radius:22px;color:#1b2d42;
+  box-shadow:0 30px 90px rgba(6,24,44,.38);animation:tfxRise .22s ease;
+  font-family:inherit;
+}
+.tfx *{box-sizing:border-box}
+.tfx button{font-family:inherit;cursor:pointer}
+.tfx button:disabled{cursor:not-allowed;opacity:.55}
+
+/* ---------- Шапка ---------- */
+.tfxHead{
+  position:relative;flex:none;display:flex;align-items:center;gap:14px;
+  padding:18px 22px;color:#fff;overflow:hidden;
+  background:linear-gradient(120deg,#0f263d 0%,#123552 55%,#0c5a4a 120%);
+}
+.tfxHead::after{content:"";position:absolute;right:-60px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(46,204,140,.22),transparent 70%);pointer-events:none}
+.tfxTitle{flex:1;min-width:0;position:relative;z-index:1}
+.tfxTitle small{display:block;font-size:10px;font-weight:800;letter-spacing:1.4px;color:#7fe0b6}
+.tfxTitle h2{margin:3px 0 2px;font-size:22px;font-weight:850;letter-spacing:-.4px;color:#fff}
+.tfxTitle p{margin:0;font-size:12px;color:#b6c9da;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfxHeadStats{display:flex;gap:8px;position:relative;z-index:1}
+.tfxHeadStats span{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:12px;color:#cfe0ec;white-space:nowrap}
+.tfxHeadStats b{color:#fff;font-size:14px}
+.tfxHeadAdd{
+  position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 16px;
+  border:0;border-radius:12px;background:linear-gradient(120deg,#08a36b,#0bbf7f);color:#fff;font-size:13px;font-weight:800;
+  box-shadow:0 8px 20px rgba(8,163,107,.35);transition:transform .15s,box-shadow .15s;
+}
+.tfxHeadAdd:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(8,163,107,.45)}
+.tfxClose{
+  position:relative;z-index:1;display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;padding:0;
+  border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.08);color:#fff;transition:background .15s;
+}
+.tfxClose:hover{background:rgba(255,255,255,.18)}
+.tfxBurger{display:none}
+
+.tfxNotice,.tfxError{flex:none;display:flex;align-items:flex-start;gap:9px;margin:12px 18px 0;padding:11px 14px;border-radius:12px;font-size:12.5px;line-height:1.5}
+.tfxNotice{background:#eef5ff;border:1px solid #d3e3fb;color:#29507f}
+.tfxNotice svg{flex:none;margin-top:2px;color:#2f6fd0}
+.tfxError{background:#fff1f1;border:1px solid #f4cfcf;color:#a73535;align-items:center}
+.tfxError span{flex:1}
+.tfxError button{display:grid;place-items:center;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:transparent;color:inherit}
+
+/* ---------- Корпус ---------- */
+.tfxBody{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:300px minmax(0,1fr)}
+.tfxSide{
+  min-height:0;display:flex;flex-direction:column;gap:10px;padding:16px 14px;
+  background:#fff;border-right:1px solid #e3eaf1;overflow:hidden;
+}
+.tfxSideHead{display:flex;align-items:center;gap:8px;padding:0 4px}
+.tfxSideHead b{font-size:12px;font-weight:850;letter-spacing:1px;text-transform:uppercase;color:#4c6378}
+.tfxSideHead>span{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:#e6f4ee;color:#0b7a53;font-size:11px;font-weight:800}
+.tfxSideClose{display:none}
+.tfxSearch{display:flex;align-items:center;gap:8px;min-height:42px;padding:0 12px;border:1px solid #dfe7ee;border-radius:12px;background:#f7fafc;color:#7b8ea2;transition:border-color .15s,box-shadow .15s}
+.tfxSearch:focus-within{border-color:#18a874;box-shadow:0 0 0 3px rgba(24,168,116,.12);background:#fff}
+.tfxSearch input{flex:1;min-width:0;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;padding:10px 0!important;font-size:13px;color:#1b2d42}
+.tfxSearch button{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:#e9eef3;color:#5b6f83}
+.tfxFolderList{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;align-content:start;gap:4px;margin:0 -4px;padding:0 4px 6px}
+.tfxFolderAll,.tfxFolderBtn{
+  width:100%;display:flex;align-items:center;gap:10px;min-height:46px;padding:7px 10px;
+  border:1px solid transparent;border-radius:12px;background:transparent;color:#21354b;text-align:left;
+  transition:background .14s,border-color .14s;
+}
+.tfxFolderAll:hover,.tfxFolderBtn:hover{background:#f1f6f9}
+.tfxFolderAll.isActive,.tfxFolder.isActive>.tfxFolderBtn{background:#e8f6ef;border-color:#c8ebd9;color:#07704b}
+.tfxFolderIcon{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:9px;background:#fff4dc;color:#c98a07}
+.tfxFolderIcon.all{background:#e7f0fd;color:#2c69c9}
+.tfxFolderName{flex:1;min-width:0;font-size:13px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxFolderAll small,.tfxFolderBtn small{flex:none;min-width:24px;text-align:center;padding:2px 7px;border-radius:9px;background:#eef2f6;color:#5a6f84;font-size:11px;font-weight:800}
+.tfxChevron{flex:none;color:#8aa0b4;transition:transform .18s}
+.tfxFolder.isOpen .tfxChevron{transform:rotate(180deg)}
+.tfxFolderFiles{display:grid;gap:2px;margin:3px 0 6px 26px;padding-left:10px;border-left:2px solid #e5edf3}
+.tfxFolderFile{display:flex;align-items:center;gap:8px;min-height:36px;padding:5px 8px;border:0;border-radius:9px;background:transparent;color:#3a5068;font-size:12px;font-weight:600;text-align:left}
+.tfxFolderFile span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxFolderFile:hover{background:#f1f6f9}
+.tfxFolderFile.isActive{background:#e8f6ef;color:#07704b}
+.tfxSideEmpty{display:grid;justify-items:center;gap:8px;padding:26px 10px;color:#8396a8;font-size:12px;text-align:center}
+.tfxSideAdd{
+  flex:none;display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;
+  border:1px dashed #9fd5bd;border-radius:12px;background:#f1faf6;color:#08754f;font-size:13px;font-weight:800;
+}
+.tfxSideAdd:hover{background:#e4f6ee}
+.tfxSideBackdrop{display:none}
+
+/* ---------- Негизги бөлүк ---------- */
+.tfxMain{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.tfxMainHead{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:20px 24px 12px}
+.tfxMainHead small{font-size:10px;font-weight:850;letter-spacing:1.2px;color:#6b8197}
+.tfxMainHead h3{margin:3px 0 0;font-size:19px;font-weight:850;color:#15283d;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw}
+.tfxChip{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border:1px solid #d9e4ec;border-radius:10px;background:#fff;color:#3d556c;font-size:12px;font-weight:750}
+.tfxGrid{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));align-content:start;gap:12px;
+  padding:4px 24px 96px;
+}
+.tfxCard{
+  position:relative;display:flex;flex-direction:column;min-width:0;
+  background:#fff;border:1px solid #e1e9f0;border-radius:15px;
+  box-shadow:0 2px 8px rgba(20,45,70,.04);transition:transform .16s,box-shadow .16s,border-color .16s;
+}
+.tfxCard:hover{transform:translateY(-2px);border-color:#bfe3d2;box-shadow:0 10px 24px rgba(20,45,70,.1)}
+.tfxCardOpen{display:flex;align-items:center;gap:12px;min-width:0;padding:15px 14px 12px;border:0;background:transparent;text-align:left;color:inherit}
+.tfxCardText{display:grid;gap:3px;min-width:0}
+.tfxCardText strong{font-size:13px;font-weight:750;color:#1a2d42;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35;overflow-wrap:anywhere}
+.tfxCardText small{font-size:11px;color:#7a8ea2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxCardActions{display:flex;justify-content:flex-end;gap:6px;padding:0 10px 10px}
+.tfxCardActions button,.tfxIconBtn{
+  display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid #e0e8ef;border-radius:10px;
+  background:#f7fafc;color:#3b5770;transition:background .14s,color .14s,border-color .14s;
+}
+.tfxCardActions button:hover,.tfxIconBtn:hover{background:#e8f6ef;color:#07704b;border-color:#c5e8d6}
+.tfxCardActions button.danger:hover,.tfxIconBtn.danger:hover{background:#fdeeee;color:#b73535;border-color:#f3cccc}
+
+.tfxBadge{
+  display:grid;place-items:center;flex:0 0 46px;width:46px;height:52px;border-radius:10px;
+  font-size:11px;font-weight:900;letter-spacing:.4px;color:#fff;position:relative;
+  background:#7d8fa3;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12);
+}
+.tfxBadge::after{content:"";position:absolute;top:0;right:0;width:13px;height:13px;border-bottom-left-radius:6px;background:rgba(255,255,255,.35)}
+.tfxBadge.small{flex-basis:30px;width:30px;height:34px;border-radius:7px;font-size:8px}
+.tfxBadge.small::after{width:9px;height:9px}
+.tfxBadge.pdf{background:linear-gradient(160deg,#ef4d4d,#c92f2f)}
+.tfxBadge.doc{background:linear-gradient(160deg,#3d82f0,#2259c4)}
+.tfxBadge.xls{background:linear-gradient(160deg,#1fae67,#0d8248)}
+.tfxBadge.img{background:linear-gradient(160deg,#a259e6,#7a36c2)}
+.tfxBadge.zip{background:linear-gradient(160deg,#f0a43a,#cf7d10)}
+
+.tfxEmpty{flex:1;display:grid;place-content:center;justify-items:center;gap:8px;padding:40px 20px;text-align:center;color:#71859a;font-size:13px}
+.tfxEmpty b{font-size:16px;color:#1c3046}
+.tfxEmptyIcon{display:grid;place-items:center;width:76px;height:76px;margin-bottom:6px;border-radius:22px;background:#e7f4ee;color:#0b8a5c}
+.tfxEmptyAdd{display:inline-flex;align-items:center;gap:7px;margin-top:8px;min-height:42px;padding:0 18px;border:0;border-radius:12px;background:#0a9a68;color:#fff;font-size:13px;font-weight:800}
+
+/* Файлды көрүү */
+.tfxViewer{flex:1;min-height:0;display:flex;flex-direction:column}
+.tfxViewerHead{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fff;border-bottom:1px solid #e3eaf1}
+.tfxViewerHead>div{flex:1;min-width:0;display:grid;gap:2px}
+.tfxViewerHead b{font-size:14px;color:#17293d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxViewerHead small{font-size:11px;color:#7a8ea2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxBack{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;padding:0;border:1px solid #e0e8ef;border-radius:10px;background:#f7fafc;color:#2d4a63}
+.tfxViewerBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;background:#e9eef3}
+.tfxViewerBody>*{flex:1;min-height:0}
+.tfxViewerBody>img{flex:none;max-width:100%;margin:auto;object-fit:contain;padding:16px}
+.tfxViewerBody>iframe{width:100%;border:0;background:#fff}
+
+/* «+» баскычы */
+.tfxFab{
+  position:absolute;right:26px;bottom:26px;z-index:15;display:grid;place-items:center;
+  width:60px;height:60px;padding:0;border:0;border-radius:20px;color:#fff;
+  background:linear-gradient(135deg,#0bbf7f,#078f5e);
+  box-shadow:0 14px 30px rgba(7,143,94,.42),0 0 0 6px rgba(11,191,127,.12);
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.tfxFab:hover{transform:translateY(-2px) rotate(90deg)}
+.tfxFab:active{transform:scale(.94)}
+
+/* Жүктөө терезеси (ПК: борбордо, телефон: ылдыйдан чыгат) */
+.tfxSheetShade{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,22,36,.45);animation:tfxFade .15s ease}
+.tfxSheet,.tfxConfirm{
+  position:relative;width:min(540px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;
+  display:grid;gap:14px;padding:22px;background:#fff;border-radius:20px;
+  box-shadow:0 24px 70px rgba(6,24,44,.35);animation:tfxRise .2s ease;
+}
+.tfxSheetGrip{display:none}
+.tfxSheetHead{display:flex;align-items:center;gap:12px}
+.tfxSheetHead>div{flex:1;min-width:0}
+.tfxSheetHead h3{margin:0;font-size:18px;font-weight:850;color:#15283d}
+.tfxSheetHead small{font-size:12px;color:#7a8ea2}
+.tfxSheetHead .tfxClose{background:#f2f5f8;border-color:#e3e9ef;color:#4f6378}
+.tfxSheetIcon{display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:13px;background:#e6f5ee;color:#0a8a5c}
+.tfxField{position:relative;display:grid;gap:7px}
+.tfxField>label{font-size:12px;font-weight:750;color:#4b6075}
+.tfxInputWrap{display:flex;align-items:center;gap:9px;min-height:48px;padding:0 13px;border:1px solid #d9e3eb;border-radius:12px;background:#fff;color:#c98a07;transition:border-color .15s,box-shadow .15s}
+.tfxInputWrap:focus-within{border-color:#18a874;box-shadow:0 0 0 3px rgba(24,168,116,.12)}
+.tfxInputWrap input{flex:1;min-width:0;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;padding:12px 0!important;font-size:15px;color:#1b2d42}
+.tfxSuggest{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:5;max-height:230px;overflow-y:auto;overscroll-behavior:contain;padding:6px;background:#fff;border:1px solid #dde6ed;border-radius:13px;box-shadow:0 16px 36px rgba(20,45,73,.2)}
+.tfxSuggest button{width:100%;display:flex;align-items:center;gap:9px;min-height:40px;padding:8px 10px;border:0;border-radius:9px;background:transparent;color:#263c56;font-size:13px;font-weight:650;text-align:left}
+.tfxSuggest button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxSuggest button svg{flex:none;color:#c98a07}
+.tfxSuggest button em{font-style:normal;font-size:10px;font-weight:800;color:#0a8a5c;background:#e6f5ee;border-radius:6px;padding:2px 6px}
+.tfxSuggest button:hover,.tfxSuggest button[aria-selected="true"]{background:#eef8f3;color:#07704b}
+.tfxDrop{
+  position:relative;display:grid;justify-items:center;gap:6px;padding:24px 16px;text-align:center;cursor:pointer;
+  border:2px dashed #b9dccb;border-radius:16px;background:#f5fbf8;color:#5f7688;transition:background .15s,border-color .15s;
+}
+.tfxDrop:hover,.tfxDrop.isOver{background:#e9f7f0;border-color:#22a874}
+.tfxDrop b{font-size:15px;color:#0a6f4b}
+.tfxDrop small{font-size:12px;line-height:1.45}
+.tfxDrop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.tfxDropIcon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:#fff;color:#0a8a5c;box-shadow:0 6px 16px rgba(10,138,92,.15)}
+.tfxPicked{display:grid;gap:6px;max-height:210px;overflow-y:auto}
+.tfxPicked>div{display:flex;align-items:center;gap:10px;padding:7px 8px;border:1px solid #e5ecf2;border-radius:11px;background:#fafcfd}
+.tfxPicked span{flex:1;min-width:0;font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxPicked small{flex:none;font-size:11px;color:#7a8ea2}
+.tfxPicked button{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:#eef2f6;color:#5b6f83}
+.tfxSheetError{margin:0;padding:10px 12px;border-radius:10px;background:#fff1f1;color:#a73535;font-size:12.5px}
+.tfxSheetActions{display:flex;justify-content:flex-end;gap:10px}
+.tfxGhost,.tfxPrimary,.tfxDanger{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:0 18px;border-radius:12px;font-size:14px;font-weight:800}
+.tfxGhost{border:1px solid #dfe7ee;background:#f5f8fa;color:#4f6378}
+.tfxPrimary{border:0;background:linear-gradient(120deg,#08a36b,#078f5e);color:#fff;box-shadow:0 8px 18px rgba(8,143,94,.28)}
+.tfxDanger{border:0;background:linear-gradient(120deg,#e24a4a,#c43434);color:#fff;box-shadow:0 8px 18px rgba(196,52,52,.25)}
+.tfxConfirm{width:min(420px,100%);justify-items:center;text-align:center}
+.tfxConfirm h3{margin:0;font-size:19px;color:#15283d}
+.tfxConfirm p{margin:0;max-width:100%;font-size:13px;font-weight:700;color:#2b4157;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfxConfirm small{font-size:12px;color:#7a8ea2}
+.tfxConfirm .tfxSheetActions{width:100%}
+.tfxConfirm .tfxSheetActions>button{flex:1}
+.tfxConfirmIcon{display:grid;place-items:center;width:56px;height:56px;border-radius:17px;background:#fdecec;color:#c43434}
+
+/* ---------- Планшет ---------- */
+@media(max-width:1100px){
+  .tfxHeadStats{display:none}
+  .tfxBody{grid-template-columns:260px minmax(0,1fr)}
+}
+
+/* ---------- Телефон: толук экран + бургер-меню ---------- */
+@media(max-width:900px){
+  .tfxShade{padding:0;background:#f4f7fb;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .tfx{width:100%;height:100dvh;border-radius:0;box-shadow:none;animation:tfxSlide .22s ease}
+  @keyframes tfxSlide{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  .tfxHead{gap:10px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));min-height:64px}
+  .tfxBurger{
+    position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4.5px;
+    flex:0 0 42px;width:42px;height:42px;padding:0;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.1);
+  }
+  .tfxBurger i{display:block;width:19px;height:2.2px;border-radius:3px;background:#fff;transition:transform .2s,opacity .2s}
+  .tfxBurger.isOpen i:nth-child(1){transform:translateY(6.7px) rotate(45deg)}
+  .tfxBurger.isOpen i:nth-child(2){opacity:0}
+  .tfxBurger.isOpen i:nth-child(3){transform:translateY(-6.7px) rotate(-45deg)}
+  .tfxTitle small{font-size:9px;letter-spacing:1px}
+  .tfxTitle h2{font-size:17px;margin:1px 0}
+  .tfxTitle p{font-size:11px}
+  .tfxHeadAdd{display:none}
+  .tfxNotice,.tfxError{margin:10px 12px 0;font-size:12px}
+
+  .tfxBody{display:block}
+  .tfxSide{
+    position:absolute;top:0;left:0;bottom:0;z-index:12;width:min(330px,86vw);
+    padding:14px 12px calc(14px + env(safe-area-inset-bottom));
+    border-right:0;border-radius:0 18px 18px 0;box-shadow:16px 0 40px rgba(6,24,44,.22);
+    transform:translateX(-104%);visibility:hidden;transition:transform .24s ease,visibility .24s;
+  }
+  .tfxSide.isOpen{transform:none;visibility:visible}
+  .tfxSideBackdrop{display:block;position:absolute;inset:0;z-index:11;border:0;border-radius:0;padding:0;background:rgba(8,22,36,.42);animation:tfxFade .18s ease}
+  .tfxSearch input{font-size:16px}
+  .tfxFolderAll,.tfxFolderBtn{min-height:50px}
+  .tfxFolderFile{min-height:42px;font-size:13px}
+
+  .tfxMain{height:100%}
+  .tfxMainHead{padding:14px 14px 10px}
+  .tfxMainHead h3{font-size:17px;max-width:62vw}
+  .tfxGrid{grid-template-columns:1fr;gap:9px;padding:2px 12px calc(110px + env(safe-area-inset-bottom))}
+  .tfxCard{flex-direction:row;align-items:center;border-radius:14px}
+  .tfxCard:hover{transform:none}
+  .tfxCardOpen{flex:1;padding:11px 4px 11px 11px}
+  .tfxCardActions{padding:0 10px 0 0}
+  .tfxCardActions button{width:38px;height:38px}
+  .tfxBadge{flex-basis:40px;width:40px;height:46px;font-size:10px}
+
+  .tfxViewerHead{padding:9px 10px;gap:8px}
+  .tfxViewerHead .tfxBadge{display:none}
+  .tfxIconBtn{width:38px;height:38px}
+
+  .tfxFab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));width:62px;height:62px;border-radius:50%}
+  .tfxFab:hover{transform:none}
+
+  .tfxSheetShade{position:fixed;align-items:flex-end;padding:0}
+  .tfxSheet,.tfxConfirm{
+    width:100%;max-height:92dvh;border-radius:22px 22px 0 0;
+    padding:10px 16px calc(16px + env(safe-area-inset-bottom));animation:tfxSheetUp .24s ease;
+  }
+  @keyframes tfxSheetUp{from{transform:translateY(100%)}to{transform:none}}
+  .tfxSheetGrip{display:block;justify-self:center;width:44px;height:5px;border-radius:5px;background:#d5dee6}
+  .tfxSuggest{position:static;max-height:200px;box-shadow:none;margin-top:2px}
+  .tfxSheetActions{display:grid;grid-template-columns:1fr 1.4fr}
+  .tfxConfirm{padding-top:22px}
+}
+@media(max-width:380px){
+  .tfxTitle p{display:none}
+  .tfxSheetActions{grid-template-columns:1fr}
+  .tfxSheetActions .tfxGhost{order:2}
+}
+@media(prefers-reduced-motion:reduce){
+  .tfxShade,.tfx,.tfxSheet,.tfxConfirm,.tfxSide,.tfxSheetShade,.tfxSideBackdrop{animation:none!important;transition:none!important}
+}
+
+@media(min-width:901px){.tfxSideAdd{display:none}}

@@ -401,12 +401,23 @@ export default function App(){
   },[mobileNavOpen]);
 
   useEffect(()=>{
-    // Every main menu page owns its scroll inside <main>.
-    // Reset it when switching pages and make sure no stale body lock survives.
-    if(!mobileNavOpen) document.body.classList.remove('nav-lock');
+    // Мобилдик меню: Escape жабат, экран кеңейгенде меню өзү жабылат.
+    if(!mobileNavOpen)return;
+    const onKey=e=>{if(e.key==='Escape')setMobileNavOpen(false)};
+    const wide=window.matchMedia('(min-width:901px) and (hover:hover)');
+    const onWide=()=>{if(wide.matches)setMobileNavOpen(false)};
+    document.addEventListener('keydown',onKey);
+    wide.addEventListener?.('change',onWide);
+    return()=>{document.removeEventListener('keydown',onKey);wide.removeEventListener?.('change',onWide);};
+  },[mobileNavOpen]);
+
+  useEffect(()=>{
+    // Бөлүм же аткаруучу алмашканда барак башынан ачылат
+    // (ПКда <main> өзү скролл болот, телефондо — бүт барак).
     const main=document.querySelector('.shell > main');
     if(main) main.scrollTo({top:0,left:0,behavior:'auto'});
-  },[page,mobileNavOpen]);
+    window.scrollTo({top:0,left:0,behavior:'auto'});
+  },[page,selectedExecutor]);
 
   const[user,setUser]=useState(null);
   const[authReady,setAuthReady]=useState(false);
@@ -1179,7 +1190,7 @@ const tableGridStyle = {
       {copyTip&&createPortal(<div className="tfCopyFloatingTip" role="tooltip" style={{left:copyTip.left,top:copyTip.top}}><Copy size={12}/> Скопировать</div>,document.body)}
 
       <div className="mobileTopbar">
-        <div className="mobileTopbarBrand"><span className="mobileTopbarLogo"><TenderLogo className="tenderLogoSvg"/></span><strong>Тендерлер</strong></div>
+        <div className="mobileTopbarBrand"><span className="mobileTopbarLogo"><TenderLogo className="tenderLogoSvg"/></span><span className="mobileTopbarText"><strong>Тендерлер</strong><small>{page==='files'?'Файлдар':page==='settings'?'Настройки':selectedExecutor?(isFailedPage?'Не состоялся · ':'')+selectedExecutor:isFailedPage?'Не состоялся':'Бардык тендерлер'}</small></span></div>
         <button type="button" className={"mobileMenuTrigger tfHamburger "+(mobileNavOpen?"isOpen":"")} aria-label={mobileNavOpen?"Менюну жабуу":"Менюну ачуу"} aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(v=>!v)}><i/><i/><i/></button>
       </div>
       {mobileNavOpen && <button type="button" className="mobileNavBackdrop" aria-label="Менюну жабуу" onClick={()=>setMobileNavOpen(false)}/>}
@@ -1230,8 +1241,8 @@ const tableGridStyle = {
           </a>
 
           <div className="navAccordionSection" style={{marginTop:'8px',paddingLeft:'8px',paddingRight:'8px'}}>
-            <div style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
-              АТКАРУУЧУЛАР
+            <div className="executorSectionTitle" style={{fontSize:'10px',color:'var(--text-muted)',fontWeight:'700',marginBottom:'6px',letterSpacing:'0.5px'}}>
+              АТКАРУУЧУЛАР <span className="executorSectionCount">{Object.keys(sidebarExecutorsGroup).length}</span>
             </div>
             <label className="executorSearch"><Search size={15}/><input aria-label="Аткаруучуларды издөө" placeholder="Аткаруучуну издөө…" value={executorQuery} onChange={e=>setExecutorQuery(e.target.value)}/></label>
             <div className="executorScrollable" aria-label="Аткаруучулардын тизмеси">
@@ -1512,27 +1523,48 @@ const tableGridStyle = {
                     return state==='returned'?'Кайтарылды':state==='waiting'?'Күтүлүүдө':state==='unpaid'?'Төлөнө элек':state==='paid'||(!state&&t[kind+'Paid'])?'Төлөндү':Number(String(val||'').replace(/\s/g,''))>0?'Төлөнө элек':'Жок';
                   };
                   const failed=isNotHeld(t);
-                  return <article className={'tfMobileTenderCard'+(failed?' tfTenderFailed':'')} key={groupKey}>
-                    <div className="tfCardHead">
-                      {canManageTenders&&<input type="checkbox" className="tfCardSelect" aria-label={`Тендер ${t.id} тандоо`} checked={lots.every(item=>selectedIds.includes(tenderKey(item)))} onChange={()=>toggleGroupSelect(lots)}/>}
-                      <button type="button" className="tfCardNumber tfTenderCopy" aria-label={`Скопировать тендер № ${t.id}`} onMouseEnter={showCopyTip} onMouseLeave={()=>setCopyTip(null)} onFocus={showCopyTip} onBlur={()=>setCopyTip(null)} onClick={()=>{setCopyTip(null);copyTenderNumber(t.id)}}><FileText size={15}/> <span>Тендер №: {t.id}</span></button>
-                      <span className="tfCardDate">{t.date||'—'}</span>
-                      {canManageTenders&&<button type="button" className="tfCardEdit" aria-label="Тендерди оңдоо" disabled={failed} onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>}
+                  const checked=lots.every(item=>selectedIds.includes(tenderKey(item)));
+                  const canPay=canManageTenders&&!failed;
+                  const openPayment=()=>{if(canPay){startPayment(t);setMobilePaymentTender(t)}};
+                  const priceAttached=hasPriceTable(t.docs);
+                  const filesCount=Object.keys(t.docs||{}).length;
+                  return <article className={'tfmCard'+(failed?' isFailed':'')+(checked&&canManageTenders?' isChecked':'')} key={groupKey}>
+                    <header className="tfmHead">
+                      {canManageTenders&&<label className="tfmCheck"><input type="checkbox" aria-label={`Тендер ${t.id} тандоо`} checked={checked} onChange={()=>toggleGroupSelect(lots)}/></label>}
+                      <button type="button" className="tfmNumber" aria-label={`Скопировать тендер № ${t.id}`} onClick={()=>copyTenderNumber(t.id)}>
+                        <small>№</small><strong>{t.id}</strong><Copy size={13} aria-hidden="true"/>
+                      </button>
+                      <span className="tfmDate"><CalendarDays size={13} aria-hidden="true"/>{t.date||'—'}</span>
+                      {canManageTenders&&<button type="button" className="tfmEdit" aria-label="Тендерди оңдоо" disabled={failed} onClick={()=>{startEdit(t);setMobileEditOpen(true);}}><Pencil size={16}/></button>}
+                    </header>
+                    {failed&&<span className="tfmFailed"><X size={13}/> Тендер не состоялся</span>}
+                    <div className="tfmMeta">
+                      <div><Building2 size={14} aria-hidden="true"/><span><small>Компания</small><strong>{t.partnerCompany||'—'}</strong></span></div>
+                      <div><Briefcase size={14} aria-hidden="true"/><span><small>Мекеме</small><strong>{t.org||'—'}</strong></span></div>
+                      {!selectedExecutor&&<div><User size={14} aria-hidden="true"/><span><small>Аткаруучу</small><strong>{t.executor||'—'}</strong></span></div>}
                     </div>
-                    {failed&&<span className="tfFailedBadge">Тендер не состоялся</span>}
-                    <div className="tfCardInfo org"><small>КОМПАНИЯ:</small><strong>{t.partnerCompany||'—'}</strong></div>
-                    <div className="tfCardInfo org"><small>МЕКЕМЕ:</small><strong>{t.org}</strong></div>
-                    <div className="tfCardInfo lot"><small>ЛОТ АТАЛЫШЫ:</small>{lots.length>1?<LotAccordion lots={lots} activeLot={t} open={openLotTender===groupKey} onToggle={()=>toggleLotMenu(groupKey)} onSelect={recordId=>selectLot(groupKey,recordId)}/>:<strong>{t.name}</strong>}</div>
-                    <div className="tfCardAmounts"><div><small>Бюджет (жалпы сумма):</small><strong>{money(totalSum)}</strong>{lots.length>1&&<small>{lots.length} лоттун суммасы</small>}</div><div role={canManageTenders&&!failed?'button':undefined} tabIndex={canManageTenders&&!failed?0:undefined} className={failed?'tfFailedInactive':''} onClick={()=>{if(canManageTenders&&!failed){startPayment(t);setMobilePaymentTender(t)}}} onKeyDown={e=>{if(canManageTenders&&!failed&&e.key==='Enter'){startPayment(t);setMobilePaymentTender(t)}}}><small>Төлөнгөн сумма: {canManageTenders&&!failed?'✎':''}</small><strong className={paid>0?'positive':'negative'}>{paid>0?'✓ ':'× '}{money(paid)}</strong>{canManageTenders&&lots.length>1&&<small>Оңдоо: тандалган лот</small>}</div></div>
-                    <div className="tfCardGuarantees">{['gopp','goik'].map(kind=>{
-                      const cls='tfCardGuarantee '+(status(kind)==='Төлөндү'?'blue':status(kind)==='Кайтарылды'?'green':status(kind)==='Күтүлүүдө'?'yellow':status(kind)==='Жок'?'gray':'red');
-                      const label=status(kind)+(t[kind]?' · '+t[kind]+' сом':'');
-                      return <div key={kind}><small>{guaranteeLabel(kind)}:</small>{canManageGuaranteesAndFiles?<button type="button" className={cls} onClick={()=>setPayStatusModal({t,type:kind})}>{label}</button>:<span className={cls+' tfReadonlyPill'}>{label}</span>}</div>;
+                    <div className="tfmLot"><small>Лот аталышы</small>{lots.length>1?<LotAccordion lots={lots} activeLot={t} open={openLotTender===groupKey} onToggle={()=>toggleLotMenu(groupKey)} onSelect={recordId=>selectLot(groupKey,recordId)}/>:<strong>{t.name}</strong>}</div>
+                    <div className="tfmAmounts">
+                      <div><small>Бюджет{lots.length>1?` · ${lots.length} лот`:''}</small><strong>{money(totalSum)}</strong></div>
+                      <div className={'tfmPaid '+(failed?'off':paid>0?'ok':'no')+(canPay?' canEdit':'')} role={canPay?'button':undefined} tabIndex={canPay?0:undefined} onClick={openPayment} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openPayment()}}}>
+                        <small>Төлөнгөн{canPay&&<Pencil size={11} aria-hidden="true"/>}</small><strong>{failed?'—':money(paid)}</strong>
+                      </div>
+                    </div>
+                    <div className="tfmGuarantees">{['gopp','goik'].map(kind=>{
+                      const st=status(kind);
+                      const tone=st==='Төлөндү'?'blue':st==='Кайтарылды'?'green':st==='Күтүлүүдө'?'yellow':st==='Жок'?'gray':'red';
+                      const inner=<><small>{guaranteeLabel(kind)}</small><span>{st}</span>{t[kind]&&<em>{t[kind]} сом</em>}</>;
+                      return canManageGuaranteesAndFiles
+                        ?<button type="button" key={kind} className={'tfmGuarantee '+tone} onClick={()=>setPayStatusModal({t,type:kind})}>{inner}</button>
+                        :<div key={kind} className={'tfmGuarantee '+tone}>{inner}</div>;
                     })}</div>
-                    <div className="tfCardPrice"><span>Таблица цен:</span><b className={hasPriceTable(t.docs)?'attached':'missing'}>{hasPriceTable(t.docs)?'✓ Тиркелген':'Жок'}</b></div>
-                    <button type="button" className="tfCardFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={16}/> Файлдар <span><Paperclip size={13}/> {Object.keys(t.docs||{}).length} файл</span></button>
+                    <footer className="tfmFoot">
+                      <span className={'tfmPrice '+(priceAttached?'ok':'')}>{priceAttached?<CheckCircle2 size={14}/>:<X size={14}/>}Таблица цен</span>
+                      <button type="button" className="tfmFiles" onClick={()=>{setActive(t);setDocsOpen(true)}}><FolderOpen size={15}/> Файлдар <b>{filesCount}</b></button>
+                    </footer>
                   </article>;
                 })}
+                {displayGroups.length===0&&<div className="tfmEmpty"><Search size={22}/><strong>Тендер табылган жок</strong><span>Издөөнү же фильтрлерди өзгөртүп көрүңүз.</span></div>}
               </div>
 
               {/* ТАБЛИЦА */}
@@ -2709,7 +2741,24 @@ function Documents({t,update,close,readOnly=false}){
   const [deleteTarget,setDeleteTarget]=useState(null);
   const [search,setSearch]=useState('');
   const [showSuggestions,setShowSuggestions]=useState(false);
+  const [sideOpen,setSideOpen]=useState(false);
+  const [uploadOpen,setUploadOpen]=useState(false);
+  const [activeFolder,setActiveFolder]=useState(null);
+  const [dragOver,setDragOver]=useState(false);
   const picker=useRef(null);
+  // Escape: эң үстүңкү катмарды гана жабат (өчүрүү → жүктөө → меню → көрүү → модал).
+  useEffect(()=>{
+    const onKey=e=>{
+      if(e.key!=='Escape'||busy)return;
+      if(deleteTarget)setDeleteTarget(null);
+      else if(uploadOpen)setUploadOpen(false);
+      else if(sideOpen)setSideOpen(false);
+      else if(preview)setPreview(null);
+      else close();
+    };
+    document.addEventListener('keydown',onKey);
+    return()=>document.removeEventListener('keydown',onKey);
+  },[busy,deleteTarget,uploadOpen,sideOpen,preview,close]);
   const suggestionsRef=useRef(null);
   const lock=useRef(false);
   useEffect(()=>{
@@ -2763,6 +2812,8 @@ function Documents({t,update,close,readOnly=false}){
         saved++;
       }
       setExpanded(name);
+      setActiveFolder(name);
+      setUploadOpen(false);
       setDocTitle('');setSelectedFiles([]);setShowSuggestions(false);
       if(picker.current)picker.current.value='';
     }catch(err){
@@ -2803,64 +2854,192 @@ function Documents({t,update,close,readOnly=false}){
   const isImage=previewFile?.type?.startsWith('image/')||['jpg','jpeg','png','webp','gif','bmp','svg'].includes(extension);
   const isPdf=extension==='pdf'||previewFile?.type==='application/pdf';
   const office=['doc','docx','xls','xlsx','ppt','pptx'].includes(extension);
-  return <div className="drawerShade docsDrawerShade"><div className="docsModal tfDocsV2" role="dialog" aria-modal="true" aria-label="Документтер">
-    <div className="tfDocsHead">
-      <div><small>ТЕНДЕР № {t.id}</small><h2>Документтер</h2><p>{t.name} · {t.executor||'Аткаруучу көрсөтүлгөн эмес'}</p></div>
-      <button className="tfDocsClose" type="button" onClick={close} disabled={busy} aria-label="Жабуу"><X size={20}/></button>
+
+  const totalFiles=Object.values(drafts).filter(Boolean).length;
+  const folderCount=new Set(Object.entries(drafts).filter(([,f])=>!!f).map(([key,f])=>String(f.docName||key.split('__')[0]||'Документ').trim())).size;
+  const visibleFiles=folders
+    .filter(folder=>!activeFolder||folder.name===activeFolder)
+    .flatMap(folder=>folder.files.map(item=>({...item,folder:folder.name})));
+  const openPreview=item=>{setPreview(item);setSideOpen(false);};
+  const openUpload=()=>{
+    if(readOnly)return;
+    setError('');
+    if(!docTitle&&activeFolder)setDocTitle(activeFolder);
+    setUploadOpen(true);
+  };
+  const pickFiles=list=>{
+    const files=Array.from(list||[]);
+    const tooLarge=files.find(f=>f.size>20*1024*1024);
+    if(tooLarge){setError(`${tooLarge.name}: 20 МБдан чоң файл`);return;}
+    setError('');
+    setSelectedFiles(prev=>[...prev,...files.filter(f=>!prev.some(p=>p.name===f.name&&p.size===f.size&&p.lastModified===f.lastModified))]);
+  };
+  const quickFolders=Array.from(new Set([...folderSuggestions,...DOCS.filter(name=>!docTitle.trim()||name.toLocaleLowerCase().includes(docTitle.trim().toLocaleLowerCase()))])).slice(0,40);
+
+  const sidebar=<aside className={'tfxSide'+(sideOpen?' isOpen':'')} aria-label="Папкалар жана файлдар">
+    <div className="tfxSideHead">
+      <b>Папкалар</b><span>{folders.length}</span>
+      <button type="button" className="tfxSideClose" aria-label="Менюну жабуу" onClick={()=>setSideOpen(false)}><X size={18}/></button>
     </div>
-    {readOnly&&<div className="tfDocsReadonlyNotice"><FolderOpen size={16}/> Бул бөлүмдө документтерди көрүп, жүктөп гана алсаңыз болот.</div>}
-    {!readOnly&&<form className="tfDocsForm" onSubmit={saveFiles}>
-      <div className="tfDocsField tfDocsTitlePicker" ref={suggestionsRef}>
-        <label htmlFor="tfDocsNameInput">Название документа</label>
-        <input id="tfDocsNameInput" autoComplete="off" value={docTitle}
-          onFocus={()=>setShowSuggestions(true)}
-          onChange={e=>{setDocTitle(e.target.value);setShowSuggestions(true)}}
-          onKeyDown={e=>{if(e.key==='Escape')setShowSuggestions(false)}}
-          placeholder="Папканын атын жазыңыз же тандаңыз" disabled={busy} required/>
-        {showSuggestions&&folderSuggestions.length>0&&<div className="tfDocsSuggestions" role="listbox" aria-label="Бар папкалар">
-          {folderSuggestions.map(name=><button type="button" role="option" aria-selected={docTitle===name} key={name}
-            onClick={()=>{setDocTitle(name);setShowSuggestions(false)}}><FolderOpen size={15}/><span>{name}</span></button>)}
-        </div>}
-      </div>
-      <label className="tfDocsFileField"><span>Файлдарды тандоо</span><input ref={picker} type="file" multiple onChange={e=>setSelectedFiles(Array.from(e.target.files||[]))} disabled={busy}/></label>
-      <button type="submit" className="primary tfDocsSave" disabled={busy||!docTitle.trim()||!selectedFiles.length}><Save size={17}/>{busy?'Сакталууда…':'Сохранить'}</button>
-      {selectedFiles.length>0&&<small className="tfDocsSelected">{selectedFiles.length} файл тандалды: {selectedFiles.map(f=>f.name).join(', ')}</small>}
-    </form>}
-    {error&&<p className="authError" role="alert">{error}</p>}
-    <div className="tfDocsBody">
-      <section className="tfDocsFolders">
-        <div className="tfDocsSectionTitle"><b>Документтердин папкалары</b><span>{folders.length}</span></div>
-        <label className="tfDocsSearch"><Search size={16}/><input placeholder="Документ издөө…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
-        <div className="tfDocsFolderScroll">
-          {!folders.length&&<div className="tfDocsEmpty"><FolderOpen size={32}/>Азырынча документ жок</div>}
-          {folders.map(folder=><div className="tfDocsFolder" key={folder.name}>
-            <button type="button" className={'tfDocsFolderButton '+(expanded===folder.name?'opened':'')} onClick={()=>setExpanded(expanded===folder.name?null:folder.name)}>
-              <FolderOpen size={19}/><span>{folder.name}</span><small>{folder.files.length}</small>{expanded===folder.name?<ChevronDown size={17}/>:<ChevronRight size={17}/>}
-            </button>
-            {expanded===folder.name&&<div className="tfDocsFolderFiles">{folder.files.map(({key,file})=><div className={'tfDocsFileRow '+(preview?.key===key?'active':'')} key={key}>
-              <button type="button" className="tfDocsFileOpen" onClick={()=>setPreview({key,file})} title={file.name}><FileText size={16}/><span>{file.name}</span></button>
-              {!readOnly&&<button type="button" className="tfDocsFileDelete" disabled={busy} title="Өчүрүү" onClick={()=>setDeleteTarget({key,file})}><Trash2 size={15}/></button>}
-            </div>)}</div>}
-          </div>)}
+    <label className="tfxSearch"><Search size={16}/><input placeholder="Файл же папка издөө…" value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button type="button" aria-label="Издөөнү тазалоо" onClick={()=>setSearch('')}><X size={14}/></button>}</label>
+    <div className="tfxFolderList">
+      <button type="button" className={'tfxFolderAll'+(!activeFolder?' isActive':'')} onClick={()=>{setActiveFolder(null);setPreview(null);setSideOpen(false);}}>
+        <span className="tfxFolderIcon all"><Paperclip size={16}/></span><span className="tfxFolderName">Бардык файлдар</span><small>{totalFiles}</small>
+      </button>
+      {!folders.length&&<div className="tfxSideEmpty"><FolderOpen size={26}/>{search?'Эч нерсе табылган жок':'Азырынча папка жок'}</div>}
+      {folders.map(folder=>{
+        const isOpen=expanded===folder.name;
+        return <div className={'tfxFolder'+(isOpen?' isOpen':'')+(activeFolder===folder.name?' isActive':'')} key={folder.name}>
+          <button type="button" className="tfxFolderBtn" aria-expanded={isOpen} onClick={()=>{setExpanded(isOpen?null:folder.name);setActiveFolder(folder.name);}}>
+            <span className="tfxFolderIcon"><FolderOpen size={16}/></span>
+            <span className="tfxFolderName" title={folder.name}>{folder.name}</span>
+            <small>{folder.files.length}</small>
+            <ChevronDown size={16} className="tfxChevron"/>
+          </button>
+          {isOpen&&<div className="tfxFolderFiles">{folder.files.map(({key,file})=><button type="button" key={key} className={'tfxFolderFile'+(preview?.key===key?' isActive':'')} onClick={()=>openPreview({key,file,folder:folder.name})} title={file.name}>
+            <FileBadge name={file.name} type={file.type} small/><span>{file.name}</span>
+          </button>)}</div>}
+        </div>;
+      })}
+    </div>
+    {!readOnly&&<button type="button" className="tfxSideAdd" onClick={()=>{setSideOpen(false);openUpload();}}><Plus size={17}/> Файл кошуу</button>}
+  </aside>;
+
+  return <div className="tfxShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}>
+    <div className={'tfx'+(preview?' hasPreview':'')} role="dialog" aria-modal="true" aria-label="Документтер">
+      <header className="tfxHead">
+        <button type="button" className={'tfxBurger'+(sideOpen?' isOpen':'')} aria-label={sideOpen?'Менюну жабуу':'Папкаларды ачуу'} aria-expanded={sideOpen} onClick={()=>setSideOpen(v=>!v)}><i/><i/><i/></button>
+        <div className="tfxTitle">
+          <small>ТЕНДЕР № {t.id}</small>
+          <h2>Документтер</h2>
+          <p title={t.name}>{t.name} · {t.executor||'Аткаруучу көрсөтүлгөн эмес'}</p>
         </div>
-      </section>
-      <section className="tfDocsPreview">
-        <div className="tfDocsPreviewHead"><b>{previewFile?.name||'Документти көрүү'}</b>{preview&&<button type="button" aria-label="Жабуу" onClick={()=>setPreview(null)}><X size={19}/></button>}</div>
-        {!preview?<div className="tfDocsPreviewEmpty"><FileText size={43}/><b>Документти тандаңыз</b><span>Сол жактагы папканы ачып, файлды басыңыз</span></div>:
-          <div className="tfDocsPreviewContent">
-            {isImage?<img src={previewFile.url} alt={previewFile.name}/>:
-             isPdf?<TenderPdfViewer key={previewFile.url} url={previewFile.url} name={previewFile.name}/>:
-             office?<iframe title={previewFile.name} src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFile.url)}`}/>:
-             <div className="tfDocsPreviewEmpty"><FileText size={35}/><b>Бул формат браузерде түз ачылбашы мүмкүн</b><span>Файлды жүктөп алып ачыңыз</span></div>}
+        <div className="tfxHeadStats">
+          <span><FolderOpen size={15}/><b>{folderCount}</b> папка</span>
+          <span><Paperclip size={15}/><b>{totalFiles}</b> файл</span>
+        </div>
+        {!readOnly&&<button type="button" className="tfxHeadAdd" onClick={openUpload}><Plus size={17}/> Файл кошуу</button>}
+        <button className="tfxClose" type="button" onClick={close} disabled={busy} aria-label="Жабуу"><X size={20}/></button>
+      </header>
+      {readOnly&&<div className="tfxNotice"><ShieldCheck size={16}/><span>Бул жерден файлдарды көрүп, жүктөп гана аласыз. Файл кошуу үчүн менюдан ушул тендердин аткаруучусун (<b>{t.executor||'—'}</b>) тандаңыз.</span></div>}
+      {error&&!uploadOpen&&<div className="tfxError" role="alert"><span>{error}</span><button type="button" aria-label="Жабуу" onClick={()=>setError('')}><X size={15}/></button></div>}
+
+      <div className="tfxBody">
+        {sideOpen&&<button type="button" className="tfxSideBackdrop" aria-label="Менюну жабуу" onClick={()=>setSideOpen(false)}/>}
+        {sidebar}
+        <section className="tfxMain">
+          {!preview?<>
+            <div className="tfxMainHead">
+              <div><small>{activeFolder?'ПАПКА':'ДОКУМЕНТТЕР'} · {visibleFiles.length} ФАЙЛ</small><h3 title={activeFolder||''}>{activeFolder||'Бардык файлдар'}</h3></div>
+              {activeFolder&&<button type="button" className="tfxChip" onClick={()=>setActiveFolder(null)}>Баары <X size={13}/></button>}
+            </div>
+            {!visibleFiles.length?<div className="tfxEmpty">
+              <span className="tfxEmptyIcon"><FolderOpen size={34}/></span>
+              <b>{search?'Эч нерсе табылган жок':'Азырынча файл жок'}</b>
+              <span>{readOnly?'Бул тендерге файл тиркеле элек.':'Төмөнкү «+» баскычы менен биринчи файлды кошуңуз.'}</span>
+              {!readOnly&&<button type="button" className="tfxEmptyAdd" onClick={openUpload}><Plus size={17}/> Файл кошуу</button>}
+            </div>:<div className="tfxGrid">
+              {visibleFiles.map(item=><div className="tfxCard" key={item.key}>
+                <button type="button" className="tfxCardOpen" onClick={()=>openPreview(item)} title={item.file.name}>
+                  <FileBadge name={item.file.name} type={item.file.type}/>
+                  <span className="tfxCardText"><strong>{item.file.name}</strong><small>{item.folder}{item.file.size?` · ${fileSize(item.file.size)}`:''}</small></span>
+                </button>
+                <div className="tfxCardActions">
+                  <button type="button" aria-label="Жүктөп алуу" title="Жүктөп алуу" onClick={()=>downloadCloudFile(item.file.url,item.file.name)}><Download size={15}/></button>
+                  {!readOnly&&<button type="button" className="danger" aria-label="Өчүрүү" title="Өчүрүү" disabled={busy} onClick={()=>setDeleteTarget(item)}><Trash2 size={15}/></button>}
+                </div>
+              </div>)}
+            </div>}
+          </>:<div className="tfxViewer">
+            <div className="tfxViewerHead">
+              <button type="button" className="tfxBack" aria-label="Артка" onClick={()=>setPreview(null)}><ChevronLeft size={19}/></button>
+              <FileBadge name={previewFile.name} type={previewFile.type} small/>
+              <div><b title={previewFile.name}>{previewFile.name}</b><small>{preview.folder||''}{previewFile.size?` · ${fileSize(previewFile.size)}`:''}</small></div>
+              <button type="button" className="tfxIconBtn" aria-label="Жүктөп алуу" title="Жүктөп алуу" onClick={()=>downloadCloudFile(previewFile.url,previewFile.name)}><Download size={17}/></button>
+              <button type="button" className="tfxIconBtn" aria-label="Жаңы беттен ачуу" title="Жаңы беттен ачуу" onClick={()=>window.open(previewFile.url,'_blank','noopener,noreferrer')}><ArrowRight size={17}/></button>
+              {!readOnly&&<button type="button" className="tfxIconBtn danger" aria-label="Өчүрүү" title="Өчүрүү" disabled={busy} onClick={()=>setDeleteTarget(preview)}><Trash2 size={17}/></button>}
+            </div>
+            <div className="tfxViewerBody">
+              {isImage?<img src={previewFile.url} alt={previewFile.name}/>:
+               isPdf?<TenderPdfViewer key={previewFile.url} url={previewFile.url} name={previewFile.name}/>:
+               office?<iframe title={previewFile.name} src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFile.url)}`}/>:
+               <div className="tfxEmpty"><span className="tfxEmptyIcon"><FileText size={32}/></span><b>Бул формат браузерде түз ачылбайт</b><span>Файлды жүктөп алып ачыңыз.</span><button type="button" className="tfxEmptyAdd" onClick={()=>downloadCloudFile(previewFile.url,previewFile.name)}><Download size={16}/> Жүктөп алуу</button></div>}
+            </div>
           </div>}
-        {preview&&<div className="tfDocsPreviewActions"><button type="button" className="downloadBtn" onClick={()=>downloadCloudFile(previewFile.url,previewFile.name)}><Download size={16}/> Скачать</button><button type="button" className="filesBtn" onClick={()=>window.open(previewFile.url,'_blank','noopener,noreferrer')}>Жаңы беттен ачуу</button></div>}
-      </section>
+        </section>
+      </div>
+
+      {!readOnly&&!preview&&!uploadOpen&&!deleteTarget&&<button type="button" className="tfxFab" aria-label="Файл кошуу" onClick={openUpload}><Plus size={26}/></button>}
+
+      {uploadOpen&&!readOnly&&<div className="tfxSheetShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setUploadOpen(false)}}>
+        <form className="tfxSheet" onSubmit={saveFiles} role="dialog" aria-modal="true" aria-labelledby="tfxUploadTitle">
+          <span className="tfxSheetGrip" aria-hidden="true"/>
+          <div className="tfxSheetHead">
+            <span className="tfxSheetIcon"><Upload size={20}/></span>
+            <div><h3 id="tfxUploadTitle">Файл кошуу</h3><small>Тендер № {t.id} · {t.executor||'—'}</small></div>
+            <button type="button" className="tfxClose" aria-label="Жабуу" disabled={busy} onClick={()=>setUploadOpen(false)}><X size={18}/></button>
+          </div>
+          <div className="tfxField" ref={suggestionsRef}>
+            <label htmlFor="tfxFolderInput">Папка (документтин аты)</label>
+            <div className="tfxInputWrap"><FolderOpen size={17}/>
+              <input id="tfxFolderInput" autoComplete="off" value={docTitle}
+                onFocus={()=>setShowSuggestions(true)}
+                onChange={e=>{setDocTitle(e.target.value);setShowSuggestions(true)}}
+                onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setShowSuggestions(false)}}}
+                placeholder="Мисалы: Договор" disabled={busy} required/>
+            </div>
+            {showSuggestions&&quickFolders.length>0&&<div className="tfxSuggest" role="listbox" aria-label="Папкалар">
+              {quickFolders.map(name=><button type="button" role="option" aria-selected={docTitle===name} key={name}
+                onClick={()=>{setDocTitle(name);setShowSuggestions(false)}}>
+                <FolderOpen size={14}/><span>{name}</span>{folderSuggestions.includes(name)&&<em>бар</em>}
+              </button>)}
+            </div>}
+          </div>
+          <label className={'tfxDrop'+(dragOver?' isOver':'')}
+            onDragOver={e=>{e.preventDefault();setDragOver(true)}}
+            onDragLeave={()=>setDragOver(false)}
+            onDrop={e=>{e.preventDefault();setDragOver(false);pickFiles(e.dataTransfer.files)}}>
+            <span className="tfxDropIcon"><Upload size={24}/></span>
+            <b>Файлдарды тандоо</b>
+            <small>же бул жерге сүйрөп таштаңыз · PDF, Word, Excel, сүрөт · 20 МБга чейин</small>
+            <input ref={picker} type="file" multiple disabled={busy} onChange={e=>{pickFiles(e.target.files);e.target.value=''}}/>
+          </label>
+          {selectedFiles.length>0&&<div className="tfxPicked">{selectedFiles.map((f,i)=><div key={`${f.name}-${f.lastModified}-${i}`}>
+            <FileBadge name={f.name} type={f.type} small/><span title={f.name}>{f.name}</span><small>{fileSize(f.size)}</small>
+            <button type="button" aria-label="Алып салуу" disabled={busy} onClick={()=>setSelectedFiles(prev=>prev.filter((_,j)=>j!==i))}><X size={14}/></button>
+          </div>)}</div>}
+          {error&&<p className="tfxSheetError" role="alert">{error}</p>}
+          <div className="tfxSheetActions">
+            <button type="button" className="tfxGhost" disabled={busy} onClick={()=>setUploadOpen(false)}>Жокко чыгаруу</button>
+            <button type="submit" className="tfxPrimary" disabled={busy||!docTitle.trim()||!selectedFiles.length}><Save size={17}/>{busy?'Жүктөлүүдө…':`Сактоо${selectedFiles.length?` (${selectedFiles.length})`:''}`}</button>
+          </div>
+        </form>
+      </div>}
+
+      {deleteTarget&&!readOnly&&<div className="tfxSheetShade tfxConfirmShade" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setDeleteTarget(null)}}>
+        <div className="tfxConfirm" role="alertdialog" aria-modal="true" aria-labelledby="tfxDeleteTitle">
+          <span className="tfxConfirmIcon"><Trash2 size={22}/></span>
+          <h3 id="tfxDeleteTitle">Файлды өчүрөсүзбү?</h3>
+          <p title={deleteTarget.file.name}>{deleteTarget.file.name}</p>
+          <small>Файл биротоло өчүрүлөт, кайра калыбына келбейт.</small>
+          <div className="tfxSheetActions">
+            <button type="button" className="tfxGhost" disabled={busy} onClick={()=>setDeleteTarget(null)}>Жок, калтыр</button>
+            <button type="button" className="tfxDanger" disabled={busy} onClick={removeFile}><Trash2 size={16}/>{busy?'Өчүрүлүүдө…':'Ооба, өчүрүү'}</button>
+          </div>
+        </div>
+      </div>}
     </div>
-    {deleteTarget&&!readOnly&&<div className="deleteConfirmShade documentDeleteShade"><div className="deleteConfirmDialog" role="dialog" aria-modal="true">
-      <h2>Файлды өчүрөсүзбү?</h2><p>{deleteTarget.file.name}</p>
-      <div className="deleteConfirmActions"><button type="button" disabled={busy} onClick={()=>setDeleteTarget(null)}>Жок, калтыр</button><button type="button" className="deleteApproveBtn" disabled={busy} onClick={removeFile}><Trash2 size={16}/>{busy?'Өчүрүлүүдө…':'Ооба, өчүрүү'}</button></div>
-    </div></div>}
-  </div></div>;
+  </div>;
+}
+
+// Файлдын түрүнө жараша түстүү белги (PDF, DOC, XLS, сүрөт…).
+function FileBadge({name='',type='',small=false}){
+  const ext=(String(name).split('.').pop()||'').toLowerCase();
+  const kind=ext==='pdf'?'pdf':['doc','docx','rtf','odt'].includes(ext)?'doc':['xls','xlsx','csv','ods'].includes(ext)?'xls':
+    (String(type).startsWith('image/')||['jpg','jpeg','png','webp','gif','bmp','svg','avif'].includes(ext))?'img':
+    ['zip','rar','7z'].includes(ext)?'zip':'other';
+  const label=kind==='img'?'IMG':kind==='other'?(ext&&ext.length<=4?ext.toUpperCase():'FILE'):ext.toUpperCase().slice(0,4);
+  return <span className={'tfxBadge '+kind+(small?' small':'')} aria-hidden="true">{label}</span>;
 }
 
 function FilePreview({file,close}){
